@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import re
 import warnings
 
 # 3rd party imports
@@ -11,7 +12,7 @@ import xarray as xr
 # Local imports
 from pyrfu._core.time import _ns
 from pyrfu._core.units import _check_same_units
-from pyrfu.mms._internal.epd import _check_same_attrs
+from pyrfu.mms._internal.epd import _check_same_attrs, _common_attrs
 
 
 def _idx_closest(lst0, lst1):
@@ -64,6 +65,45 @@ def _paired_samples(ref, inp):
     return out
 
 
+def _combined_attrs(omni_vars, method):
+    r"""Attributes of the combined spectrum: those with the same value on all
+    the spacecraft (those of the reference spacecraft labelled it, e.g.
+    MMS4), the global attributes common to their files, the name and
+    description of the combination (``mms#_`` -> ``mmsx_``, as SPEDAS), and
+    SCALEMAX the spacecraft maxima combined as the data."""
+    attrs_list = [dict(inp.attrs) for inp in omni_vars]
+    attrs = _common_attrs(attrs_list, skip=("GLOBAL",))
+
+    if all(isinstance(attrs_.get("GLOBAL"), dict) for attrs_ in attrs_list):
+        attrs["GLOBAL"] = _common_attrs([attrs_["GLOBAL"] for attrs_ in attrs_list])
+
+    # Name and description that differ by the spacecraft only
+    for key, pattern, repl in [
+        ("FIELDNAM", r"^mms\d_", "mmsx_"),
+        ("CATDESC", r"^MMS\d ", "MMSX "),
+    ]:
+        values = [attrs_.get(key) for attrs_ in attrs_list]
+        if key in attrs or not all(isinstance(val, str) for val in values):
+            continue
+
+        combined = {re.sub(pattern, repl, val) for val in values}
+        if len(combined) == 1:
+            attrs[key] = combined.pop()
+
+    try:
+        scale_max = np.stack(
+            [np.asarray(attrs_["SCALEMAX"], dtype=np.float64) for attrs_ in attrs_list]
+        )
+    except (KeyError, TypeError, ValueError):
+        pass
+    else:
+        attrs["SCALEMAX"] = (
+            scale_max.sum(axis=0) if method == "sum" else scale_max.mean(axis=0)
+        )
+
+    return attrs
+
+
 def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     r"""Combines omni-directional energy spectrogram variable from EIS on
     multiple MMS spacecraft.
@@ -84,7 +124,12 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     omni_spec : xarray.DataArray
         Combined omni-directional energy spectrogram, on the times of the
         spacecraft with the fewest samples and the energies of the one with
-        the fewest channels (the others at their closest channels).
+        the fewest channels (the others at their closest channels). Its
+        attributes are those common to the spacecraft (and the global
+        attributes common to their files), the name and description of the
+        combination (``mmsx_`` and ``MMSX``, as SPEDAS), ``SCALEMAX`` the
+        spacecraft maxima combined as the data, and the energy widths of the
+        spacecraft of the energies.
 
     Raises
     ------
@@ -178,7 +223,7 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
         omni_spec,
         coords=[time_refprobe.time.data, ener_refprobe.energy.data],
         dims=["time", "energy"],
-        attrs={**time_refprobe.attrs},
+        attrs=_combined_attrs(omni_vars, method.lower()),
     )
 
     for key in ["spin", "sector"]:

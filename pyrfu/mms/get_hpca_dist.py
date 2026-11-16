@@ -61,7 +61,10 @@ def get_hpca_dist(
         phi and dphi of shape [nT, ner63, naz16, npo16]), with the times of
         `azimuth` (time), NaN for the half-spins not complete in `inp` or
         without azimuths. ``units_name`` is "flux" for fluxes and "df_cm" for
-        phase-space densities, from the ``UNITS`` of `inp`.
+        phase-space densities, from the ``UNITS`` of `inp`. ``mass`` (eV
+        (km/s)^-2) and ``charge`` are those of SPEDAS (1.0013 times the mass
+        number); pyrfu uses the masses of the ions (see
+        :func:`pyrfu.mms.hpca_skymap`).
 
     Raises
     ------

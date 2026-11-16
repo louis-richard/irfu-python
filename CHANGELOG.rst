@@ -1,6 +1,123 @@
 Changelog
 =========
 
+2.5.16 (2026-11-16)
+-------------------
+
+This release fixes the reading of MMS data: the spectra whose energy table
+changes with time keep the table of each time, the fill values of the files
+are NaN, and the HPCA velocities parallel and perpendicular to the magnetic
+field, its quality flags and its magnetic field (in DMPA) can be read. It
+fixes calls that failed or gave wrong results with valid inputs, and
+documents that the HPCA velocities in GSM of the files lack the rotation by
+the tilt of the spin axis.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``mms.get_ts`` and the readers built on it (``mms.get_data``,
+  ``mms.db_get_ts``, ``mms.get_eis_allt``, ``mms.get_feeps_alleyes``) set the
+  fill values (``FILLVAL``) of floating-point data to NaN, as irfu-matlab and
+  pySPEDAS: e.g. the HPCA moments of the species without data and the MEC
+  field-line footpoints were -1e31. Integer data (flags, counts) keep their
+  fill values.
+- A 2-D variable whose energy table changes within the time interval (the FPI
+  burst omni spectra of the early mission, ``defi``/``defe_fpi_brst_l2``,
+  alternate two tables up to 12 % apart) is a Dataset as
+  ``pyrf.ts_spectr``, with the table of each time: every time was labelled
+  with the table of the first one (47 to 52 % of the times of 2015-10-16 had
+  the energies of the other table). With one table (fast mode, later burst
+  data) the result is unchanged. ``pyrf.ts_append`` keeps the table of each
+  time of such spectra, and ``plot.plot_spectr`` draws each time with the
+  channels of its own table (the times shared their corners, i.e. the tables
+  were drawn at their mean).
+- The HPCA magnetic field key is ``b_dmpa_hpca_{srvy,brst}_l2``: the
+  variable ``B_GSE_spin_avg`` of the files is in DMPA (its description, the
+  CMAD, and FGM DMPA within 0.12 nT, GSE 1.15 nT). ``b_gse_hpca_*``, which
+  never returned data (``KeyError``), is no longer a key.
+- ``pyrf.calc_dt`` and ``pyrf.calc_fs`` raise ``TypeError`` for times that
+  are not datetime64 (times in seconds were read as nanoseconds: 0 and inf).
+- ``models.magnetopause_normal`` raises ``ValueError`` for a pressure p_sw
+  <= 0 (``ZeroDivisionError``) and, for the bow shock, an Alfven Mach number
+  <= 1 (division by zero, or a negative standoff distance below 1).
+- ``pyrf.int_sph_dist`` raises ``ValueError`` for a single azimuth or polar
+  bin without its width (``d_phi``, ``d_theta``), and ``mms.reduce`` for a
+  distribution with a single bin without the ``delta_phi_*`` and
+  ``delta_theta_*`` attributes: the widths were NaN, and the result NaN and
+  zeros.
+
+Fixes that change results
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- ``pyrf.ts_skymap`` takes its default energy tables (``energy0``,
+  ``energy1``) from the first time of each step of ``esteptable``: they were
+  swapped when the step table starts with 1 (calls without the tables;
+  ``mms.get_dist`` gives them).
+- ``plot.add_position`` sorts the positions by time: unsorted positions gave
+  wrong tick labels.
+
+Other fixes
+^^^^^^^^^^^
+
+- ``mms.get_ts`` reads the HPCA vectors with their magnitude (``vperp``,
+  ``vparallel``, ``B_GSE``/``B_GSM_spin_avg``, representation
+  "x,y,z,total"; ``KeyError``) as vectors, the magnitude removed as for FGM,
+  and the variables with a ``DEPEND`` of a dimension they do not have (the
+  HPCA ``data_quality`` flags; ``ValueError``). The warning on the units of
+  the FPI epoch deltas names the variable and its units.
+- ``mms.reduce`` accepts a transformation matrix per time as an array
+  (n_t, 3, 3) (``TypeError``), and a distribution with a single azimuth or
+  polar bin with its widths (``ValueError``).
+- ``mms.vdf_to_e64`` accepts energy widths per channel, as
+  ``pyrf.average_vdf`` keeps them (``IndexError``).
+- ``models.igrf`` accepts datetime64 times (``UFuncTypeError``).
+- ``dispersion.one_fluid_dispersion`` accepts a cold plasma (``LinAlgError``):
+  the slow mode at 0 and the other two the roots of the cold relation; the
+  roots of a warm plasma are unchanged but at the rounding level.
+- ``pyrf.ebsp`` accepts ``freq_int`` "pc12" and "pc35" in any case, as
+  irfu-matlab, and computes its degrees of polarisation without the false
+  warning "invalid value encountered in divide" (complex division by the NaN
+  of the censored times; the results are unchanged).
+- ``mms.eis_omni`` and ``mms.eis_spec_combine_sc`` give their result the
+  attributes common to the telescopes or the spacecraft: they took those of
+  telescope 0 or of one spacecraft (e.g. CATDESC "MMS4 ExTOF-S", its
+  SCALEMAX and file). The names are those of the combination (``_omni``,
+  ``mmsx_``, as SPEDAS), and SCALEMAX the maxima combined as the data.
+
+New features
+^^^^^^^^^^^^
+
+- HPCA keys: ``vpara{s}_dbcs_hpca_{srvy,brst}_l2`` and
+  ``vperp{s}_dbcs_hpca_{srvy,brst}_l2``, the bulk velocity parallel and
+  perpendicular to the magnetic field (DBCS, as the bulk velocity), and
+  ``flag{s}_hpca_{srvy,brst}_l2``, the quality flag of each sweep of the ion
+  files, for the four species (``hplus``, ``heplus``, ``heplusplus``,
+  ``oplus``).
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``pyrf.ts_skymap``: ``energy0`` and ``energy1`` are the tables of the times
+  with ``esteptable`` 0 and 1 (not of the odd and even times).
+- ``pyrf.wavepolarize_means``: the ellipticity is averaged over the three
+  rows of the spectral matrix, as IDL and pySPEDAS wavpol: a circular wave
+  gives about 0.67, not 1.
+- ``mms.hpca_skymap`` and ``mms.get_hpca_dist``: pyrfu uses the masses of the
+  ions, SPEDAS 1.0013 times the mass number (0.13 to 0.9 % heavier).
+- Type annotations of ``mms.fk_power_spectrum_4sc`` (``w_width`` float),
+  ``mms.get_feeps_alleyes`` (``quality_flag`` None) and
+  ``plot.ion_brazil_plot_thresh``; ``mms.eis_pad`` requires ``vec``.
+
+Known issues
+^^^^^^^^^^^^
+
+- The HPCA velocities in GSM of the files (``v{s}_gsm_hpca_*``, and
+  ``vparallel_GSM``, ``vperp_GSM``) are the DBCS velocities rotated from GSE
+  to GSM as if DBCS were GSE: the rotation by the tilt of the spin axis (2 to
+  4 degrees) is missing. For the velocities in GSM, rotate the DBCS ones with
+  ``mms.dsl2gsm`` and the definitive attitude (``defatt``). The
+  ``v{s}_gsm_hpca_*`` keys will be deprecated in 2.6.0.
+
 2.5.15 (2026-11-15)
 -------------------
 

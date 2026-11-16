@@ -112,14 +112,16 @@ def int_sph_dist(
         `velocity_grid`.
     d_phi, d_theta : numpy.ndarray
         Azimuth and elevation widths of the instrument bins (rad). Default is
-        the median spacing of `phi` and `theta`.
+        the median spacing of `phi` and `theta` (required with a single bin,
+        which has no spacing).
 
     Raises
     ------
     ValueError
         If the speed widths are negative or extend below zero speed, if only
         one of `d_v_m` and `d_v_p` is given, if `weight` is not one of the
-        above, or if a cartesian projection grid is not uniform.
+        above, if a cartesian projection grid is not uniform, or if `phi` or
+        `theta` has a single bin without `d_phi` or `d_theta`.
     NotImplementedError
         If the projection is not a 1d polar, or a 2d or 3d cartesian one.
 
@@ -171,7 +173,13 @@ def int_sph_dist(
     projection_dim = str(projection_dim).lower()
 
     # Azimuthal and elevation angles steps. Assumed to be constant
-    # if not provided.
+    # if not provided. A single bin has no spacing to take its width from
+    # (the median of an empty spacing was NaN: NaN and zeros in the result,
+    # as irfu-matlab)
+    for name, angles, widths in [("phi", phi, d_phi), ("theta", theta, d_theta)]:
+        if widths is None and np.size(angles) < 2:
+            raise ValueError(f"{name} has a single bin: give its width d_{name}")
+
     if d_phi is None:
         d_phi = np.abs(np.median(np.diff(phi))) * np.ones_like(phi)
 

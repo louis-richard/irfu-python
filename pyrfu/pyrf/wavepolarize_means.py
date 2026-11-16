@@ -112,7 +112,13 @@ def wavepolarize_means(
     deg_pol : xarray.DataArray
         Spectrogram of the degree of polarization (form 0 to 1).
     ellipticity : xarray.DataArray
-        Spectrogram of the ellipticity (form -1 to 1)
+        Spectrogram of the ellipticity: the signed ratio of the minor to the
+        major axis of the polarisation ellipse, averaged over the three rows
+        of the spectral matrix, as IDL and pyspedas wavpol (between -1 and
+        1). The row of a component without wave power gives about 0: a wave
+        in a plane gives about 2/3 of its ellipticity (+-0.67 for a circular
+        wave perpendicular to the background field, 0.33 for an axis ratio of
+        0.5); the helicity is 1 for a circular wave.
     helicity : xarray.DataArray
         Spectrogram of the helicity (from 0 to 1, \|Im\| / \|Re\| of the
         eigenvectors, as irfu-matlab and IDL).

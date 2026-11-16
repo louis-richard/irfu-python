@@ -1,9 +1,50 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+import re
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
+
+# Local imports
+from pyrfu.mms._internal.epd import _common_attrs
+
+
+def _omni_attrs(telescope_attrs, energy_dim, method):
+    r"""Attributes of the omni-directional flux: those with the same value in
+    all the telescopes (the attributes of the telescope 0 labelled it: name,
+    pointers to its support variables, display maximum), and for the omni
+    flux its name (``_t0`` → ``_omni``, as SPEDAS), DEPEND_1 the name of its
+    energy coordinate, and SCALEMAX the telescopes' maxima combined as the
+    data (an upper bound of the omni maximum of the file)."""
+    attrs = _common_attrs(telescope_attrs)
+    first = telescope_attrs[0]
+
+    if isinstance(first.get("FIELDNAM"), str) and re.search(
+        r"_t\d$", first["FIELDNAM"]
+    ):
+        attrs["FIELDNAM"] = re.sub(r"_t\d$", "_omni", first["FIELDNAM"])
+
+    if "DEPEND_1" in first:
+        attrs["DEPEND_1"] = energy_dim
+
+    try:
+        scale_max = np.stack(
+            [
+                np.asarray(attrs_["SCALEMAX"], dtype=np.float64)
+                for attrs_ in telescope_attrs
+            ]
+        )
+    except (KeyError, TypeError, ValueError):
+        pass
+    else:
+        attrs["SCALEMAX"] = (
+            scale_max.sum(axis=0) if method == "sum" else scale_max.mean(axis=0)
+        )
+
+    return attrs
 
 
 def eis_omni(eis_allt, method: str = "mean"):
@@ -25,7 +66,11 @@ def eis_omni(eis_allt, method: str = "mean"):
         sectors of the samples (``spin`` and ``sector`` coordinates, if
         `eis_allt` has them on the same times) and the energy widths and
         species of `eis_allt` in its attributes (``delta_energy_plus``,
-        ``delta_energy_minus``, ``species``).
+        ``delta_energy_minus``, ``species``). Its attributes are those common
+        to the telescopes, with FIELDNAM the name of the omni flux (``_omni``
+        instead of ``_t0``), DEPEND_1 the name of its energy coordinate and
+        SCALEMAX the telescopes' SCALEMAX combined as the data (an upper
+        bound of the maximum of the omni flux over the file).
 
     Raises
     ------
@@ -74,10 +119,14 @@ def eis_omni(eis_allt, method: str = "mean"):
     if method.lower() == "mean":
         flux_omni /= len(scopes)
 
-    # Get dimensions, coordinates and attributes based on first telescope
+    # Dimensions and coordinates of the first telescope (the energies are the
+    # same for all, one coordinate in eis_allt), the attributes common to the
+    # telescopes
     dims = eis_allt[scopes[0]].dims
     coords = [eis_allt[scopes[0]][k] for k in dims]
-    attrs = {**eis_allt[scopes[0]].attrs}
+    attrs = _omni_attrs(
+        [eis_allt[scope].attrs for scope in scopes], dims[1], method.lower()
+    )
 
     # Energy widths and species, attributes of the Dataset (they were left
     # out, on which eis_spec_combine_sc raised KeyError)

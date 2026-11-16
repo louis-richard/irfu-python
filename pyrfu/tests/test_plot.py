@@ -247,6 +247,26 @@ class AddPositionTestCase(unittest.TestCase):
         texts = [text_.get_text() for text_ in result.texts]
         self.assertListEqual(texts, ["X [km]\nY [km]\nZ [km]\nR [km]"])
 
+    def test_add_position_unsorted(self):
+        # Positions not in time order (np.interp on unsorted times: wrong
+        # labels): the labels of the sorted positions
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(10) * np.timedelta64(60, "s")
+        x_pos = np.arange(10) * 60.0
+        r_xyz = pyrf.ts_vec_xyz(time, np.stack([x_pos, 2 * x_pos, -x_pos], axis=1))
+        shuffled = r_xyz.isel(time=np.random.default_rng(3).permutation(10))
+
+        labels = []
+        for inp in [r_xyz, shuffled]:
+            _, ax = plt.subplots(1)
+            ax.plot(time, x_pos)
+            ax.set_xticks(date2num(time[1:9] + np.timedelta64(15, "s")))
+            result = plot.add_position(ax, inp, units="km")
+            labels.append([label.get_text() for label in result.get_xticklabels()])
+
+        self.assertListEqual(labels[1], labels[0])
+        self.assertEqual(labels[0][0], "75.00\n150.00\n-75.00\n183.71")
+
     @data("top", "bottom")
     def test_add_position_earth_radii(self, position):
         # Position at (3, 4, 12) R_E, |R| = 13 R_E
@@ -1632,11 +1652,63 @@ class PlotSpectrTestCase(unittest.TestCase):
             _, ax = plt.subplots(1)
             plot.plot_spectr(ax, dataset, yscale="log")
 
+            # One column per time, a masked column of zero width between them
             image = self._image(ax)
             np.testing.assert_allclose(
-                np.asarray(image.get_array()).reshape(8, 50), self.data.T
+                np.asarray(image.get_array()).reshape(8, 99)[:, ::2], self.data.T
             )
             np.testing.assert_allclose(ax.get_ylim(), [10.0, 2e4])
+
+    def test_plot_spectr_dataset_own_table(self):
+        # Alternating tables: each time drawn with the cell edges of its own
+        # table (pcolormesh shared the corners of neighbouring times, so both
+        # tables were drawn at their mean)
+        energy = np.tile(self.energy, (50, 1))
+        energy[1::2] *= 1.2
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, pyrf.ts_spectr(self.time, energy, self.data))
+
+        coords = self._image(ax).get_coordinates()
+        self.assertEqual(coords.shape, (9, 100, 2))
+        y_edges = np.concatenate(
+            [
+                1.5 * energy[:, :1] - 0.5 * energy[:, 1:2],
+                (energy[:, 1:] + energy[:, :-1]) / 2,
+                1.5 * energy[:, -1:] - 0.5 * energy[:, -2:-1],
+            ],
+            axis=1,
+        )
+        for i in [0, 1, 24, 49]:
+            # left and right edges of time i: its own table
+            np.testing.assert_allclose(coords[:, 2 * i, 1], y_edges[i])
+            np.testing.assert_allclose(coords[:, 2 * i + 1, 1], y_edges[i])
+
+        # Zero-width masked columns between the times, the data in the others
+        np.testing.assert_allclose(coords[:, 2:-1:2, 0], coords[:, 1:-2:2, 0])
+        array = self._image(ax).get_array()
+        self.assertTrue(np.all(np.ma.getmaskarray(array).reshape(8, 99)[:, 1::2]))
+        np.testing.assert_allclose(
+            np.asarray(array).reshape(8, 99)[:, ::2], self.data.T
+        )
+
+        # One time or one channel (no spacing for the edges): pcolormesh with
+        # the shading "auto", as before
+        table = np.outer(1.0 + 0.01 * np.arange(50), self.energy)
+        for times, channels in [(slice(0, 1), slice(None)), (slice(None), slice(0, 1))]:
+            _, ax = plt.subplots(1)
+            one = xr.Dataset(
+                {"data": (["time", "idx"], self.data[times, channels])},
+                coords={
+                    "time": self.time[times],
+                    "energy": (["time", "idx"], table[times, channels]),
+                },
+            )
+            plot.plot_spectr(ax, one)
+            n_y, n_t = table[times, channels].T.shape
+            np.testing.assert_allclose(
+                np.asarray(self._image(ax).get_array()).reshape(n_y, n_t),
+                self.data[times, channels].T,
+            )
 
     def test_plot_spectr_input_type(self):
         _, ax = plt.subplots(1)
@@ -1672,7 +1744,8 @@ class PlotSpectrTestCase(unittest.TestCase):
             plot.plot_spectr(ax, dataset, yscale="log")
 
             np.testing.assert_allclose(
-                np.asarray(self._image(ax).get_array()).reshape(8, 50), self.data.T
+                np.asarray(self._image(ax).get_array()).reshape(8, 99)[:, ::2],
+                self.data.T,
             )
             np.testing.assert_allclose(ax.get_ylim(), [10.0, 1e4])
 
@@ -1708,7 +1781,7 @@ class PlotSpectrTestCase(unittest.TestCase):
 
         times = np.delete(np.arange(50), [3, 10])
         np.testing.assert_allclose(
-            np.asarray(self._image(ax).get_array()).reshape(7, 48),
+            np.asarray(self._image(ax).get_array()).reshape(7, 95)[:, ::2],
             self.data[times, 1:].T,
         )
         np.testing.assert_allclose(ax.get_ylim(), self.energy[[1, 7]])

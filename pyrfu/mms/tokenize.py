@@ -145,6 +145,10 @@ HPCA_PARAMS_SCALARS = [
     "tperpheplus",
     "tperpheplusplus",
     "tperpoplus",
+    "flaghplus",
+    "flagheplus",
+    "flagheplusplus",
+    "flagoplus",
 ]
 
 HPCA_PARAMS_TENSORS = [
@@ -160,6 +164,14 @@ HPCA_PARAMS_TENSORS = [
     "theplus",
     "theplusplus",
     "toplus",
+    "vparahplus",
+    "vparaheplus",
+    "vparaheplusplus",
+    "vparaoplus",
+    "vperphplus",
+    "vperpheplus",
+    "vperpheplusplus",
+    "vperpoplus",
 ]
 
 PARAMS_SCALARS = [*ALL_PARAMS_SCALARS, *HPCA_PARAMS_SCALARS]

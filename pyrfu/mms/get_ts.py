@@ -11,7 +11,7 @@ from typing import Any
 import numpy as np
 import xarray as xr
 from pycdfpp import DataType, load, to_datetime64
-from xarray import DataArray
+from xarray import DataArray, Dataset
 
 # Local imports
 from pyrfu._core.time import _timedelta
@@ -46,18 +46,20 @@ def _shift_epochs(file, epoch):
         delta_vars = [delta_minus_var, delta_plus_var]
         flags_vars = [1e3, 1e3]  # Time scaling conversion flags
 
-        for i, delta_var in enumerate(delta_vars):
+        delta_keys = [delta_minus_key, delta_plus_key]
+
+        # The variable and its units in the warnings (" units are not clear")
+        for i, (delta_key, delta_var) in enumerate(zip(delta_keys, delta_vars)):
             if isinstance(delta_var["attrs"], dict) and "UNITS" in delta_var["attrs"]:
-                if delta_var["attrs"]["UNITS"].lower() == "s":
+                units = delta_var["attrs"]["UNITS"]
+                if units.lower() == "s":
                     flags_vars[i] = 1e3
-                elif delta_var["attrs"]["UNITS"].lower() == "ms":
+                elif units.lower() == "ms":
                     flags_vars[i] = 1e0
                 else:
-                    message = " units are not clear, assume s"
-                    warnings.warn(message)
+                    warnings.warn(f"{delta_key}: units {units!r} unclear, assumed s")
             else:
-                message = "Epoch_plus_var/Epoch_minus_var units are not clear, assume s"
-                warnings.warn(message)
+                warnings.warn(f"{delta_key}: no units, assumed s")
 
         flag_minus, flag_plus = flags_vars
 
@@ -182,8 +184,11 @@ def _get_depend(file, cdf_name, dep_num=1):
     else:
         raise KeyError(f"no DEPEND_{dep_num:d}/REPRESENTATION_{dep_num:d} attributes")
 
-    if depend_key == "x,y,z":
-        out["data"] = np.array(depend_key.split(","))
+    # Components, of a vector or of a vector and its magnitude (HPCA vperp,
+    # vparallel and B: "x,y,z,total", which raised KeyError): the magnitude is
+    # removed from the data, as for FGM
+    if depend_key in ["x,y,z", "x,y,z,total"]:
+        out["data"] = np.array(["x", "y", "z"])
 
         out["attrs"] = {"LABLAXIS": "comp"}
     else:
@@ -207,11 +212,57 @@ def _get_depend(file, cdf_name, dep_num=1):
                 # Record varying table of a file without records: NaN values
                 out["data"] = np.full(out["data"].shape[1], np.nan)
             else:
-                # Record varying table (e.g. FPI energies): first record
+                # Record varying table (e.g. FPI burst energies): the table of
+                # each record, the first one as the 1-D coordinate
+                out["table"] = out["data"]
                 out["data"] = out["data"][0, :]
 
         out["attrs"] = _get_depend_attributes(file, depend_key)
 
+    return out
+
+
+def _mask_fill(data, fill_val):
+    r"""Floating-point data with the values equal to FILLVAL set to NaN, as
+    irfu-matlab mms.variable2ts and pySPEDAS (the moments of the HPCA species
+    without data were -1e31); integer data (flags, counts) unchanged."""
+    if fill_val is None or not np.issubdtype(data.dtype, np.floating):
+        return data
+
+    # A NaN fill value matches no value
+    is_fill = data == np.ravel(np.asarray(fill_val, dtype=np.float64))[0]
+
+    if not np.any(is_fill):
+        return data
+
+    out = np.array(data, copy=True)
+    out[is_fill] = np.nan
+    return out
+
+
+def _record_varying_axis(out, dim, table, depend_attrs):
+    r"""Time series of a 2-D variable whose axis `dim` (e.g. the FPI burst
+    energies) is a table per record, `table` (time, n), clipped as `out`: a
+    DataArray with that axis if it is the same at all times, else a Dataset
+    as ``pyrf.ts_spectr`` (the data (time, idx0) and the coordinate `dim`
+    (time, idx0); the first table labelled every record before)."""
+    if len(table) == 0 or np.all(table == table[0]):
+        if len(table):
+            out = out.assign_coords({dim: table[0]})
+            out[dim].attrs = depend_attrs
+
+        return out
+
+    time_attrs = out.time.attrs
+    out = xr.Dataset(
+        {"data": (["time", "idx0"], out.data, out.attrs)},
+        coords={
+            "time": out.time.data,
+            "idx0": np.arange(table.shape[1]),
+            dim: (["time", "idx0"], table, depend_attrs),
+        },
+    )
+    out.time.attrs = time_attrs
     return out
 
 
@@ -229,7 +280,7 @@ def _unique_labels(depends):
 
 def get_ts(
     file_path: str | bytes, cdf_name: str, tint: list | None = None
-) -> DataArray:
+) -> DataArray | Dataset:
     r"""Reads field named cdf_name in file and convert to time series.
 
     Parameters
@@ -245,8 +296,17 @@ def get_ts(
 
     Returns
     -------
-    out : xarray.DataArray
-        Time series of the target variable in the selected time interval.
+    out : xarray.DataArray or xarray.Dataset
+        Time series of the target variable in the selected time interval. A
+        2-D variable whose axis is a table per record that changes within the
+        interval (e.g. the FPI burst energy spectra of the early mission,
+        with two alternating energy tables) is a Dataset as
+        `pyrfu.pyrf.ts_spectr`: the variable data (time, idx0) and the
+        coordinate of the axis (time, idx0). A vector and its magnitude (FGM
+        "x, y, z, r", HPCA "x,y,z,total") is the vector (time, comp): the
+        magnitude is removed. The fill values (``FILLVAL``) of floating-point
+        variables are NaN, as irfu-matlab and pySPEDAS; integer variables
+        (flags, counts) keep them.
 
     Raises
     ------
@@ -280,8 +340,14 @@ def get_ts(
 
     time = _get_epochs(file, cdf_name)
 
+    # Dimensions of the variable, with the records: a DEPEND of a dimension
+    # the variable does not have labels nothing (HPCA data_quality, 1-D with
+    # the DEPEND_1 of the anodes, raised ValueError)
+    n_dims = len(file[cdf_name].shape)
+
     if "DEPEND_1" in var_attrs or "REPRESENTATION_1" in var_attrs:
-        depend_1 = _get_depend(file, cdf_name, 1)
+        if n_dims > 1:
+            depend_1 = _get_depend(file, cdf_name, 1)
 
     elif "afg" in cdf_name or "dfg" in cdf_name:
         depend_1 = {
@@ -289,14 +355,14 @@ def get_ts(
             "attrs": {"LABLAXIS": "comp"},
         }
 
-    if "DEPEND_2" in var_attrs or "REPRESENTATION_2" in var_attrs:
+    if n_dims > 2 and ("DEPEND_2" in var_attrs or "REPRESENTATION_2" in var_attrs):
         depend_2 = _get_depend(file, cdf_name, 2)
 
         if depend_2["attrs"]["LABLAXIS"] == depend_1["attrs"]["LABLAXIS"]:
             depend_1["attrs"]["LABLAXIS"] = "rcomp"
             depend_2["attrs"]["LABLAXIS"] = "ccomp"
 
-    if "DEPEND_3" in var_attrs or "REPRESENTATION_3" in var_attrs:
+    if n_dims > 3 and ("DEPEND_3" in var_attrs or "REPRESENTATION_3" in var_attrs):
         if out_dict["attrs"].get("REPRESENTATION_3") == "x,y,z":
             raise NotImplementedError(
                 f"{cdf_name}: a fourth dimension of components is not supported"
@@ -317,7 +383,8 @@ def get_ts(
         depend_1["data"] = ["x", "y", "z"]
         depend_1["attrs"] = {"LABLAXIS": "comp"}
 
-    out_dict["data"] = file[cdf_name].values
+    # Fill values to NaN (floating-point data), as irfu-matlab
+    out_dict["data"] = _mask_fill(file[cdf_name].values, var_attrs.get("FILLVAL"))
 
     # Non-record-varying variables (e.g. FEEPS sector masks): same values at
     # all times, without copy until the time clip
@@ -361,8 +428,31 @@ def get_ts(
         # Sort attributes and set to coordinates attribute
         out[dim].attrs = {k: coord_attrs[k] for k in sorted(coord_attrs)}
 
+    # Axis table per record (time, n) of a 2-D variable, clipped with it
+    table = depend_1.get("table")
+    has_table = (
+        table is not None and out.ndim == 2 and table.shape == out.shape and not is_nrv
+    )
+
+    if has_table:
+        out = out.assign_coords(_table=(dims, table))
+
+    for dep in [depend_1, depend_2, depend_3]:
+        if dep.get("table") is not None and not has_table:
+            if not np.all(dep["table"] == dep["table"][0]):
+                logger.warning(
+                    "%s: the axis %s changes with time; the first record is used",
+                    cdf_name,
+                    dep["attrs"]["LABLAXIS"],
+                )
+
     # Time clip to original time interval
     out = time_clip(out, tint)
+
+    if has_table:
+        table = out["_table"].data
+        out = out.drop_vars("_table")
+        out = _record_varying_axis(out, dims[1], table, coords_attrs[1])
 
     if is_nrv:
         # writable copy of the broadcast (read-only) data

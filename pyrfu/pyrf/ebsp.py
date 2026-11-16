@@ -203,6 +203,27 @@ def _average_stacked(inp, in_time, out_time, av_window=None):
     return out.reshape((len(out_time),) + inp.shape[1:])
 
 
+def _trace_ratio(s_mat):
+    r"""tr(S^2) / tr(S)^2 of the spectral matrices `s_mat` (time, n, n), NaN
+    where tr(S) is NaN (the censured times: the complex division by NaN
+    raised "invalid value encountered in divide")."""
+    num = np.trace(np.matmul(s_mat, s_mat), axis1=1, axis2=2)
+    den = np.trace(s_mat, axis1=1, axis2=2) ** 2
+    out = np.full(num.shape, np.nan, dtype=num.dtype)
+    np.divide(num, den, out=out, where=np.isfinite(den))
+    return out
+
+
+def _degree_of_polarization(s_mat, a_coef, b_coef):
+    r"""sqrt(a tr(S^2) / tr(S)^2 - b), NaN where the ratio is NaN (the complex
+    square root of NaN raised "invalid value encountered in sqrt" on
+    Windows)."""
+    ratio = _trace_ratio(s_mat)
+    out = np.full(ratio.shape, np.nan, dtype=ratio.dtype)
+    np.sqrt(a_coef * ratio - b_coef, out=out, where=np.isfinite(ratio))
+    return out
+
+
 def _polarization(wb, new_freq_mat, in_time, out_time, av_window, censure, matlab):
     r"""Polarization parameters of the magnetic wavelet coefficients `wb`
     (time, 3) at one frequency, averaged on `out_time` and censured at the
@@ -268,14 +289,7 @@ def _polarization(wb, new_freq_mat, in_time, out_time, av_window, censure, matla
     ellipticity[censure_idx] = np.nan
     out[:, 3] = ellipticity
 
-    dop = np.sqrt(
-        (3 / 2)
-        * (
-            np.trace(np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2)
-            / np.trace(s_mat_avg, axis1=1, axis2=2) ** 2
-        )
-        - 1 / 2
-    )
+    dop = _degree_of_polarization(s_mat_avg, 3 / 2, 1 / 2)
     dop[censure_idx] = np.nan
     out[:, 4] = dop
 
@@ -294,14 +308,7 @@ def _polarization(wb, new_freq_mat, in_time, out_time, av_window, censure, matla
 
     s_mat_avg = s_mat_avg2dim[:, :2, :2]
 
-    dop2dim = np.sqrt(
-        2
-        * (
-            np.trace(np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2)
-            / np.trace(s_mat_avg, axis1=1, axis2=2) ** 2
-        )
-        - 1
-    )
+    dop2dim = _degree_of_polarization(s_mat_avg, 2, 1)
     dop2dim[censure_idx] = np.nan
     out[:, 5] = dop2dim
 
@@ -371,7 +378,7 @@ def ebsp(
         Time series of the position time series of spacecraft used for field
         aligned coordinates.
     freq_int : str or array_like
-        Frequency interval :
+        Frequency interval (the strings case-insensitive, as irfu-matlab):
             * "pc12" : [0.1, 5.0]
             * "pc35" : [2e-3, 0.1]
             * [fmin, fmax] : arbitrary interval [fmin,fmax]
@@ -512,7 +519,7 @@ def ebsp(
     if isinstance(freq_int, (list, np.ndarray)):
         if len(freq_int) != 2:
             raise ValueError("freq_int list must contain two elements")
-    elif freq_int not in ["pc12", "pc35"]:
+    elif freq_int.lower() not in ["pc12", "pc35"]:
         raise ValueError("string freq_int must be pc12 or pc35")
 
     # Compute magnetic field fluctuations sampling frequency

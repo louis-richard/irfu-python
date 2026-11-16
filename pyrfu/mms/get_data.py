@@ -383,14 +383,17 @@ def get_data(
 
     FSM: b_gse_fsm_brst_l3
 
-    HPCA: azimuth_hpca_brst_l2, azimuth_hpca_srvy_l2, b_gse_hpca_brst_l2,
-    b_gse_hpca_srvy_l2, b_gsm_hpca_brst_l2, b_gsm_hpca_srvy_l2, dpfheplus_hpca_brst_l2,
+    HPCA: azimuth_hpca_brst_l2, azimuth_hpca_srvy_l2, b_dmpa_hpca_brst_l2,
+    b_dmpa_hpca_srvy_l2, b_gsm_hpca_brst_l2, b_gsm_hpca_srvy_l2, dpfheplus_hpca_brst_l2,
     dpfheplus_hpca_srvy_l2, dpfheplusplus_hpca_brst_l2, dpfheplusplus_hpca_srvy_l2,
     dpfhplus_hpca_brst_l2, dpfhplus_hpca_srvy_l2, dpfoplus_hpca_brst_l2,
-    dpfoplus_hpca_srvy_l2, nheplus_hpca_brst_l2, nheplus_hpca_srvy_l2,
-    nheplusplus_hpca_brst_l2, nheplusplus_hpca_srvy_l2, nhplus_hpca_brst_l2,
-    nhplus_hpca_srvy_l2, noplus_hpca_brst_l2, noplus_hpca_srvy_l2,
-    pheplus_dbcs_hpca_brst_l2, pheplus_dbcs_hpca_srvy_l2, pheplusplus_dbcs_hpca_brst_l2,
+    dpfoplus_hpca_srvy_l2, flagheplus_hpca_brst_l2, flagheplus_hpca_srvy_l2,
+    flagheplusplus_hpca_brst_l2, flagheplusplus_hpca_srvy_l2, flaghplus_hpca_brst_l2,
+    flaghplus_hpca_srvy_l2, flagoplus_hpca_brst_l2, flagoplus_hpca_srvy_l2,
+    nheplus_hpca_brst_l2, nheplus_hpca_srvy_l2, nheplusplus_hpca_brst_l2,
+    nheplusplus_hpca_srvy_l2, nhplus_hpca_brst_l2, nhplus_hpca_srvy_l2,
+    noplus_hpca_brst_l2, noplus_hpca_srvy_l2, pheplus_dbcs_hpca_brst_l2,
+    pheplus_dbcs_hpca_srvy_l2, pheplusplus_dbcs_hpca_brst_l2,
     pheplusplus_dbcs_hpca_srvy_l2, phplus_dbcs_hpca_brst_l2, phplus_dbcs_hpca_srvy_l2,
     poplus_dbcs_hpca_brst_l2, poplus_dbcs_hpca_srvy_l2, saz_hpca_brst_l2,
     saz_hpca_srvy_l2, theplus_dbcs_hpca_brst_l2, theplus_dbcs_hpca_srvy_l2,
@@ -409,7 +412,15 @@ def get_data(
     vheplusplus_dbcs_hpca_srvy_l2, vheplusplus_gsm_hpca_brst_l2,
     vheplusplus_gsm_hpca_srvy_l2, vhplus_dbcs_hpca_brst_l2, vhplus_dbcs_hpca_srvy_l2,
     vhplus_gsm_hpca_brst_l2, vhplus_gsm_hpca_srvy_l2, voplus_dbcs_hpca_brst_l2,
-    voplus_dbcs_hpca_srvy_l2, voplus_gsm_hpca_brst_l2, voplus_gsm_hpca_srvy_l2
+    voplus_dbcs_hpca_srvy_l2, voplus_gsm_hpca_brst_l2, voplus_gsm_hpca_srvy_l2,
+    vparaheplus_dbcs_hpca_brst_l2, vparaheplus_dbcs_hpca_srvy_l2,
+    vparaheplusplus_dbcs_hpca_brst_l2, vparaheplusplus_dbcs_hpca_srvy_l2,
+    vparahplus_dbcs_hpca_brst_l2, vparahplus_dbcs_hpca_srvy_l2,
+    vparaoplus_dbcs_hpca_brst_l2, vparaoplus_dbcs_hpca_srvy_l2,
+    vperpheplus_dbcs_hpca_brst_l2, vperpheplus_dbcs_hpca_srvy_l2,
+    vperpheplusplus_dbcs_hpca_brst_l2, vperpheplusplus_dbcs_hpca_srvy_l2,
+    vperphplus_dbcs_hpca_brst_l2, vperphplus_dbcs_hpca_srvy_l2,
+    vperpoplus_dbcs_hpca_brst_l2, vperpoplus_dbcs_hpca_srvy_l2
 
     MEC: dst_mec_brst_l2, dst_mec_srvy_l2, eclipseearth_mec_brst_l2,
     eclipseearth_mec_srvy_l2, eclipsemoon_mec_brst_l2, eclipsemoon_mec_srvy_l2,
@@ -452,7 +463,11 @@ def get_data(
     -------
     out : DataArray or Dataset
         Time series of the target variable of measured by the target
-        spacecraft over the selected time interval.
+        spacecraft over the selected time interval. A spectrum whose axis
+        changes with time (e.g. the FPI burst energy spectra of the early
+        mission, with two alternating energy tables) is a Dataset as
+        `pyrfu.pyrf.ts_spectr`: the data (time, idx0) and the axis (time,
+        idx0).
 
     Raises
     ------
@@ -465,6 +480,16 @@ def get_data(
     --------
     pyrfu.mms.get_ts : Read time series.
     pyrfu.mms.get_dist : Read velocity distribution function.
+
+    Notes
+    -----
+    The HPCA velocities in GSM (``v*_gsm_hpca_*``) are those of the files,
+    the DBCS velocities rotated from GSE to GSM as if DBCS were GSE: the
+    rotation by the tilt of the spin axis (2 to 4 degrees) is missing. For
+    the velocities in GSM, rotate the DBCS velocities (``v*_dbcs_hpca_*``)
+    with `pyrfu.mms.dsl2gsm` and the definitive attitude (``defatt``,
+    `pyrfu.mms.load_ancillary`). The HPCA magnetic field ``B_GSE_spin_avg``
+    of the files is in DMPA (``b_dmpa_hpca_*``).
 
     Examples
     --------

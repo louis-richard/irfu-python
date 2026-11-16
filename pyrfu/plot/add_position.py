@@ -70,6 +70,10 @@ def add_position(
     t_list = [t_.replace(tzinfo=None) for t_ in num2date(ax.get_xticks())]
     t_ticks = np.array(t_list).astype("<M8[ns]")
 
+    # Positions in time order (np.interp takes increasing times: unsorted
+    # ones labelled the ticks with wrong positions)
+    r_xyz = r_xyz.isel(time=np.argsort(r_xyz.time.data, kind="stable"))
+
     # Position interpolated at the ticks (seconds since the first sample), NaN
     # outside the time series
     t_data = r_xyz.time.data.astype("<M8[ns]")

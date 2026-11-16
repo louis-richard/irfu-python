@@ -2228,6 +2228,43 @@ class EisOmniTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.eis_omni(eis, "median")
 
+    def test_eis_omni_telescope_attrs(self):
+        # The attributes of the telescope 0 labelled the omni flux: those
+        # common to the telescopes kept, its name, energies and display
+        # maximum (as the data: mean or sum) for the omni flux
+        eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", 2)
+        pref = "mms2_epd_eis_srvy_l2_extof_proton"
+        for i in range(6):
+            eis[f"t{i:d}"].attrs = {
+                "CATDESC": "MMS2 ExTOF-S",
+                "UNITS": "1/(cm^2 s sr keV)",
+                "FILLVAL": np.array([-1e31]),
+                "FIELDNAM": f"{pref}_P4_flux_t{i:d}",
+                "DEPEND_1": f"{pref}_t{i:d}_energy",
+                "LABL_PTR_1": f"{pref}_flux_t{i:d}_channel_names",
+                "SCALEMAX": np.array([1000.0 * (i + 1)]),
+            }
+
+        for method, scale_max in [("mean", 3500.0), ("sum", 21000.0)]:
+            result = mms.eis_omni(eis, method)
+            self.assertEqual(result.attrs["CATDESC"], "MMS2 ExTOF-S")
+            self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
+            np.testing.assert_array_equal(result.attrs["FILLVAL"], [-1e31])
+            self.assertEqual(result.attrs["FIELDNAM"], f"{pref}_P4_flux_omni")
+            self.assertEqual(result.attrs["DEPEND_1"], "energy")
+            self.assertIn(result.attrs["DEPEND_1"], result.coords)
+            self.assertNotIn("LABL_PTR_1", result.attrs)
+            np.testing.assert_allclose(result.attrs["SCALEMAX"], [scale_max])
+
+        # Without SCALEMAX or with a name without telescope: left out
+        for i in range(6):
+            del eis[f"t{i:d}"].attrs["SCALEMAX"]
+            eis[f"t{i:d}"].attrs["FIELDNAM"] = f"name{i:d}"
+
+        result = mms.eis_omni(eis)
+        self.assertNotIn("SCALEMAX", result.attrs)
+        self.assertNotIn("FIELDNAM", result.attrs)
+
 
 class EisAngAngTestCase(unittest.TestCase):
     # Telescope polar angles (degrees from +z) and 8 samples per spin, the
@@ -2611,6 +2648,41 @@ class EisSpecCombineScTestCase(unittest.TestCase):
             attrs={"delta_energy_plus": energies / 10, "UNITS": "1/(cm^2 s sr keV)"},
         )
         return out if spin_avg else out.assign_coords(sector=("time", sector))
+
+    def test_eis_spec_combine_sc_attributes(self):
+        # The attributes of the spacecraft with the fewest samples labelled the
+        # combination (CATDESC "MMS4 ExTOF-S", FIELDNAM mms4_..., its SCALEMAX
+        # and file, on MMS2-4 2017-07-23): those common to the spacecraft, the
+        # combined name (mmsx, as SPEDAS) and SCALEMAX
+        omnis = []
+        for mms_id, n_pts in [(2, 16), (3, 16), (4, 12)]:
+            omni = self._omni("2017-07-23T16:10:00", n_pts, 0, np.ones_like)
+            omni.attrs = {
+                **omni.attrs,
+                "species": "proton",
+                "CATDESC": f"MMS{mms_id} ExTOF-S",
+                "FIELDNAM": f"mms{mms_id}_epd_eis_srvy_l2_extof_proton_P4_flux_omni",
+                "SCALEMAX": np.array([100.0 * mms_id]),
+                "GLOBAL": {"Project": "STP>MMS", "Source_name": f"MMS{mms_id}>"},
+            }
+            omnis.append(omni)
+
+        for method, scale_max in [("mean", 300.0), ("sum", 900.0)]:
+            with self.subTest(method=method):
+                result = mms.eis_spec_combine_sc(omnis, method=method)
+                self.assertEqual(result.attrs["CATDESC"], "MMSX ExTOF-S")
+                self.assertEqual(
+                    result.attrs["FIELDNAM"],
+                    "mmsx_epd_eis_srvy_l2_extof_proton_P4_flux_omni",
+                )
+                np.testing.assert_array_equal(result.attrs["SCALEMAX"], [scale_max])
+                self.assertDictEqual(result.attrs["GLOBAL"], {"Project": "STP>MMS"})
+                self.assertEqual(result.attrs["UNITS"], omnis[0].attrs["UNITS"])
+                self.assertEqual(result.attrs["species"], "proton")
+
+        # Names that differ by more than the spacecraft: none
+        omnis[0].attrs["FIELDNAM"] = "mms2_epd_eis_brst_l2_extof_proton_P4_flux_omni"
+        self.assertNotIn("FIELDNAM", mms.eis_spec_combine_sc(omnis).attrs)
 
     def test_eis_spec_combine_sc_species(self):
         # Spectra of different species raise ValueError (they were combined)
@@ -8627,8 +8699,9 @@ class GetFeepsTestCase(unittest.TestCase):
 
 def _cdf_four_columns(t_start="2019-09-14T07:54:00"):
     # In-memory CDF with (N, 4) variables labelled as in the MMS files: FGM
-    # (x, y, z, r representation), MEC quaternions (qx, qy, qz, qw) and MEC
-    # B fields (labels only, last one the magnitude), with padded labels
+    # (x, y, z, r representation), MEC quaternions (qx, qy, qz, qw), MEC B
+    # fields (labels only, last one the magnitude), with padded labels, and
+    # HPCA vperp (the representation "x,y,z,total" as a string)
     time = np.datetime64(t_start, "ns") + np.arange(5) * np.timedelta64(1, "s")
     data = np.tile([1.0, 2.0, 3.0, 4.0], (5, 1))
 
@@ -8648,6 +8721,7 @@ def _cdf_four_columns(t_start="2019-09-14T07:54:00"):
         "mms1_mec_quat_eci_to_gse": {"REPRESENTATION_1": "rep_quat"},
         "mms1_mec_bsc_gsm": {"LABL_PTR_1": "label_b_gsm"},
         "mms1_mec_other": {"LABL_PTR_1": "label_other"},
+        "mms1_hpca_hplus_vperp": {"REPRESENTATION_1": "x,y,z,total"},
     }.items():
         cdf.add_variable(name, values=data)
         cdf[name].add_attribute("DEPEND_0", "Epoch")
@@ -8703,10 +8777,12 @@ class GetTsTestCase(unittest.TestCase):
         ("mms1_mec_quat_eci_to_gse", ["qx", "qy", "qz", "qw"]),
         ("mms1_mec_bsc_gsm", [0, 1, 2]),
         ("mms1_mec_other", [0, 1, 2, 3]),
+        ("mms1_hpca_hplus_vperp", ["x", "y", "z"]),
     )
     @unpack
     def test_get_ts_four_columns(self, cdf_name, comps):
-        # Only the magnitude of (x, y, z, magnitude) variables is removed
+        # Only the magnitude of (x, y, z, magnitude) variables is removed (HPCA
+        # "x,y,z,total" raised KeyError)
         result = get_ts(_cdf_four_columns(), cdf_name)
         np.testing.assert_array_equal(
             result.data[0], [1.0, 2.0, 3.0, 4.0][: len(comps)]
@@ -8801,6 +8877,48 @@ class GetTsTestCase(unittest.TestCase):
             cdf[cdf_name].add_attribute(key, name)
 
         return bytes(pycdfpp.save(cdf)), time
+
+    def test_get_ts_depend_of_missing_dimension(self):
+        # HPCA data_quality: 1-D (one flag per sweep) with the DEPEND_1 of the
+        # 16 anodes (ValueError): a time series of the flags
+        values = np.array([3, 3, 0], dtype=np.uint16)
+        content, _ = self._cdf(
+            "mms1_hpca_hplus_data_quality",
+            values,
+            {"DEPEND_1": ("mms1_hpca_polar_anode_number", np.arange(16), None)},
+        )
+        result = get_ts(content, "mms1_hpca_hplus_data_quality")
+        self.assertTupleEqual(result.dims, ("time",))
+        np.testing.assert_array_equal(result.data, values)
+        self.assertEqual(result.attrs["DEPEND_1"], "mms1_hpca_polar_anode_number")
+
+    def test_get_ts_fill_values(self):
+        # FILLVAL of floating-point data to NaN, as irfu-matlab (the HPCA
+        # moments of the species without data were -1e31), float32 data with
+        # its float32 fill included; integer data unchanged
+        cases = [
+            (np.array([1.0, -1e31, 3.0]), [-1e31], [1.0, np.nan, 3.0]),
+            (
+                np.array([1.0, -1e31, 3.0], dtype=np.float32),
+                [float(np.float32(-1e31))],
+                [1.0, np.nan, 3.0],
+            ),
+            (np.array([3, 65535, 0], dtype=np.uint16), [65535], [3, 65535, 0]),
+            (np.array([1.0, 2.0, 3.0]), [-1e31], [1.0, 2.0, 3.0]),
+            (np.array([1.0, np.nan, 3.0]), [np.nan], [1.0, np.nan, 3.0]),
+        ]
+        for values, fill_val, expected in cases:
+            with self.subTest(values=values, fill_val=fill_val):
+                content, _ = self._cdf("mms1_hpca_hplus_number_density", values)
+                cdf = pycdfpp.load(content)
+                cdf["mms1_hpca_hplus_number_density"].add_attribute(
+                    "FILLVAL", np.array(fill_val, dtype=values.dtype)
+                )
+                result = get_ts(
+                    bytes(pycdfpp.save(cdf)), "mms1_hpca_hplus_number_density"
+                )
+                self.assertEqual(result.dtype, values.dtype)
+                np.testing.assert_array_equal(result.data, expected)
 
     def test_get_ts_tensor(self):
         # (time, 3, 3) with the representation "x,y,z" of both dimensions: rcomp
@@ -8952,6 +9070,29 @@ class GetTsTestCase(unittest.TestCase):
 
         np.testing.assert_array_equal(result.time.data, time + np.timedelta64(15, "ms"))
 
+    @data(("min", r"Epoch_(minus|plus)_var: units 'min' unclear"), (None, "no units"))
+    @unpack
+    def test_get_ts_fpi_epoch_units_warning(self, units, message):
+        # The warning names the variable and its units (" units are not
+        # clear, assume s")
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(30, "ms")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf["Epoch"].add_attribute("DELTA_MINUS_VAR", "Epoch_minus_var")
+        cdf["Epoch"].add_attribute("DELTA_PLUS_VAR", "Epoch_plus_var")
+        for name in ["Epoch_minus_var", "Epoch_plus_var"]:
+            cdf.add_variable(name, values=np.array([0.0]), is_nrv=True)
+            if units is not None:
+                cdf[name].add_attribute("UNITS", units)
+        cdf.add_variable("mms1_des_numberdensity_brst", values=np.ones(3))
+        cdf["mms1_des_numberdensity_brst"].add_attribute("DEPEND_0", "Epoch")
+
+        with self.assertWarnsRegex(UserWarning, message):
+            get_ts(bytes(pycdfpp.save(cdf)), "mms1_des_numberdensity_brst")
+
     def test_get_ts_fpi_epoch_small_mismatch(self):
         # Deltas within 1 % of the sampling period: half the sampling period
         # without warning, as irfu-matlab mms.variable2ts (any mismatch)
@@ -8996,13 +9137,17 @@ class GetTsTestCase(unittest.TestCase):
             get_ts(content, "mms1_x")
 
 
-def _cdf_fpi_brst_spectr(n_records, t_start="2019-09-14T07:54:00", offset=0.0):
+def _cdf_fpi_brst_spectr(
+    n_records, t_start="2019-09-14T07:54:00", offset=0.0, alternate=0.0
+):
     # In-memory FPI burst electron omni spectrogram as in the L2 moments files:
-    # record varying energy table (DEPEND_1), start times with deltas
+    # record varying energy table (DEPEND_1), start times with deltas; the
+    # odd records with the energies + alternate (two tables, early mission)
     time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
         30, "ms"
     )
     energy = np.tile(10.0 * 1.3 ** np.arange(32) + offset, (n_records, 1))
+    energy[1::2] += alternate
 
     cdf = pycdfpp.CDF()
     cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
@@ -9039,6 +9184,125 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             np.testing.assert_allclose(result.energy.data, 10.0 * 1.3 ** np.arange(32))
         else:
             self.assertTrue(np.all(np.isnan(result.energy.data)))
+
+    def test_get_ts_alternating_tables(self):
+        # Two alternating energy tables (FPI burst, early mission): each record
+        # keeps its table, as pyrf.ts_spectr (the first table labelled all)
+        n_records = 6
+        content = _cdf_fpi_brst_spectr(n_records, alternate=0.5)
+        constant = get_ts(_cdf_fpi_brst_spectr(n_records), self.cdf_name)
+        result = get_ts(content, self.cdf_name)
+
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertEqual(result.data.dims, ("time", "idx0"))
+        self.assertEqual(result.energy.dims, ("time", "idx0"))
+        expected = np.tile(10.0 * 1.3 ** np.arange(32), (n_records, 1))
+        expected[1::2] += 0.5
+        np.testing.assert_allclose(result.energy.data, expected)
+        np.testing.assert_array_equal(result.data.data, constant.data)
+        np.testing.assert_array_equal(result.time.data, constant.time.data)
+        self.assertEqual(result.data.attrs, constant.attrs)
+        self.assertEqual(result.energy.attrs, constant.energy.attrs)
+        self.assertEqual(result.time.attrs, constant.time.attrs)
+
+    def test_get_ts_alternating_tables_clipped(self):
+        # One record in the interval: a DataArray with the energies of that
+        # record (those of the first record of the file before)
+        content = _cdf_fpi_brst_spectr(6, alternate=0.5)
+        times = get_ts(_cdf_fpi_brst_spectr(6), self.cdf_name).time.data
+        result = get_ts(content, self.cdf_name, [times[1], times[1]])
+
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.shape, (1, 32))
+        np.testing.assert_allclose(
+            result.energy.data, 10.0 * 1.3 ** np.arange(32) + 0.5
+        )
+        self.assertEqual(result.energy.attrs["LABLAXIS"], "energy")
+
+    def test_get_ts_alternating_tables_no_record(self):
+        # No record in the interval: a DataArray with the first table, as
+        # without the per-record tables
+        content = _cdf_fpi_brst_spectr(6, alternate=0.5)
+        result = get_ts(
+            content, self.cdf_name, ["2019-09-15T00:00", "2019-09-15T00:01"]
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.shape, (0, 32))
+        np.testing.assert_allclose(result.energy.data, 10.0 * 1.3 ** np.arange(32))
+
+    @staticmethod
+    def _cdf_3d(alternate):
+        # 3-D variable (time, energy, pitch angle) with a record varying
+        # energy table, alternating if alternate
+        time = np.datetime64("2019-09-14T07:54:00", "ns") + np.arange(
+            4
+        ) * np.timedelta64(30, "ms")
+        energy = np.tile(10.0 * 1.3 ** np.arange(4), (4, 1))
+        energy[1::2] += alternate
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf.add_variable("mms1_energy", values=energy)
+        cdf["mms1_energy"].add_attribute("LABLAXIS", "energy")
+        cdf.add_variable("mms1_pa", values=np.array([[30.0, 90.0, 150.0]]), is_nrv=True)
+        cdf["mms1_pa"].add_attribute("LABLAXIS", "pa")
+        cdf.add_variable("mms1_x", values=np.ones((4, 4, 3)))
+        for key, value in [
+            ("DEPEND_0", "Epoch"),
+            ("DEPEND_1", "mms1_energy"),
+            ("DEPEND_2", "mms1_pa"),
+        ]:
+            cdf["mms1_x"].add_attribute(key, value)
+
+        return bytes(pycdfpp.save(cdf)), energy
+
+    def test_get_ts_varying_axis_3d_warns(self):
+        # A 3-D variable with a varying table: the first record, with a
+        # warning (not a spectrum); without a warning if the table is the
+        # same at all times
+        content, energy = self._cdf_3d(0.5)
+
+        with self.assertLogs("pyrfu.mms.get_ts", level="WARNING") as logs:
+            result = get_ts(content, "mms1_x")
+
+        self.assertIn("changes with time", logs.output[0])
+        self.assertEqual(result.dims, ("time", "energy", "pa"))
+        np.testing.assert_allclose(result.energy.data, energy[0])
+
+        content, energy = self._cdf_3d(0.0)
+
+        with self.assertNoLogs("pyrfu.mms.get_ts", level="WARNING"):
+            result = get_ts(content, "mms1_x")
+
+        np.testing.assert_allclose(result.energy.data, energy[0])
+
+    def test_get_data_alternating_tables(self):
+        # get_data over two files with alternating tables: one spectrum with
+        # the table of each record
+        module = importlib.import_module("pyrfu.mms.get_data")
+        contents = [
+            _cdf_fpi_brst_spectr(4, "2019-09-14T07:54:00", alternate=0.5),
+            _cdf_fpi_brst_spectr(4, "2019-09-14T07:54:01", alternate=0.5),
+        ]
+        tint = ["2019-09-14T07:53:59", "2019-09-14T07:54:02"]
+
+        with tempfile.TemporaryDirectory() as root:
+            paths = []
+            for i, content in enumerate(contents):
+                path = os.path.join(root, f"mms1_fpi_brst_l2_des-moms_{i}.cdf")
+                with open(path, "wb") as file:
+                    file.write(content)
+                paths.append(path)
+
+            with mock.patch.object(module, "list_files", return_value=paths):
+                result = mms.get_data("defe_fpi_brst_l2", tint, 1, False, root)
+
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertEqual(result.energy.shape, (8, 32))
+        np.testing.assert_allclose(
+            result.energy.data[:, 0], [10.0, 10.5, 10.0, 10.5, 10.0, 10.5, 10.0, 10.5]
+        )
 
     def test_get_ts_append_empty_file(self):
         # As get_data: a file without records, before or after a file with
@@ -9897,6 +10161,35 @@ class ReduceTestCase(unittest.TestCase):
 
         result = mms.reduce(vdf, np.eye(3), n_mc=2, verbose=False)
         np.testing.assert_array_equal(result.time.data, times)
+
+    def test_reduce_xyz_per_time(self):
+        # One matrix per time as an array (n_t, 3, 3) (TypeError), as the
+        # same matrices as a time series; a wrong number of times raises
+        vdf = generate_vdf(64.0, 3, [8, 4, 4], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+        xyz = np.tile(np.eye(3), (3, 1, 1))
+
+        result = mms.reduce(vdf, xyz, n_mc=2, verbose=False)
+        self.assertEqual(result.shape[0], 3)
+
+        with self.assertRaisesRegex(ValueError, "n_t, 3, 3"):
+            mms.reduce(vdf, xyz[:2], n_mc=2, verbose=False)
+
+    def test_reduce_single_bin(self):
+        # One azimuth bin without the angle widths: ValueError (NaN and zeros
+        # from int_sph_dist); with them, a reduced distribution
+        vdf = generate_vdf(64.0, 3, [8, 1, 4], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+
+        with self.assertRaisesRegex(ValueError, "single azimuth or polar bin"):
+            mms.reduce(vdf, np.eye(3), n_mc=5, verbose=False)
+
+        vdf.attrs["delta_phi_minus"] = np.full((3, 1), 11.25)
+        vdf.attrs["delta_phi_plus"] = np.full((3, 1), 11.25)
+        vdf.attrs["delta_theta_minus"] = np.full(4, 11.25)
+        vdf.attrs["delta_theta_plus"] = np.full(4, 11.25)
+        result = mms.reduce(vdf, np.eye(3), n_mc=5, verbose=False)
+        self.assertTrue(np.all(np.isfinite(result.data)))
 
     def test_reduce_species_mass(self):
         # The speeds of the channels with the mass of the species (oxygen
@@ -10961,6 +11254,24 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
 
 
 class VdfToE64TestCase(unittest.TestCase):
+    def test_vdf_to_e64_energy_widths_per_channel(self):
+        # Energy widths per channel (energy,), as average_vdf keeps them
+        # (IndexError): the outer edges as with the same widths at every time
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        vdf = vdf.assign(energy=vdf.energy + 10.0)
+        vdf.attrs["energy0"] = vdf.attrs["energy0"] + 10.0
+        vdf.attrs["energy1"] = vdf.attrs["energy1"] + 10.0
+        widths = {
+            k: np.asarray(vdf.attrs[k])[0]
+            for k in ["delta_energy_minus", "delta_energy_plus"]
+        }
+        per_time = {k: np.tile(v, (10, 1)) for k, v in widths.items()}
+
+        result = mms.vdf_to_e64(vdf.assign_attrs(widths))
+        expected = mms.vdf_to_e64(vdf.assign_attrs(per_time))
+        for key in widths:
+            np.testing.assert_array_equal(result.attrs[key], expected.attrs[key])
+
     def test_vdf_to_e64_delta_energy(self):
         # The input attrs are unchanged; the 64-channel widths are the same at
         # every time, the top/bottom edges from the 32-channel widths (they were
@@ -12548,6 +12859,33 @@ class TokenizeTestCase(unittest.TestCase):
             self.assertEqual(result["param"], f"partidx{species}")
 
     @data("srvy", "brst")
+    def test_tokenize_hpca_data_quality(self, data_rate):
+        # The per-sweep quality flags of the HPCA ion files (CMAD Tables 5-16
+        # and 5-17), as the FPI flagi and flage
+        for species in ["hplus", "heplus", "heplusplus", "oplus"]:
+            result = mms.tokenize(f"flag{species}_hpca_{data_rate}_l2")
+            self.assertEqual(result["cdf_name"], f"hpca_{species}_data_quality")
+            self.assertEqual(result["dtype"], "ion")
+            self.assertEqual(result["cs"], "")
+
+    @data("srvy", "brst")
+    def test_tokenize_hpca_vpara_vperp(self, data_rate):
+        # The velocities parallel and perpendicular to B of the HPCA moments
+        # files (CMAD Table 5-18), in DBCS as the bulk velocity; not in GSM
+        # (the files' GSM velocities lack the rotation by the spin-axis tilt)
+        for param, suffix in [("vpara", "vparallel"), ("vperp", "vperp")]:
+            for species in ["hplus", "heplus", "heplusplus", "oplus"]:
+                var_str = f"{param}{species}_dbcs_hpca_{data_rate}_l2"
+                with self.subTest(var_str=var_str):
+                    result = mms.tokenize(var_str)
+                    self.assertEqual(result["cdf_name"], f"hpca_{species}_{suffix}")
+                    self.assertEqual(result["dtype"], "moments")
+                    self.assertEqual(result["cs"], "dbcs")
+
+                    with self.assertRaisesRegex(ValueError, "not supported"):
+                        mms.tokenize(var_str.replace("_dbcs_", "_gsm_"))
+
+    @data("srvy", "brst")
     def test_tokenize_hpca_pressure(self, data_rate):
         # The pressure tensors of the HPCA moments files (DBCS only), as
         # irfu-matlab mms.get_data P*_dbcs_hpca_*_l2
@@ -12613,8 +12951,11 @@ class TokenizeTestCase(unittest.TestCase):
 
     def test_mms_keys_coordinate_systems(self):
         # When the CDF variable name has a coordinate system, it is the one of
-        # the key (some products, e.g. HPCA DBCS moments, have none in the name)
+        # the key (some products, e.g. HPCA DBCS moments, have none in the name).
+        # HPCA B_GSE_spin_avg is in DMPA (its CATDESC; CMAD Table 5-18, "see
+        # afg_srvy_l2pre_dmpa")
         coordinates = {"gse", "gsm", "dbcs", "dmpa", "bcs", "dsl", "ssc", "gei"}
+        mislabelled = {"hpca_B_GSE_spin_avg": {"dmpa"}}
         keys_path = os.path.join(os.path.dirname(mms.__file__), "mms_keys.json")
         with open(keys_path, "r", encoding="utf-8") as file:
             keys = json.load(file)
@@ -12623,9 +12964,23 @@ class TokenizeTestCase(unittest.TestCase):
             for key, value in instrument.items():
                 key_coords = coordinates & set(key.lower().split("_"))
                 cdf_coords = coordinates & set(value["cdf_name"].lower().split("_"))
+                cdf_coords = mislabelled.get(value["cdf_name"], cdf_coords)
                 if cdf_coords:
                     with self.subTest(key=key):
                         self.assertSetEqual(cdf_coords, key_coords)
+
+    def test_tokenize_hpca_b_dmpa(self):
+        # HPCA B_GSE_spin_avg is the field in DMPA (CMAD Table 5-18; FGM b_dmpa
+        # within 0.12 nT on 2017-07-23, b_gse 1.15 nT): b_dmpa_hpca, not
+        # b_gse_hpca
+        for data_rate in ["srvy", "brst"]:
+            with self.subTest(data_rate=data_rate):
+                result = mms.tokenize(f"b_dmpa_hpca_{data_rate}_l2")
+                self.assertEqual(result["cdf_name"], "hpca_B_GSE_spin_avg")
+                self.assertEqual(result["cs"], "dmpa")
+
+                with self.assertRaisesRegex(ValueError, "not supported"):
+                    mms.tokenize(f"b_gse_hpca_{data_rate}_l2")
 
     @data(
         "es12_dsl_edp_fast_l2a",

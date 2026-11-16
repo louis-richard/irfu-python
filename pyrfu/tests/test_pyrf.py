@@ -1975,6 +1975,16 @@ class CalcDtTestCase(unittest.TestCase):
     def test_calc_dt_values(self):
         self.assertAlmostEqual(pyrf.calc_dt(generate_ts(64.0, 100)), 1 / 64.0)
 
+    def test_calc_dt_float_times(self):
+        # Times in seconds were read as nanoseconds, truncated: a time step of
+        # 0 and inf Hz; TypeError
+        inp = xr.DataArray(np.arange(10.0), coords=[np.arange(10) * 0.5], dims=["time"])
+
+        for func in [pyrf.calc_dt, pyrf.calc_fs]:
+            with self.subTest(func=func.__name__):
+                with self.assertRaisesRegex(TypeError, "datetime64"):
+                    func(inp)
+
     @data(0, 1)
     def test_calc_dt_fewer_than_two_samples(self, n_samples):
         # NaN (undefined), without the RuntimeWarnings of the median of nothing
@@ -3688,6 +3698,24 @@ class EbspTestCase(unittest.TestCase):
             )
         )
 
+    def test_ebsp_freq_int_case(self):
+        # Case-insensitive, as irfu-matlab irf_ebsp (lower): "PC12" raised
+        # ValueError; another string still raises. The same computation, to
+        # the rounding (two runs are not bit-identical on every platform:
+        # pf_xyz differed in the last bits on the Linux lowest-dependency CI)
+        inputs = [generate_ts(64.0, 4096, tensor_order=1) for _ in range(5)]
+        expected = pyrf.ebsp(*inputs, "pc12")
+        result = pyrf.ebsp(*inputs, "PC12")
+
+        self.assertEqual(result.keys(), expected.keys())
+        for key, value in expected.items():
+            if isinstance(value, xr.DataArray):
+                xr.testing.assert_allclose(result[key], value, rtol=1e-12, atol=0)
+                self.assertDictEqual(result[key].attrs, value.attrs)
+
+        with self.assertRaisesRegex(ValueError, "pc12 or pc35"):
+            pyrf.ebsp(*inputs, "PC13")
+
     @data(random.random(), np.random.random(3), "bazinga", [1, 100])
     def test_ebsp_freq_int_fail(self, value):
         # TypeError and ValueError (AssertionError)
@@ -4894,6 +4922,27 @@ class IntSphDistTestCase(unittest.TestCase):
         self.assertGreater(_uniform_step(edges), 0.0)
         self.assertGreater(np.count_nonzero(results[0]), 0)
         np.testing.assert_array_equal(results[0], results[1])
+
+    def test_int_sph_dist_single_bin(self):
+        # One azimuth or polar bin: no spacing for its width (NaN and zeros,
+        # with "Mean of empty slice"); with the width given, the profile
+        speed = np.linspace(1e5, 1e6, 8)
+        phi = np.deg2rad(np.arange(16) * 22.5)
+        theta = np.deg2rad(np.arange(8) * 22.5 - 78.75)
+        v_grid = np.linspace(-1e6, 1e6, 21)
+
+        for name, angles in [("phi", (phi[:1], theta)), ("theta", (phi, theta[:1]))]:
+            vdf = np.ones((8, len(angles[0]), len(angles[1])))
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, f"give its width d_{name}"):
+                    pyrf.int_sph_dist(vdf, speed, *angles, v_grid, None, n_mc=5)
+
+                widths = {f"d_{name}": np.full(1, np.deg2rad(22.5))}
+                result = pyrf.int_sph_dist(
+                    vdf, speed, *angles, v_grid, None, n_mc=5, **widths
+                )
+                self.assertTrue(np.all(np.isfinite(result["f"])))
+                self.assertGreater(result["f"].max(), 0.0)
 
     def test_int_sph_dist_projections(self):
         # 1d polar (also with an azimuthal grid and projection_dim "1d"), 2d
@@ -7990,6 +8039,62 @@ class TEvalTestCase(unittest.TestCase):
 
 @ddt
 class TsAppendTestCase(unittest.TestCase):
+    def test_ts_append_spectra(self):
+        # Spectra with different energies: each time keeps its energies (the
+        # energies of the first input labelled both), as pyrf.ts_spectr
+        time = generate_timeline(64.0, 6)
+        energy = 10.0 * 1.3 ** np.arange(4)
+        data = np.arange(24.0).reshape(6, 4)
+        attrs = {"UNITS": "keV/(cm^2 s sr keV)", "DELTA": np.arange(3.0)}
+        spec0 = pyrf.ts_spectr(time[:3], energy, data[:3], attrs=attrs)
+        spec1 = pyrf.ts_spectr(time[3:], energy + 0.5, data[3:], attrs=attrs)
+        spec0.energy.attrs = {"UNITS": "eV"}
+
+        result = pyrf.ts_append(spec0, spec1)
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.data.data, data)
+        np.testing.assert_array_equal(result.time.data, time)
+        np.testing.assert_allclose(result.energy.data[:, 0], [10.0] * 3 + [10.5] * 3)
+        self.assertEqual(result.energy.attrs, {"UNITS": "eV"})
+        self.assertEqual(result.data.attrs["UNITS"], attrs["UNITS"])
+
+        # A ts_spectr Dataset appended to a spectrum, and back to one table
+        alternating = np.tile(energy, (6, 1))
+        alternating[1::2] += 0.5
+        dataset = pyrf.ts_spectr(time, alternating, data)
+        result = pyrf.ts_append(
+            dataset, pyrf.ts_spectr(time + np.timedelta64(1, "s"), energy, data)
+        )
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertEqual(result.energy.shape, (12, 4))
+        np.testing.assert_allclose(result.energy.data[6:], np.tile(energy, (6, 1)))
+
+        # A Dataset whose times all have the table of the other input: back to
+        # a DataArray
+        table_a = dataset.isel(time=[0, 2, 4])
+        result = pyrf.ts_append(
+            table_a, pyrf.ts_spectr(time + np.timedelta64(1, "s"), energy, data)
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_allclose(result.energy.data, energy)
+        self.assertEqual(result.shape, (9, 4))
+
+        same = pyrf.ts_spectr(time[:3], energy + 0.5, data[:3])
+        result = pyrf.ts_append(same, spec1)
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_allclose(result.energy.data, energy + 0.5)
+
+        # Identical axes, and non-numeric ones: unchanged (first input's)
+        vec0, vec1 = generate_ts(64.0, 3, tensor_order=1), generate_ts(
+            64.0, 3, tensor_order=1
+        )
+        vec1 = vec1.assign_coords(time=vec1.time.data + np.timedelta64(1, "s"))
+        result = pyrf.ts_append(vec0, vec1)
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_array_equal(
+            result[result.dims[1]].data, vec0[vec0.dims[1]].data
+        )
+
     @data(
         generate_ts(64.0, 100, tensor_order=0),
         generate_ts(64.0, 100, tensor_order=1),
@@ -8476,6 +8581,21 @@ class TsSkymapTestCase(unittest.TestCase):
 
         self.assertEqual(result.phi.dims, ("time", "idx1"))
         xr.testing.assert_identical(result, expected)
+
+    def test_ts_skymap_energy_tables_step_one_first(self):
+        # A step table starting with 1 (energy[0] and energy[1] were swapped):
+        # the default tables are those of the first time of each step
+        energy = np.vstack([np.arange(1.0, 33.0), np.arange(2.0, 34.0)])
+        result = pyrf.ts_skymap(
+            generate_timeline(64.0, 2),
+            np.random.random((2, 32, 32, 16)),
+            energy,
+            np.ones((2, 32)),
+            np.arange(16.0),
+            esteptable=np.array([1, 0], dtype=np.uint8),
+        )
+        np.testing.assert_array_equal(result.attrs["energy0"], energy[1])
+        np.testing.assert_array_equal(result.attrs["energy1"], energy[0])
 
     def test_ts_skymap_energy_tables(self):
         energy = np.vstack([np.arange(1.0, 33.0), np.arange(2.0, 34.0)])
@@ -9616,6 +9736,19 @@ class EbspPhysicsTestCase(unittest.TestCase):
         np.testing.assert_allclose(dt, 1 / (8 / 5), rtol=1e-6)
         # inputs must not be modified
         self.assertFalse(np.isnan(b.data).any())
+
+    def test_ebsp_polarization_no_warning(self):
+        # The degrees of polarisation at the censured times (spectral matrix
+        # NaN): no "invalid value encountered in divide" (complex division by
+        # NaN), NaN there
+        e, b, b0 = self._wave()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            res = pyrf.ebsp(e, b, b0, b0, None, [0.5, 8], polarization=True, fac=False)
+
+        for key in ["dop", "dop2d"]:
+            with self.subTest(key=key):
+                self.assertTrue(np.isnan(res[key].data[0]).all())
 
     def test_ebsp_dop2d_in_polarisation_plane(self):
         e, b, b0 = self._wave(noise_n=4.0)  # compressional noise along k only

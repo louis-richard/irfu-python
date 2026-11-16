@@ -29,15 +29,18 @@ def _disprel(w, k, theta, v_a, c_s, wc_e, wc_p):
 
 
 def _disprel_roots(k, theta, v_a, c_s, wc_e, wc_p):
-    # Multiplied by D = w^2 / c_s^2 - k^2, the dispersion relation is a cubic
-    # in x = w^2, solved here in x / wc_p^2 for a better conditioning:
-    # [(1 - a x) D + k^2 sin^2(theta)] (cos^2(theta) - a x) - x cos^2(theta) D
-    # / wc_p^2 = 0, with a = 1 / (k^2 v_a^2) + 1 / (wc_e wc_p)
+    # Multiplied by c_s^2 D = w^2 - k^2 c_s^2, the dispersion relation is a
+    # cubic in x = w^2, solved here in x / wc_p^2 for a better conditioning:
+    # [(1 - a x) c_s^2 D + k^2 c_s^2 sin^2(theta)] (cos^2(theta) - a x)
+    # - x cos^2(theta) c_s^2 D / wc_p^2 = 0, with a = 1 / (k^2 v_a^2)
+    # + 1 / (wc_e wc_p). The same roots for c_s > 0 (D = w^2 / c_s^2 - k^2,
+    # infinite for a cold plasma: LinAlgError); for c_s = 0, x = 0 and the
+    # cold roots
     cos2, sin2 = [np.cos(np.deg2rad(theta)) ** 2, np.sin(np.deg2rad(theta)) ** 2]
     a_ = (1 / (k**2 * v_a**2) + 1 / (wc_e * wc_p)) * wc_p**2
-    d_ = [-(k**2), wc_p**2 / c_s**2]
+    d_ = [-(k**2) * c_s**2, wc_p**2]
 
-    l_0 = polynomial.polyadd(polynomial.polymul([1, -a_], d_), [k**2 * sin2])
+    l_0 = polynomial.polyadd(polynomial.polymul([1, -a_], d_), [k**2 * c_s**2 * sin2])
     l_1 = [cos2, -a_]
     r_0 = polynomial.polymul([0, cos2], d_)
     coeffs = polynomial.polysub(polynomial.polymul(l_0, l_1), r_0)

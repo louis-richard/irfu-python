@@ -57,7 +57,7 @@ def fk_power_spectrum_4sc(
     num_k: int = 500,
     num_f: int = 200,
     df: float | None = None,
-    w_width: int = 1,
+    w_width: float = 1.0,
     f_range: list | None = None,
 ):
     r"""Calculates the frequency-wave number power spectrum using the four
