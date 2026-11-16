@@ -10058,6 +10058,22 @@ class ReduceTestCase(unittest.TestCase):
         result = mms.reduce(vdf, np.eye(3), n_mc=2, verbose=False)
         np.testing.assert_array_equal(result.time.data, times)
 
+    def test_reduce_single_bin(self):
+        # One azimuth bin without the angle widths: ValueError (NaN and zeros
+        # from int_sph_dist); with them, a reduced distribution
+        vdf = generate_vdf(64.0, 3, [8, 1, 4], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+
+        with self.assertRaisesRegex(ValueError, "single azimuth or polar bin"):
+            mms.reduce(vdf, np.eye(3), n_mc=5, verbose=False)
+
+        vdf.attrs["delta_phi_minus"] = np.full((3, 1), 11.25)
+        vdf.attrs["delta_phi_plus"] = np.full((3, 1), 11.25)
+        vdf.attrs["delta_theta_minus"] = np.full(4, 11.25)
+        vdf.attrs["delta_theta_plus"] = np.full(4, 11.25)
+        result = mms.reduce(vdf, np.eye(3), n_mc=5, verbose=False)
+        self.assertTrue(np.all(np.isfinite(result.data)))
+
     def test_reduce_species_mass(self):
         # The speeds of the channels with the mass of the species (oxygen
         # raised ValueError, the ions were protons); energy widths per channel,

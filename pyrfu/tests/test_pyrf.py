@@ -4910,6 +4910,27 @@ class IntSphDistTestCase(unittest.TestCase):
         self.assertGreater(np.count_nonzero(results[0]), 0)
         np.testing.assert_array_equal(results[0], results[1])
 
+    def test_int_sph_dist_single_bin(self):
+        # One azimuth or polar bin: no spacing for its width (NaN and zeros,
+        # with "Mean of empty slice"); with the width given, the profile
+        speed = np.linspace(1e5, 1e6, 8)
+        phi = np.deg2rad(np.arange(16) * 22.5)
+        theta = np.deg2rad(np.arange(8) * 22.5 - 78.75)
+        v_grid = np.linspace(-1e6, 1e6, 21)
+
+        for name, angles in [("phi", (phi[:1], theta)), ("theta", (phi, theta[:1]))]:
+            vdf = np.ones((8, len(angles[0]), len(angles[1])))
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, f"give its width d_{name}"):
+                    pyrf.int_sph_dist(vdf, speed, *angles, v_grid, None, n_mc=5)
+
+                widths = {f"d_{name}": np.full(1, np.deg2rad(22.5))}
+                result = pyrf.int_sph_dist(
+                    vdf, speed, *angles, v_grid, None, n_mc=5, **widths
+                )
+                self.assertTrue(np.all(np.isfinite(result["f"])))
+                self.assertGreater(result["f"].max(), 0.0)
+
     def test_int_sph_dist_projections(self):
         # 1d polar (also with an azimuthal grid and projection_dim "1d"), 2d
         # and 3d cartesian; the 2d and 3d polar and the 1d cartesian raise

@@ -142,7 +142,9 @@ def reduce(
     TypeError
         If xyz is not a time series or a matrix.
     ValueError
-        If the matrix xyz is not (3, 3).
+        If the matrix xyz is not (3, 3), or if `vdf` has a single azimuth or
+        polar bin without the ``delta_phi_*`` and ``delta_theta_*``
+        attributes (the widths of its bins).
 
     Notes
     -----
@@ -219,6 +221,14 @@ def reduce(
     # angle (int_sph_dist uses cos(theta) d_theta at the centre of the band).
     # Without them, the widths are the spacing of the grids (FPI, EIS).
     angle_widths = _angle_widths(vdf, vdf_theta.data, tint)
+
+    # A single bin has no spacing to take its width from (NaN and zeros)
+    if angle_widths is None and min(vdf.data.shape[2:4]) < 2:
+        raise ValueError(
+            "vdf has a single azimuth or polar bin: give the widths of its bins "
+            "(delta_phi_minus, delta_phi_plus, delta_theta_minus and "
+            "delta_theta_plus attributes)"
+        )
 
     # The relativistic phase-space density, integrated with the relativistic
     # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)
@@ -327,7 +337,9 @@ def reduce(
 
     for i_t in tqdm.tqdm(range(n_t), ncols=60, disable=not verbose):
         # 3d data matrix for time index
-        f_3d = np.squeeze(vdf_data.data[i_t, ...])  # s^3/m^6
+        # (energy, phi, theta) of the time (np.squeeze, as MATLAB's squeeze,
+        # also removed a single azimuth or polar bin: ValueError)
+        f_3d = vdf_data.data[i_t]  # s^3/m^6
         f_3d = f_3d.astype(np.float64).copy()  # Convert to float64
 
         # Energies
