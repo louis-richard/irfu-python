@@ -452,7 +452,11 @@ def get_data(
     -------
     out : DataArray or Dataset
         Time series of the target variable of measured by the target
-        spacecraft over the selected time interval.
+        spacecraft over the selected time interval. A spectrum whose axis
+        changes with time (e.g. the FPI burst energy spectra of the early
+        mission, with two alternating energy tables) is a Dataset as
+        `pyrfu.pyrf.ts_spectr`: the data (time, idx0) and the axis (time,
+        idx0).
 
     Raises
     ------

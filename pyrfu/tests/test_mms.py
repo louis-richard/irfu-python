@@ -8996,13 +8996,17 @@ class GetTsTestCase(unittest.TestCase):
             get_ts(content, "mms1_x")
 
 
-def _cdf_fpi_brst_spectr(n_records, t_start="2019-09-14T07:54:00", offset=0.0):
+def _cdf_fpi_brst_spectr(
+    n_records, t_start="2019-09-14T07:54:00", offset=0.0, alternate=0.0
+):
     # In-memory FPI burst electron omni spectrogram as in the L2 moments files:
-    # record varying energy table (DEPEND_1), start times with deltas
+    # record varying energy table (DEPEND_1), start times with deltas; the
+    # odd records with the energies + alternate (two tables, early mission)
     time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
         30, "ms"
     )
     energy = np.tile(10.0 * 1.3 ** np.arange(32) + offset, (n_records, 1))
+    energy[1::2] += alternate
 
     cdf = pycdfpp.CDF()
     cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
@@ -9039,6 +9043,125 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             np.testing.assert_allclose(result.energy.data, 10.0 * 1.3 ** np.arange(32))
         else:
             self.assertTrue(np.all(np.isnan(result.energy.data)))
+
+    def test_get_ts_alternating_tables(self):
+        # Two alternating energy tables (FPI burst, early mission): each record
+        # keeps its table, as pyrf.ts_spectr (the first table labelled all)
+        n_records = 6
+        content = _cdf_fpi_brst_spectr(n_records, alternate=0.5)
+        constant = get_ts(_cdf_fpi_brst_spectr(n_records), self.cdf_name)
+        result = get_ts(content, self.cdf_name)
+
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertEqual(result.data.dims, ("time", "idx0"))
+        self.assertEqual(result.energy.dims, ("time", "idx0"))
+        expected = np.tile(10.0 * 1.3 ** np.arange(32), (n_records, 1))
+        expected[1::2] += 0.5
+        np.testing.assert_allclose(result.energy.data, expected)
+        np.testing.assert_array_equal(result.data.data, constant.data)
+        np.testing.assert_array_equal(result.time.data, constant.time.data)
+        self.assertEqual(result.data.attrs, constant.attrs)
+        self.assertEqual(result.energy.attrs, constant.energy.attrs)
+        self.assertEqual(result.time.attrs, constant.time.attrs)
+
+    def test_get_ts_alternating_tables_clipped(self):
+        # One record in the interval: a DataArray with the energies of that
+        # record (those of the first record of the file before)
+        content = _cdf_fpi_brst_spectr(6, alternate=0.5)
+        times = get_ts(_cdf_fpi_brst_spectr(6), self.cdf_name).time.data
+        result = get_ts(content, self.cdf_name, [times[1], times[1]])
+
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.shape, (1, 32))
+        np.testing.assert_allclose(
+            result.energy.data, 10.0 * 1.3 ** np.arange(32) + 0.5
+        )
+        self.assertEqual(result.energy.attrs["LABLAXIS"], "energy")
+
+    def test_get_ts_alternating_tables_no_record(self):
+        # No record in the interval: a DataArray with the first table, as
+        # without the per-record tables
+        content = _cdf_fpi_brst_spectr(6, alternate=0.5)
+        result = get_ts(
+            content, self.cdf_name, ["2019-09-15T00:00", "2019-09-15T00:01"]
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertEqual(result.shape, (0, 32))
+        np.testing.assert_allclose(result.energy.data, 10.0 * 1.3 ** np.arange(32))
+
+    @staticmethod
+    def _cdf_3d(alternate):
+        # 3-D variable (time, energy, pitch angle) with a record varying
+        # energy table, alternating if alternate
+        time = np.datetime64("2019-09-14T07:54:00", "ns") + np.arange(
+            4
+        ) * np.timedelta64(30, "ms")
+        energy = np.tile(10.0 * 1.3 ** np.arange(4), (4, 1))
+        energy[1::2] += alternate
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        cdf.add_variable("mms1_energy", values=energy)
+        cdf["mms1_energy"].add_attribute("LABLAXIS", "energy")
+        cdf.add_variable("mms1_pa", values=np.array([[30.0, 90.0, 150.0]]), is_nrv=True)
+        cdf["mms1_pa"].add_attribute("LABLAXIS", "pa")
+        cdf.add_variable("mms1_x", values=np.ones((4, 4, 3)))
+        for key, value in [
+            ("DEPEND_0", "Epoch"),
+            ("DEPEND_1", "mms1_energy"),
+            ("DEPEND_2", "mms1_pa"),
+        ]:
+            cdf["mms1_x"].add_attribute(key, value)
+
+        return bytes(pycdfpp.save(cdf)), energy
+
+    def test_get_ts_varying_axis_3d_warns(self):
+        # A 3-D variable with a varying table: the first record, with a
+        # warning (not a spectrum); without a warning if the table is the
+        # same at all times
+        content, energy = self._cdf_3d(0.5)
+
+        with self.assertLogs("pyrfu.mms.get_ts", level="WARNING") as logs:
+            result = get_ts(content, "mms1_x")
+
+        self.assertIn("changes with time", logs.output[0])
+        self.assertEqual(result.dims, ("time", "energy", "pa"))
+        np.testing.assert_allclose(result.energy.data, energy[0])
+
+        content, energy = self._cdf_3d(0.0)
+
+        with self.assertNoLogs("pyrfu.mms.get_ts", level="WARNING"):
+            result = get_ts(content, "mms1_x")
+
+        np.testing.assert_allclose(result.energy.data, energy[0])
+
+    def test_get_data_alternating_tables(self):
+        # get_data over two files with alternating tables: one spectrum with
+        # the table of each record
+        module = importlib.import_module("pyrfu.mms.get_data")
+        contents = [
+            _cdf_fpi_brst_spectr(4, "2019-09-14T07:54:00", alternate=0.5),
+            _cdf_fpi_brst_spectr(4, "2019-09-14T07:54:01", alternate=0.5),
+        ]
+        tint = ["2019-09-14T07:53:59", "2019-09-14T07:54:02"]
+
+        with tempfile.TemporaryDirectory() as root:
+            paths = []
+            for i, content in enumerate(contents):
+                path = os.path.join(root, f"mms1_fpi_brst_l2_des-moms_{i}.cdf")
+                with open(path, "wb") as file:
+                    file.write(content)
+                paths.append(path)
+
+            with mock.patch.object(module, "list_files", return_value=paths):
+                result = mms.get_data("defe_fpi_brst_l2", tint, 1, False, root)
+
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertEqual(result.energy.shape, (8, 32))
+        np.testing.assert_allclose(
+            result.energy.data[:, 0], [10.0, 10.5, 10.0, 10.5, 10.0, 10.5, 10.0, 10.5]
+        )
 
     def test_get_ts_append_empty_file(self):
         # As get_data: a file without records, before or after a file with

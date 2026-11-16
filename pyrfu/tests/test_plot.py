@@ -1632,11 +1632,63 @@ class PlotSpectrTestCase(unittest.TestCase):
             _, ax = plt.subplots(1)
             plot.plot_spectr(ax, dataset, yscale="log")
 
+            # One column per time, a masked column of zero width between them
             image = self._image(ax)
             np.testing.assert_allclose(
-                np.asarray(image.get_array()).reshape(8, 50), self.data.T
+                np.asarray(image.get_array()).reshape(8, 99)[:, ::2], self.data.T
             )
             np.testing.assert_allclose(ax.get_ylim(), [10.0, 2e4])
+
+    def test_plot_spectr_dataset_own_table(self):
+        # Alternating tables: each time drawn with the cell edges of its own
+        # table (pcolormesh shared the corners of neighbouring times, so both
+        # tables were drawn at their mean)
+        energy = np.tile(self.energy, (50, 1))
+        energy[1::2] *= 1.2
+        _, ax = plt.subplots(1)
+        plot.plot_spectr(ax, pyrf.ts_spectr(self.time, energy, self.data))
+
+        coords = self._image(ax).get_coordinates()
+        self.assertEqual(coords.shape, (9, 100, 2))
+        y_edges = np.concatenate(
+            [
+                1.5 * energy[:, :1] - 0.5 * energy[:, 1:2],
+                (energy[:, 1:] + energy[:, :-1]) / 2,
+                1.5 * energy[:, -1:] - 0.5 * energy[:, -2:-1],
+            ],
+            axis=1,
+        )
+        for i in [0, 1, 24, 49]:
+            # left and right edges of time i: its own table
+            np.testing.assert_allclose(coords[:, 2 * i, 1], y_edges[i])
+            np.testing.assert_allclose(coords[:, 2 * i + 1, 1], y_edges[i])
+
+        # Zero-width masked columns between the times, the data in the others
+        np.testing.assert_allclose(coords[:, 2:-1:2, 0], coords[:, 1:-2:2, 0])
+        array = self._image(ax).get_array()
+        self.assertTrue(np.all(np.ma.getmaskarray(array).reshape(8, 99)[:, 1::2]))
+        np.testing.assert_allclose(
+            np.asarray(array).reshape(8, 99)[:, ::2], self.data.T
+        )
+
+        # One time or one channel (no spacing for the edges): pcolormesh with
+        # the shading "auto", as before
+        table = np.outer(1.0 + 0.01 * np.arange(50), self.energy)
+        for times, channels in [(slice(0, 1), slice(None)), (slice(None), slice(0, 1))]:
+            _, ax = plt.subplots(1)
+            one = xr.Dataset(
+                {"data": (["time", "idx"], self.data[times, channels])},
+                coords={
+                    "time": self.time[times],
+                    "energy": (["time", "idx"], table[times, channels]),
+                },
+            )
+            plot.plot_spectr(ax, one)
+            n_y, n_t = table[times, channels].T.shape
+            np.testing.assert_allclose(
+                np.asarray(self._image(ax).get_array()).reshape(n_y, n_t),
+                self.data[times, channels].T,
+            )
 
     def test_plot_spectr_input_type(self):
         _, ax = plt.subplots(1)
@@ -1672,7 +1724,8 @@ class PlotSpectrTestCase(unittest.TestCase):
             plot.plot_spectr(ax, dataset, yscale="log")
 
             np.testing.assert_allclose(
-                np.asarray(self._image(ax).get_array()).reshape(8, 50), self.data.T
+                np.asarray(self._image(ax).get_array()).reshape(8, 99)[:, ::2],
+                self.data.T,
             )
             np.testing.assert_allclose(ax.get_ylim(), [10.0, 1e4])
 
@@ -1708,7 +1761,7 @@ class PlotSpectrTestCase(unittest.TestCase):
 
         times = np.delete(np.arange(50), [3, 10])
         np.testing.assert_allclose(
-            np.asarray(self._image(ax).get_array()).reshape(7, 48),
+            np.asarray(self._image(ax).get_array()).reshape(7, 95)[:, ::2],
             self.data[times, 1:].T,
         )
         np.testing.assert_allclose(ax.get_ylim(), self.energy[[1, 7]])

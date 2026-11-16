@@ -11,7 +11,7 @@ from typing import Any
 import numpy as np
 import xarray as xr
 from pycdfpp import DataType, load, to_datetime64
-from xarray import DataArray
+from xarray import DataArray, Dataset
 
 # Local imports
 from pyrfu._core.time import _timedelta
@@ -207,11 +207,39 @@ def _get_depend(file, cdf_name, dep_num=1):
                 # Record varying table of a file without records: NaN values
                 out["data"] = np.full(out["data"].shape[1], np.nan)
             else:
-                # Record varying table (e.g. FPI energies): first record
+                # Record varying table (e.g. FPI burst energies): the table of
+                # each record, the first one as the 1-D coordinate
+                out["table"] = out["data"]
                 out["data"] = out["data"][0, :]
 
         out["attrs"] = _get_depend_attributes(file, depend_key)
 
+    return out
+
+
+def _record_varying_axis(out, dim, table, depend_attrs):
+    r"""Time series of a 2-D variable whose axis `dim` (e.g. the FPI burst
+    energies) is a table per record, `table` (time, n), clipped as `out`: a
+    DataArray with that axis if it is the same at all times, else a Dataset
+    as ``pyrf.ts_spectr`` (the data (time, idx0) and the coordinate `dim`
+    (time, idx0); the first table labelled every record before)."""
+    if len(table) == 0 or np.all(table == table[0]):
+        if len(table):
+            out = out.assign_coords({dim: table[0]})
+            out[dim].attrs = depend_attrs
+
+        return out
+
+    time_attrs = out.time.attrs
+    out = xr.Dataset(
+        {"data": (["time", "idx0"], out.data, out.attrs)},
+        coords={
+            "time": out.time.data,
+            "idx0": np.arange(table.shape[1]),
+            dim: (["time", "idx0"], table, depend_attrs),
+        },
+    )
+    out.time.attrs = time_attrs
     return out
 
 
@@ -229,7 +257,7 @@ def _unique_labels(depends):
 
 def get_ts(
     file_path: str | bytes, cdf_name: str, tint: list | None = None
-) -> DataArray:
+) -> DataArray | Dataset:
     r"""Reads field named cdf_name in file and convert to time series.
 
     Parameters
@@ -245,8 +273,13 @@ def get_ts(
 
     Returns
     -------
-    out : xarray.DataArray
-        Time series of the target variable in the selected time interval.
+    out : xarray.DataArray or xarray.Dataset
+        Time series of the target variable in the selected time interval. A
+        2-D variable whose axis is a table per record that changes within the
+        interval (e.g. the FPI burst energy spectra of the early mission,
+        with two alternating energy tables) is a Dataset as
+        `pyrfu.pyrf.ts_spectr`: the variable data (time, idx0) and the
+        coordinate of the axis (time, idx0).
 
     Raises
     ------
@@ -361,8 +394,31 @@ def get_ts(
         # Sort attributes and set to coordinates attribute
         out[dim].attrs = {k: coord_attrs[k] for k in sorted(coord_attrs)}
 
+    # Axis table per record (time, n) of a 2-D variable, clipped with it
+    table = depend_1.get("table")
+    has_table = (
+        table is not None and out.ndim == 2 and table.shape == out.shape and not is_nrv
+    )
+
+    if has_table:
+        out = out.assign_coords(_table=(dims, table))
+
+    for dep in [depend_1, depend_2, depend_3]:
+        if dep.get("table") is not None and not has_table:
+            if not np.all(dep["table"] == dep["table"][0]):
+                logger.warning(
+                    "%s: the axis %s changes with time; the first record is used",
+                    cdf_name,
+                    dep["attrs"]["LABLAXIS"],
+                )
+
     # Time clip to original time interval
     out = time_clip(out, tint)
+
+    if has_table:
+        table = out["_table"].data
+        out = out.drop_vars("_table")
+        out = _record_varying_axis(out, dims[1], table, coords_attrs[1])
 
     if is_nrv:
         # writable copy of the broadcast (read-only) data

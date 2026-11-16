@@ -19,6 +19,36 @@ from matplotlib.colors import Colormap
 from .colorbar import colorbar as _add_colorbar
 
 
+def _edges(centres, axis=0):
+    r"""Edges of the cells around `centres` along `axis`: the midpoints, and
+    half a step beyond the first and last centres (as the "nearest" shading
+    of matplotlib's pcolormesh)."""
+    half = np.diff(centres, axis=axis) / 2
+    first = np.take(centres, [0], axis=axis) - np.take(half, [0], axis=axis)
+    last = np.take(centres, [-1], axis=axis) + np.take(half, [-1], axis=axis)
+    inner = np.take(centres, np.arange(centres.shape[axis] - 1), axis=axis) + half
+    return np.concatenate([first, inner, last], axis=axis)
+
+
+def _own_table_mesh(x_data, y_data, inp_data):
+    r"""Mesh of a spectrogram whose y values change with time, `y_data` (n_y,
+    n_t): each time drawn with the cell edges of its own y values. The times
+    get their own left and right edges with a masked column of zero width
+    between them (pcolormesh shares the corners of neighbouring columns,
+    which drew every time with the y edges averaged over its neighbours,
+    i.e. alternating tables both at their mean)."""
+    t_edges = _edges(x_data)
+    y_edges = _edges(y_data, axis=0)
+
+    x_mesh = np.broadcast_to(
+        np.repeat(t_edges, 2)[1:-1], (len(y_edges), 2 * len(x_data))
+    )
+    y_mesh = np.repeat(y_edges, 2, axis=1)
+    c_mesh = np.ma.masked_all((y_data.shape[0], 2 * len(x_data) - 1))
+    c_mesh[:, ::2] = inp_data
+    return x_mesh, y_mesh, c_mesh
+
+
 def plot_spectr(
     axis,
     inp,
@@ -46,7 +76,10 @@ def plot_spectr(
         - a second data variable holding the y-axis values.
 
         The y-axis values that are not finite (e.g., NaN energies) are left
-        out, and with a time-dependent table, the times without one.
+        out, and with a time-dependent table, the times without one. With a
+        time-dependent table, each time is drawn with the cell edges of its
+        own table (shading "flat"), except with one time or one channel
+        (no spacing to define the edges: shading "auto").
 
     yscale : {"linear", "log"}, Optional
         Y-axis scaling. Default is "linear".
@@ -174,12 +207,19 @@ def plot_spectr(
     else:
         options = {"norm": cscale, "cmap": cmap}
 
-    image = axis.pcolormesh(
-        x_data,
-        y_data,
-        inp_data,
-        **{"rasterized": True, "shading": "auto", **options, **kwargs},
-    )
+    if y_data.ndim == 2 and min(y_data.shape) > 1:
+        # Each time with the cell edges of its own table
+        image = axis.pcolormesh(
+            *_own_table_mesh(x_data, y_data, inp_data),
+            **{"rasterized": True, **options, **kwargs, "shading": "flat"},
+        )
+    else:
+        image = axis.pcolormesh(
+            x_data,
+            y_data,
+            inp_data,
+            **{"rasterized": True, "shading": "auto", **options, **kwargs},
+        )
 
     if np.issubdtype(x_data.dtype, np.datetime64):
         locator: mpl.ticker.Locator = mdates.AutoDateLocator(minticks=3, maxticks=7)

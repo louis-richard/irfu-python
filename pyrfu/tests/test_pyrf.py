@@ -7990,6 +7990,62 @@ class TEvalTestCase(unittest.TestCase):
 
 @ddt
 class TsAppendTestCase(unittest.TestCase):
+    def test_ts_append_spectra(self):
+        # Spectra with different energies: each time keeps its energies (the
+        # energies of the first input labelled both), as pyrf.ts_spectr
+        time = generate_timeline(64.0, 6)
+        energy = 10.0 * 1.3 ** np.arange(4)
+        data = np.arange(24.0).reshape(6, 4)
+        attrs = {"UNITS": "keV/(cm^2 s sr keV)", "DELTA": np.arange(3.0)}
+        spec0 = pyrf.ts_spectr(time[:3], energy, data[:3], attrs=attrs)
+        spec1 = pyrf.ts_spectr(time[3:], energy + 0.5, data[3:], attrs=attrs)
+        spec0.energy.attrs = {"UNITS": "eV"}
+
+        result = pyrf.ts_append(spec0, spec1)
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.data.data, data)
+        np.testing.assert_array_equal(result.time.data, time)
+        np.testing.assert_allclose(result.energy.data[:, 0], [10.0] * 3 + [10.5] * 3)
+        self.assertEqual(result.energy.attrs, {"UNITS": "eV"})
+        self.assertEqual(result.data.attrs["UNITS"], attrs["UNITS"])
+
+        # A ts_spectr Dataset appended to a spectrum, and back to one table
+        alternating = np.tile(energy, (6, 1))
+        alternating[1::2] += 0.5
+        dataset = pyrf.ts_spectr(time, alternating, data)
+        result = pyrf.ts_append(
+            dataset, pyrf.ts_spectr(time + np.timedelta64(1, "s"), energy, data)
+        )
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertEqual(result.energy.shape, (12, 4))
+        np.testing.assert_allclose(result.energy.data[6:], np.tile(energy, (6, 1)))
+
+        # A Dataset whose times all have the table of the other input: back to
+        # a DataArray
+        table_a = dataset.isel(time=[0, 2, 4])
+        result = pyrf.ts_append(
+            table_a, pyrf.ts_spectr(time + np.timedelta64(1, "s"), energy, data)
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_allclose(result.energy.data, energy)
+        self.assertEqual(result.shape, (9, 4))
+
+        same = pyrf.ts_spectr(time[:3], energy + 0.5, data[:3])
+        result = pyrf.ts_append(same, spec1)
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_allclose(result.energy.data, energy + 0.5)
+
+        # Identical axes, and non-numeric ones: unchanged (first input's)
+        vec0, vec1 = generate_ts(64.0, 3, tensor_order=1), generate_ts(
+            64.0, 3, tensor_order=1
+        )
+        vec1 = vec1.assign_coords(time=vec1.time.data + np.timedelta64(1, "s"))
+        result = pyrf.ts_append(vec0, vec1)
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_array_equal(
+            result[result.dims[1]].data, vec0[vec0.dims[1]].data
+        )
+
     @data(
         generate_ts(64.0, 100, tensor_order=0),
         generate_ts(64.0, 100, tensor_order=1),
