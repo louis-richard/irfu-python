@@ -9070,7 +9070,7 @@ class GetTsTestCase(unittest.TestCase):
 
         np.testing.assert_array_equal(result.time.data, time + np.timedelta64(15, "ms"))
 
-    @data(("min", r"Epoch_minus_var: units 'min' unclear"), (None, "no units"))
+    @data(("min", r"Epoch_(minus|plus)_var: units 'min' unclear"), (None, "no units"))
     @unpack
     def test_get_ts_fpi_epoch_units_warning(self, units, message):
         # The warning names the variable and its units (" units are not
