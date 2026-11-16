@@ -9734,6 +9734,19 @@ class EbspPhysicsTestCase(unittest.TestCase):
         # inputs must not be modified
         self.assertFalse(np.isnan(b.data).any())
 
+    def test_ebsp_polarization_no_warning(self):
+        # The degrees of polarisation at the censured times (spectral matrix
+        # NaN): no "invalid value encountered in divide" (complex division by
+        # NaN), NaN there
+        e, b, b0 = self._wave()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            res = pyrf.ebsp(e, b, b0, b0, None, [0.5, 8], polarization=True, fac=False)
+
+        for key in ["dop", "dop2d"]:
+            with self.subTest(key=key):
+                self.assertTrue(np.isnan(res[key].data[0]).all())
+
     def test_ebsp_dop2d_in_polarisation_plane(self):
         e, b, b0 = self._wave(noise_n=4.0)  # compressional noise along k only
         res = pyrf.ebsp(e, b, b0, b0, None, [0.5, 8], polarization=True, fac=False)

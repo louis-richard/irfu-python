@@ -203,6 +203,17 @@ def _average_stacked(inp, in_time, out_time, av_window=None):
     return out.reshape((len(out_time),) + inp.shape[1:])
 
 
+def _trace_ratio(s_mat):
+    r"""tr(S^2) / tr(S)^2 of the spectral matrices `s_mat` (time, n, n), NaN
+    where tr(S) is NaN (the censured times: the complex division by NaN
+    raised "invalid value encountered in divide")."""
+    num = np.trace(np.matmul(s_mat, s_mat), axis1=1, axis2=2)
+    den = np.trace(s_mat, axis1=1, axis2=2) ** 2
+    out = np.full(num.shape, np.nan, dtype=num.dtype)
+    np.divide(num, den, out=out, where=np.isfinite(den))
+    return out
+
+
 def _polarization(wb, new_freq_mat, in_time, out_time, av_window, censure, matlab):
     r"""Polarization parameters of the magnetic wavelet coefficients `wb`
     (time, 3) at one frequency, averaged on `out_time` and censured at the
@@ -268,14 +279,7 @@ def _polarization(wb, new_freq_mat, in_time, out_time, av_window, censure, matla
     ellipticity[censure_idx] = np.nan
     out[:, 3] = ellipticity
 
-    dop = np.sqrt(
-        (3 / 2)
-        * (
-            np.trace(np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2)
-            / np.trace(s_mat_avg, axis1=1, axis2=2) ** 2
-        )
-        - 1 / 2
-    )
+    dop = np.sqrt((3 / 2) * _trace_ratio(s_mat_avg) - 1 / 2)
     dop[censure_idx] = np.nan
     out[:, 4] = dop
 
@@ -294,14 +298,7 @@ def _polarization(wb, new_freq_mat, in_time, out_time, av_window, censure, matla
 
     s_mat_avg = s_mat_avg2dim[:, :2, :2]
 
-    dop2dim = np.sqrt(
-        2
-        * (
-            np.trace(np.matmul(s_mat_avg, s_mat_avg), axis1=1, axis2=2)
-            / np.trace(s_mat_avg, axis1=1, axis2=2) ** 2
-        )
-        - 1
-    )
+    dop2dim = np.sqrt(2 * _trace_ratio(s_mat_avg) - 1)
     dop2dim[censure_idx] = np.nan
     out[:, 5] = dop2dim
 
