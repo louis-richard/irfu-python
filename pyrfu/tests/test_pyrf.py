@@ -3700,7 +3700,9 @@ class EbspTestCase(unittest.TestCase):
 
     def test_ebsp_freq_int_case(self):
         # Case-insensitive, as irfu-matlab irf_ebsp (lower): "PC12" raised
-        # ValueError; another string still raises
+        # ValueError; another string still raises. The same computation, to
+        # the rounding (two runs are not bit-identical on every platform:
+        # pf_xyz differed in the last bits on the Linux lowest-dependency CI)
         inputs = [generate_ts(64.0, 4096, tensor_order=1) for _ in range(5)]
         expected = pyrf.ebsp(*inputs, "pc12")
         result = pyrf.ebsp(*inputs, "PC12")
@@ -3708,7 +3710,8 @@ class EbspTestCase(unittest.TestCase):
         self.assertEqual(result.keys(), expected.keys())
         for key, value in expected.items():
             if isinstance(value, xr.DataArray):
-                xr.testing.assert_identical(result[key], value)
+                xr.testing.assert_allclose(result[key], value, rtol=1e-12, atol=0)
+                self.assertDictEqual(result[key].attrs, value.attrs)
 
         with self.assertRaisesRegex(ValueError, "pc12 or pc35"):
             pyrf.ebsp(*inputs, "PC13")
