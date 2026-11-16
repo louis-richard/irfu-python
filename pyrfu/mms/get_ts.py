@@ -182,8 +182,11 @@ def _get_depend(file, cdf_name, dep_num=1):
     else:
         raise KeyError(f"no DEPEND_{dep_num:d}/REPRESENTATION_{dep_num:d} attributes")
 
-    if depend_key == "x,y,z":
-        out["data"] = np.array(depend_key.split(","))
+    # Components, of a vector or of a vector and its magnitude (HPCA vperp,
+    # vparallel and B: "x,y,z,total", which raised KeyError): the magnitude is
+    # removed from the data, as for FGM
+    if depend_key in ["x,y,z", "x,y,z,total"]:
+        out["data"] = np.array(["x", "y", "z"])
 
         out["attrs"] = {"LABLAXIS": "comp"}
     else:
@@ -279,7 +282,9 @@ def get_ts(
         interval (e.g. the FPI burst energy spectra of the early mission,
         with two alternating energy tables) is a Dataset as
         `pyrfu.pyrf.ts_spectr`: the variable data (time, idx0) and the
-        coordinate of the axis (time, idx0).
+        coordinate of the axis (time, idx0). A vector and its magnitude (FGM
+        "x, y, z, r", HPCA "x,y,z,total") is the vector (time, comp): the
+        magnitude is removed.
 
     Raises
     ------

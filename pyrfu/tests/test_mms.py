@@ -8664,8 +8664,9 @@ class GetFeepsTestCase(unittest.TestCase):
 
 def _cdf_four_columns(t_start="2019-09-14T07:54:00"):
     # In-memory CDF with (N, 4) variables labelled as in the MMS files: FGM
-    # (x, y, z, r representation), MEC quaternions (qx, qy, qz, qw) and MEC
-    # B fields (labels only, last one the magnitude), with padded labels
+    # (x, y, z, r representation), MEC quaternions (qx, qy, qz, qw), MEC B
+    # fields (labels only, last one the magnitude), with padded labels, and
+    # HPCA vperp (the representation "x,y,z,total" as a string)
     time = np.datetime64(t_start, "ns") + np.arange(5) * np.timedelta64(1, "s")
     data = np.tile([1.0, 2.0, 3.0, 4.0], (5, 1))
 
@@ -8685,6 +8686,7 @@ def _cdf_four_columns(t_start="2019-09-14T07:54:00"):
         "mms1_mec_quat_eci_to_gse": {"REPRESENTATION_1": "rep_quat"},
         "mms1_mec_bsc_gsm": {"LABL_PTR_1": "label_b_gsm"},
         "mms1_mec_other": {"LABL_PTR_1": "label_other"},
+        "mms1_hpca_hplus_vperp": {"REPRESENTATION_1": "x,y,z,total"},
     }.items():
         cdf.add_variable(name, values=data)
         cdf[name].add_attribute("DEPEND_0", "Epoch")
@@ -8740,10 +8742,12 @@ class GetTsTestCase(unittest.TestCase):
         ("mms1_mec_quat_eci_to_gse", ["qx", "qy", "qz", "qw"]),
         ("mms1_mec_bsc_gsm", [0, 1, 2]),
         ("mms1_mec_other", [0, 1, 2, 3]),
+        ("mms1_hpca_hplus_vperp", ["x", "y", "z"]),
     )
     @unpack
     def test_get_ts_four_columns(self, cdf_name, comps):
-        # Only the magnitude of (x, y, z, magnitude) variables is removed
+        # Only the magnitude of (x, y, z, magnitude) variables is removed (HPCA
+        # "x,y,z,total" raised KeyError)
         result = get_ts(_cdf_four_columns(), cdf_name)
         np.testing.assert_array_equal(
             result.data[0], [1.0, 2.0, 3.0, 4.0][: len(comps)]
