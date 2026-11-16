@@ -2228,6 +2228,43 @@ class EisOmniTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.eis_omni(eis, "median")
 
+    def test_eis_omni_telescope_attrs(self):
+        # The attributes of the telescope 0 labelled the omni flux: those
+        # common to the telescopes kept, its name, energies and display
+        # maximum (as the data: mean or sum) for the omni flux
+        eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", 2)
+        pref = "mms2_epd_eis_srvy_l2_extof_proton"
+        for i in range(6):
+            eis[f"t{i:d}"].attrs = {
+                "CATDESC": "MMS2 ExTOF-S",
+                "UNITS": "1/(cm^2 s sr keV)",
+                "FILLVAL": np.array([-1e31]),
+                "FIELDNAM": f"{pref}_P4_flux_t{i:d}",
+                "DEPEND_1": f"{pref}_t{i:d}_energy",
+                "LABL_PTR_1": f"{pref}_flux_t{i:d}_channel_names",
+                "SCALEMAX": np.array([1000.0 * (i + 1)]),
+            }
+
+        for method, scale_max in [("mean", 3500.0), ("sum", 21000.0)]:
+            result = mms.eis_omni(eis, method)
+            self.assertEqual(result.attrs["CATDESC"], "MMS2 ExTOF-S")
+            self.assertEqual(result.attrs["UNITS"], "1/(cm^2 s sr keV)")
+            np.testing.assert_array_equal(result.attrs["FILLVAL"], [-1e31])
+            self.assertEqual(result.attrs["FIELDNAM"], f"{pref}_P4_flux_omni")
+            self.assertEqual(result.attrs["DEPEND_1"], "energy")
+            self.assertIn(result.attrs["DEPEND_1"], result.coords)
+            self.assertNotIn("LABL_PTR_1", result.attrs)
+            np.testing.assert_allclose(result.attrs["SCALEMAX"], [scale_max])
+
+        # Without SCALEMAX or with a name without telescope: left out
+        for i in range(6):
+            del eis[f"t{i:d}"].attrs["SCALEMAX"]
+            eis[f"t{i:d}"].attrs["FIELDNAM"] = f"name{i:d}"
+
+        result = mms.eis_omni(eis)
+        self.assertNotIn("SCALEMAX", result.attrs)
+        self.assertNotIn("FIELDNAM", result.attrs)
+
 
 class EisAngAngTestCase(unittest.TestCase):
     # Telescope polar angles (degrees from +z) and 8 samples per spin, the
