@@ -8843,6 +8843,20 @@ class GetTsTestCase(unittest.TestCase):
 
         return bytes(pycdfpp.save(cdf)), time
 
+    def test_get_ts_depend_of_missing_dimension(self):
+        # HPCA data_quality: 1-D (one flag per sweep) with the DEPEND_1 of the
+        # 16 anodes (ValueError): a time series of the flags
+        values = np.array([3, 3, 0], dtype=np.uint16)
+        content, _ = self._cdf(
+            "mms1_hpca_hplus_data_quality",
+            values,
+            {"DEPEND_1": ("mms1_hpca_polar_anode_number", np.arange(16), None)},
+        )
+        result = get_ts(content, "mms1_hpca_hplus_data_quality")
+        self.assertTupleEqual(result.dims, ("time",))
+        np.testing.assert_array_equal(result.data, values)
+        self.assertEqual(result.attrs["DEPEND_1"], "mms1_hpca_polar_anode_number")
+
     def test_get_ts_tensor(self):
         # (time, 3, 3) with the representation "x,y,z" of both dimensions: rcomp
         # and ccomp
@@ -12757,6 +12771,16 @@ class TokenizeTestCase(unittest.TestCase):
             self.assertEqual(result["cdf_name"], f"d{species}s_part_index_{data_rate}")
             self.assertEqual(result["dtype"], f"d{species}s-partmoms")
             self.assertEqual(result["param"], f"partidx{species}")
+
+    @data("srvy", "brst")
+    def test_tokenize_hpca_data_quality(self, data_rate):
+        # The per-sweep quality flags of the HPCA ion files (CMAD Tables 5-16
+        # and 5-17), as the FPI flagi and flage
+        for species in ["hplus", "heplus", "heplusplus", "oplus"]:
+            result = mms.tokenize(f"flag{species}_hpca_{data_rate}_l2")
+            self.assertEqual(result["cdf_name"], f"hpca_{species}_data_quality")
+            self.assertEqual(result["dtype"], "ion")
+            self.assertEqual(result["cs"], "")
 
     @data("srvy", "brst")
     def test_tokenize_hpca_pressure(self, data_rate):

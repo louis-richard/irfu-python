@@ -318,8 +318,14 @@ def get_ts(
 
     time = _get_epochs(file, cdf_name)
 
+    # Dimensions of the variable, with the records: a DEPEND of a dimension
+    # the variable does not have labels nothing (HPCA data_quality, 1-D with
+    # the DEPEND_1 of the anodes, raised ValueError)
+    n_dims = len(file[cdf_name].shape)
+
     if "DEPEND_1" in var_attrs or "REPRESENTATION_1" in var_attrs:
-        depend_1 = _get_depend(file, cdf_name, 1)
+        if n_dims > 1:
+            depend_1 = _get_depend(file, cdf_name, 1)
 
     elif "afg" in cdf_name or "dfg" in cdf_name:
         depend_1 = {
@@ -327,14 +333,14 @@ def get_ts(
             "attrs": {"LABLAXIS": "comp"},
         }
 
-    if "DEPEND_2" in var_attrs or "REPRESENTATION_2" in var_attrs:
+    if n_dims > 2 and ("DEPEND_2" in var_attrs or "REPRESENTATION_2" in var_attrs):
         depend_2 = _get_depend(file, cdf_name, 2)
 
         if depend_2["attrs"]["LABLAXIS"] == depend_1["attrs"]["LABLAXIS"]:
             depend_1["attrs"]["LABLAXIS"] = "rcomp"
             depend_2["attrs"]["LABLAXIS"] = "ccomp"
 
-    if "DEPEND_3" in var_attrs or "REPRESENTATION_3" in var_attrs:
+    if n_dims > 3 and ("DEPEND_3" in var_attrs or "REPRESENTATION_3" in var_attrs):
         if out_dict["attrs"].get("REPRESENTATION_3") == "x,y,z":
             raise NotImplementedError(
                 f"{cdf_name}: a fourth dimension of components is not supported"

@@ -1130,6 +1130,38 @@
       "cdf_name": "hpca_oplus_flux",
       "dtype": "ion"
     },
+    "flagheplus_hpca_brst_l2": {
+      "cdf_name": "hpca_heplus_data_quality",
+      "dtype": "ion"
+    },
+    "flagheplus_hpca_srvy_l2": {
+      "cdf_name": "hpca_heplus_data_quality",
+      "dtype": "ion"
+    },
+    "flagheplusplus_hpca_brst_l2": {
+      "cdf_name": "hpca_heplusplus_data_quality",
+      "dtype": "ion"
+    },
+    "flagheplusplus_hpca_srvy_l2": {
+      "cdf_name": "hpca_heplusplus_data_quality",
+      "dtype": "ion"
+    },
+    "flaghplus_hpca_brst_l2": {
+      "cdf_name": "hpca_hplus_data_quality",
+      "dtype": "ion"
+    },
+    "flaghplus_hpca_srvy_l2": {
+      "cdf_name": "hpca_hplus_data_quality",
+      "dtype": "ion"
+    },
+    "flagoplus_hpca_brst_l2": {
+      "cdf_name": "hpca_oplus_data_quality",
+      "dtype": "ion"
+    },
+    "flagoplus_hpca_srvy_l2": {
+      "cdf_name": "hpca_oplus_data_quality",
+      "dtype": "ion"
+    },
     "nheplus_hpca_brst_l2": {
       "cdf_name": "hpca_heplus_number_density",
       "dtype": "moments"
