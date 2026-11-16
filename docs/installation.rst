@@ -45,3 +45,17 @@ Once you have a copy of the source, you can install it with:
 
 
 .. _Github repo: https://github.com/louis-richard/irfu-python
+
+
+Known issues
+------------
+
+With numpy 2.0 to 2.2 on macOS (Apple Accelerate), matrix products of finite
+arrays can give false warnings, e.g. ``RuntimeWarning: divide by zero
+encountered in matmul``, in routines such as ``pyrf.mva``, ``pyrf.new_xyz`` or
+``mms.vdf_shift``. The results are correct; numpy 2.3 and later no longer give
+them:
+
+.. code-block:: console
+
+    $ python -m pip install --upgrade "numpy>=2.3"

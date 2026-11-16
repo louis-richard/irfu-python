@@ -41,8 +41,8 @@ def vdf_find_low_counts(
     ----------
     vdf_counts : xarray.Dataset
         Distribution of counts (time, energy, ...), e.g. for FPI L2 the
-        phase-space density over its error squared, (f / f_err)^2 with
-        ``mms.get_data("pderri_fpi_brst_l2", ...)``.
+        phase-space density over its error squared, (f / f_err)^2
+        (``mms.vdf_counts``) with ``mms.get_data("pderri_fpi_brst_l2", ...)``.
     counts : float, Optional
         Limit on the counts of an energy channel, summed over the angles.
         Default is 5.
@@ -72,8 +72,7 @@ def vdf_find_low_counts(
     >>> tint = ["2017-07-11T22:33:30.000", "2017-07-11T22:34:30.000"]
     >>> vdf_i = mms.get_data("pdi_fpi_brst_l2", tint, 1)
     >>> err_i = mms.get_data("pderri_fpi_brst_l2", tint, 1)
-    >>> counts_i = vdf_i.copy(deep=True)
-    >>> counts_i.data.data = (vdf_i.data.data / err_i.data.data) ** 2
+    >>> counts_i = mms.vdf_counts(vdf_i, err_i)
     >>> e_low = mms.vdf_find_low_counts(counts_i, 5, 3)
     >>> vdf_i = mms.vdf_mask(vdf_i, below=e_low)
 

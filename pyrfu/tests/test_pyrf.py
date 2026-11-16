@@ -11,6 +11,7 @@ import logging
 import math
 import os
 import random
+import re
 import subprocess
 import sys
 import tempfile
@@ -607,6 +608,25 @@ class C4VTestCase(unittest.TestCase):
                 pyrf.c_4_v(r_xyz, time)
 
 
+def _assert_warnings(test, patterns, call):
+    # Each UserWarning of the call matches one of the patterns, and each pattern
+    # one warning (unittest's assertWarns drops the other warnings of its block
+    # up to Python 3.14 and passes them on from 3.15)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = call()
+
+    messages = [str(w.message) for w in caught if issubclass(w.category, UserWarning)]
+    test.assertEqual(len(messages), len(patterns), messages)
+
+    for pattern in patterns:
+        test.assertTrue(
+            any(re.search(pattern, m) for m in messages), (pattern, messages)
+        )
+
+    return result
+
+
 class C4VXcorrTestCase(unittest.TestCase):
     # Tetrahedron of ~10 km and velocity of the structure
     R_XYZ = np.array(
@@ -791,10 +811,14 @@ class C4VXcorrTestCase(unittest.TestCase):
         # correlation with the pattern
         s_mms, r_mms, _ = self._synthetic(self._hole)
 
-        with self.assertWarnsRegex(UserWarning, "MMS2 is at the edge"):
-            res = pyrf.c_4_v_xcorr(
+        # (an inverted lobe of the hole fits better inside the window)
+        res = _assert_warnings(
+            self,
+            ["MMS2 is at the edge", "MMS2 fits an inverted pattern"],
+            lambda: pyrf.c_4_v_xcorr(
                 self._tint(0.002), s_mms, r_mms, max_lag=0.016, fit="scale"
-            )
+            ),
+        )
 
         np.testing.assert_array_equal(res["flags"], [False, True, False, False])
         self.assertTrue(np.isnan(res["tau"][1]))
@@ -848,10 +872,14 @@ class C4VXcorrTestCase(unittest.TestCase):
         s_mms, r_mms, _ = self._synthetic(self._hole)
         s_mms[3] = -s_mms[3]
 
-        with self.assertWarnsRegex(UserWarning, "MMS4 fits an inverted pattern"):
-            res = pyrf.c_4_v_xcorr(
+        # (and it correlates poorly with the positive pattern)
+        res = _assert_warnings(
+            self,
+            ["MMS4 fits an inverted pattern", "MMS4 correlates poorly"],
+            lambda: pyrf.c_4_v_xcorr(
                 self._tint(0.002), s_mms, r_mms, max_lag=0.03, fit="scale"
-            )
+            ),
+        )
 
         np.testing.assert_array_equal(res["inverted"], [False, False, False, True])
 
@@ -1511,11 +1539,12 @@ class UnitsPlasmaTestCase(unittest.TestCase):
         b_si = pyrf.ts_vec_xyz(self.time, self.b_xyz.data * 1e-9, {"UNITS": "T"})
         v_xyz = pyrf.ts_vec_xyz(self.time, self.e_xyz.data, {"UNITS": "m/s"})
         n_si = pyrf.ts_scalar(self.time, np.full(8, 1e6), {"UNITS": "m^-3"})
+        v_kms = pyrf.ts_vec_xyz(self.time, self.e_xyz.data, {"UNITS": "km/s"})
         calls = [
             (lambda: pyrf.plasma_beta(b_si, self.p_xyz), "b_xyz is assumed in nT"),
             (lambda: pyrf.pres_anis(self.p_xyz, b_si), "b_xyz is assumed in nT"),
             (lambda: pyrf.e_vxb(v_xyz, self.b_xyz), "v_xyz is assumed in km/s"),
-            (lambda: pyrf.dynamic_press(n_si, self.e_xyz), "n_s is assumed in cm"),
+            (lambda: pyrf.dynamic_press(n_si, v_kms), "n_s is assumed in cm"),
             (lambda: pyrf.poynting_flux(self.e_xyz, b_si), "b_xyz is assumed in nT"),
         ]
 

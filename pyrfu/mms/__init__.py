@@ -85,6 +85,7 @@ from .probe_fields import probe_fields
 from .psd2def import psd2def
 from .psd2dpf import psd2dpf
 from .psd_moments import psd_moments
+from .psd_moments_err import psd_moments_err
 from .psd_rebin import psd_rebin
 from .read_feeps_sector_masks_csv import read_feeps_sector_masks_csv
 from .reduce import reduce
@@ -96,14 +97,17 @@ from .scpot2ne import scpot2ne
 from .spectr_to_dataset import spectr_to_dataset
 from .tokenize import tokenize
 from .vdf_convert import vdf_convert
+from .vdf_counts import vdf_counts
 from .vdf_cuts import vdf_cuts
 from .vdf_d3v import vdf_d3v
 from .vdf_elim import vdf_elim
+from .vdf_error import vdf_error
 from .vdf_find_low_counts import vdf_find_low_counts
 from .vdf_flux import vdf_flux
 from .vdf_macroparticles import vdf_macroparticles
 from .vdf_mask import vdf_mask
 from .vdf_omni import vdf_omni
+from .vdf_one_count import vdf_one_count
 from .vdf_partial_density import vdf_partial_density
 from .vdf_projection import vdf_projection
 from .vdf_rebin import vdf_rebin
@@ -203,6 +207,7 @@ __all__ = [
     "psd_rebin",
     "read_feeps_sector_masks_csv",
     "reduce",
+    "psd_moments_err",
     "remove_edist_background",
     "remove_idist_background",
     "remove_imoms_background",
@@ -211,15 +216,18 @@ __all__ = [
     "spectr_to_dataset",
     "tokenize",
     "vdf_convert",
+    "vdf_counts",
     "vdf_cuts",
     "vdf_d3v",
     "vdf_elim",
+    "vdf_error",
     "vdf_find_low_counts",
     "vdf_flux",
     "vdf_frame_transformation",
     "vdf_macroparticles",
     "vdf_mask",
     "vdf_omni",
+    "vdf_one_count",
     "vdf_partial_density",
     "vdf_projection",
     "vdf_rebin",
