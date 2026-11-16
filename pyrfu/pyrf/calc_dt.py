@@ -25,10 +25,21 @@ def calc_dt(inp: Dataset | DataArray) -> float:
         Time step in seconds, the median of the time steps; NaN for fewer
         than 2 samples (undefined).
 
+    Raises
+    ------
+    TypeError
+        If `inp` is not a DataArray or a Dataset, or if its times are not
+        datetime64.
+
     """
     # Check input type
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")
+
+    # Times as datetime64 (other numbers were read as nanoseconds and
+    # truncated: a time step of 0, inf Hz, for times in seconds)
+    if not np.issubdtype(inp.time.dtype, np.datetime64):
+        raise TypeError(f"the times must be datetime64, not {inp.time.dtype}")
 
     # One sample: no time step (and no warning from the median of nothing)
     if len(inp.time) < 2:

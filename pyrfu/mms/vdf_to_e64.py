@@ -95,12 +95,13 @@ def vdf_to_e64(vdf_e32):
         delta_energy_plus = energy_plus - energy_r
         delta_energy_minus = abs(energy_minus - energy_r)
         # Outer edges (top and bottom channels) from the 32-channel widths. The
-        # arrays are (time, energy): [-1] and [0] overwrote time steps.
+        # arrays are (time, energy): [-1] and [0] overwrote time steps. The
+        # widths of the input are (time, energy) or (energy,) (IndexError)
         delta_energy_plus[:, -1] = np.max(
-            np.asarray(vdf_e32.attrs["delta_energy_plus"])[:, -1]
+            np.asarray(vdf_e32.attrs["delta_energy_plus"])[..., -1]
         )
         delta_energy_minus[:, 0] = np.min(
-            np.asarray(vdf_e32.attrs["delta_energy_minus"])[:, 0]
+            np.asarray(vdf_e32.attrs["delta_energy_minus"])[..., 0]
         )
 
         glob_attrs["delta_energy_plus"] = delta_energy_plus

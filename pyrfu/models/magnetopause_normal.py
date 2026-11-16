@@ -61,7 +61,8 @@ def magnetopause_normal(
             * 'bs98' : Bow shock, Farris & Russell 1994, based on
               'mp_shue1998'
     m_alfven : float, Optional
-        Alfvenic Mach number, only needed if bow shock model is used.
+        Alfvenic Mach number, only needed if bow shock model is used (above
+        1: the standoff distance of [3]_ diverges at 1).
 
     Returns
     -------
@@ -94,6 +95,16 @@ def magnetopause_normal(
     """
 
     model = model.lower()
+
+    # A positive pressure (the standoff distance scales as p_sw^(-1/6.6):
+    # ZeroDivisionError at 0) and, for the bow shock, a super-Alfvenic flow
+    # (the standoff of Farris and Russell diverges at M_A = 1 and is negative
+    # below)
+    if not np.all(np.asarray(p_sw, dtype=np.float64) > 0):
+        raise ValueError(f"p_sw must be positive (nPa), not {p_sw}")
+
+    if model[:2] == "bs" and not np.all(np.asarray(m_alfven, dtype=np.float64) > 1):
+        raise ValueError(f"m_alfven must be above 1 for the bow shock, not {m_alfven}")
 
     if model in ["mp_shue1998", "mp_shue98", "bs98"]:
         logger.info("Shue et al., 1998 model used.")

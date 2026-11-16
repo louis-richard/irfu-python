@@ -1975,6 +1975,16 @@ class CalcDtTestCase(unittest.TestCase):
     def test_calc_dt_values(self):
         self.assertAlmostEqual(pyrf.calc_dt(generate_ts(64.0, 100)), 1 / 64.0)
 
+    def test_calc_dt_float_times(self):
+        # Times in seconds were read as nanoseconds, truncated: a time step of
+        # 0 and inf Hz; TypeError
+        inp = xr.DataArray(np.arange(10.0), coords=[np.arange(10) * 0.5], dims=["time"])
+
+        for func in [pyrf.calc_dt, pyrf.calc_fs]:
+            with self.subTest(func=func.__name__):
+                with self.assertRaisesRegex(TypeError, "datetime64"):
+                    func(inp)
+
     @data(0, 1)
     def test_calc_dt_fewer_than_two_samples(self, n_samples):
         # NaN (undefined), without the RuntimeWarnings of the median of nothing

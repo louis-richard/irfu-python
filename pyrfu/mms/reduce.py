@@ -91,7 +91,10 @@ def reduce(
         "oxygen", "helium++"), in any units of `vdf_convert` (phase-space
         density, differential energy or particle flux).
     xyz : xarray.DataArray or numpy.ndarray
-        Transformation matrix from instrument frame to desired frame.
+        Transformation matrix from instrument frame to desired frame: a time
+        series (time, 3, 3), resampled to the distribution, a matrix (3, 3),
+        or an array (n_t, 3, 3) of one matrix per time of the distribution in
+        the time interval.
     dim : {"1d", "2d", "3d"}, Optional
         Dimension of the reduced distribution: a line ("1d", default), a plane
         ("2d") or a box ("3d").
@@ -142,7 +145,8 @@ def reduce(
     TypeError
         If xyz is not a time series or a matrix.
     ValueError
-        If the matrix xyz is not (3, 3), or if `vdf` has a single azimuth or
+        If the matrix xyz is not (3, 3) (or (n_t, 3, 3) for the n_t times of
+        the distribution in the interval), or if `vdf` has a single azimuth or
         polar bin without the ``delta_phi_*`` and ``delta_theta_*``
         attributes (the widths of its bins).
 
@@ -252,6 +256,15 @@ def reduce(
 
         # If matrix, tile to VDF timeline
         xyz = np.tile(xyz, (n_t, 1, 1))
+    elif isinstance(xyz, np.ndarray) and xyz.ndim == 3:
+        # One matrix per time (TypeError)
+        if xyz.shape != (n_t, 3, 3):
+            raise ValueError(
+                f"xyz must be (n_t, 3, 3) with the {n_t} times of the "
+                f"distribution in the time interval, not {xyz.shape}"
+            )
+
+        xyz = np.array(xyz, dtype=np.float64)
     else:
         raise TypeError("Invalid type for xyz")
 

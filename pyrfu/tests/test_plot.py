@@ -247,6 +247,26 @@ class AddPositionTestCase(unittest.TestCase):
         texts = [text_.get_text() for text_ in result.texts]
         self.assertListEqual(texts, ["X [km]\nY [km]\nZ [km]\nR [km]"])
 
+    def test_add_position_unsorted(self):
+        # Positions not in time order (np.interp on unsorted times: wrong
+        # labels): the labels of the sorted positions
+        time = np.datetime64("2019-09-14T07:54:00", "ns")
+        time = time + np.arange(10) * np.timedelta64(60, "s")
+        x_pos = np.arange(10) * 60.0
+        r_xyz = pyrf.ts_vec_xyz(time, np.stack([x_pos, 2 * x_pos, -x_pos], axis=1))
+        shuffled = r_xyz.isel(time=np.random.default_rng(3).permutation(10))
+
+        labels = []
+        for inp in [r_xyz, shuffled]:
+            _, ax = plt.subplots(1)
+            ax.plot(time, x_pos)
+            ax.set_xticks(date2num(time[1:9] + np.timedelta64(15, "s")))
+            result = plot.add_position(ax, inp, units="km")
+            labels.append([label.get_text() for label in result.get_xticklabels()])
+
+        self.assertListEqual(labels[1], labels[0])
+        self.assertEqual(labels[0][0], "75.00\n150.00\n-75.00\n183.71")
+
     @data("top", "bottom")
     def test_add_position_earth_radii(self, position):
         # Position at (3, 4, 12) R_E, |R| = 13 R_E

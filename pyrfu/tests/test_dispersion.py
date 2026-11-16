@@ -113,6 +113,32 @@ class DispSurfCalcTestCase(unittest.TestCase):
 
 @ddt
 class OneFluidDispersionTestCase(unittest.TestCase):
+    def test_one_fluid_dispersion_cold(self):
+        # Cold plasma (c_s = 0: LinAlgError): the slow mode at 0 and the two
+        # others the roots of the cold relation (the term of c_s goes to 0),
+        # the limit of a warm plasma
+        cold = {"n": 10e6, "t": 0.0, "gamma": 5 / 3}
+        wc_1, wc_2, wc_3 = dispersion.one_fluid_dispersion(10e-9, 30.0, cold, cold, 20)
+        attrs = wc_1.attrs
+
+        np.testing.assert_array_equal(wc_3.data, 0.0)
+        for w_vec in [wc_1, wc_2]:
+            k_vec = w_vec.k.data
+            w_k = w_vec.data
+            theta = np.deg2rad(30.0)
+            a_k = w_k**2 / (k_vec**2 * attrs["v_a"] ** 2) + w_k**2 / (
+                attrs["wc_e"] * attrs["wc_p"]
+            )
+            residual = (1 - a_k) * (np.cos(theta) ** 2 - a_k) - w_k**2 * np.cos(
+                theta
+            ) ** 2 / attrs["wc_p"] ** 2
+            np.testing.assert_allclose(residual, 0.0, atol=1e-9)
+
+        warm = {"n": 10e6, "t": 1e-6, "gamma": 5 / 3}
+        warm_roots = dispersion.one_fluid_dispersion(10e-9, 30.0, warm, warm, 20)
+        np.testing.assert_allclose(warm_roots[0].data, wc_1.data, rtol=1e-6)
+        np.testing.assert_allclose(warm_roots[1].data, wc_2.data, rtol=1e-6)
+
     @data(
         (
             random.random(),

@@ -17,6 +17,18 @@ from . import generate_timeline
 
 @ddt
 class IgrfTestCase(unittest.TestCase):
+    def test_igrf_datetime64(self):
+        # datetime64 times as their unix seconds (UFuncTypeError)
+        time = np.datetime64("2019-01-01T00:00:00", "ns") + np.arange(
+            3
+        ) * np.timedelta64(1, "h")
+        unix = (time - np.datetime64("1970-01-01", "ns")) / np.timedelta64(1, "s")
+
+        for result, expected in zip(
+            models.igrf(time, "dipole"), models.igrf(unix, "dipole")
+        ):
+            np.testing.assert_allclose(result, expected, rtol=1e-12)
+
     @data(
         (
             generate_timeline(64.0, 100, ref_time="1789-07-14T00:00:00.000000000"),
@@ -77,6 +89,24 @@ class IgrfTestCase(unittest.TestCase):
 
 @ddt
 class MagnetopauseNormalTestCase(unittest.TestCase):
+    def test_magnetopause_normal_pressure_mach(self):
+        # p_sw <= 0 (ZeroDivisionError) and a bow shock at M_A <= 1 (the
+        # Farris and Russell standoff diverges at 1, negative below: -37.9 RE
+        # at 0.8) raise ValueError
+        r_mp, r_bs = np.array([10.0, 2.0, 0.0]), np.array([20.0, 2.0, 0.0])
+
+        for model in ["mp_shue1997", "mp_shue1998", "bs97", "bs98"]:
+            with self.subTest(model=model), self.assertRaisesRegex(ValueError, "p_sw"):
+                models.magnetopause_normal(r_mp, -2.0, 0.0, model)
+
+        for m_alfven in [1.0, 0.8]:
+            with self.subTest(m_alfven=m_alfven):
+                with self.assertRaisesRegex(ValueError, "m_alfven"):
+                    models.magnetopause_normal(r_bs, -2.0, 2.0, "bs97", m_alfven)
+
+        # The magnetopause does not use the Mach number
+        models.magnetopause_normal(r_mp, -2.0, 2.0, "mp_shue1997", 0.8)
+
     @data(
         (np.random.rand(3), random.randint(1, 10), random.randint(1, 10), "bazinga!!")
     )

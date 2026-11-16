@@ -51,7 +51,7 @@ def igrf(
     Parameters
     ----------
     time : numpy.ndarray
-        Times in unix format.
+        Times in unix format, or datetime64.
     flag : str
         Default is dipole.
 
@@ -85,6 +85,10 @@ def igrf(
         flag = "dipole"
 
     years_igrf, g_igrf, h_igrf = _igrf_coefficients()
+
+    # datetime64 times as unix seconds (they raised UFuncTypeError)
+    if np.issubdtype(np.asarray(time).dtype, np.datetime64):
+        time = _unix(time)
 
     year_ref = _datetime64(time).astype("datetime64[Y]")
     year_ref = year_ref.astype(np.int64) + 1970

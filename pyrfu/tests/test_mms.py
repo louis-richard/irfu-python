@@ -10058,6 +10058,19 @@ class ReduceTestCase(unittest.TestCase):
         result = mms.reduce(vdf, np.eye(3), n_mc=2, verbose=False)
         np.testing.assert_array_equal(result.time.data, times)
 
+    def test_reduce_xyz_per_time(self):
+        # One matrix per time as an array (n_t, 3, 3) (TypeError), as the
+        # same matrices as a time series; a wrong number of times raises
+        vdf = generate_vdf(64.0, 3, [8, 4, 4], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+        xyz = np.tile(np.eye(3), (3, 1, 1))
+
+        result = mms.reduce(vdf, xyz, n_mc=2, verbose=False)
+        self.assertEqual(result.shape[0], 3)
+
+        with self.assertRaisesRegex(ValueError, "n_t, 3, 3"):
+            mms.reduce(vdf, xyz[:2], n_mc=2, verbose=False)
+
     def test_reduce_single_bin(self):
         # One azimuth bin without the angle widths: ValueError (NaN and zeros
         # from int_sph_dist); with them, a reduced distribution
@@ -11137,6 +11150,24 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
 
 
 class VdfToE64TestCase(unittest.TestCase):
+    def test_vdf_to_e64_energy_widths_per_channel(self):
+        # Energy widths per channel (energy,), as average_vdf keeps them
+        # (IndexError): the outer edges as with the same widths at every time
+        vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
+        vdf = vdf.assign(energy=vdf.energy + 10.0)
+        vdf.attrs["energy0"] = vdf.attrs["energy0"] + 10.0
+        vdf.attrs["energy1"] = vdf.attrs["energy1"] + 10.0
+        widths = {
+            k: np.asarray(vdf.attrs[k])[0]
+            for k in ["delta_energy_minus", "delta_energy_plus"]
+        }
+        per_time = {k: np.tile(v, (10, 1)) for k, v in widths.items()}
+
+        result = mms.vdf_to_e64(vdf.assign_attrs(widths))
+        expected = mms.vdf_to_e64(vdf.assign_attrs(per_time))
+        for key in widths:
+            np.testing.assert_array_equal(result.attrs[key], expected.attrs[key])
+
     def test_vdf_to_e64_delta_energy(self):
         # The input attrs are unchanged; the 64-channel widths are the same at
         # every time, the top/bottom edges from the 32-channel widths (they were

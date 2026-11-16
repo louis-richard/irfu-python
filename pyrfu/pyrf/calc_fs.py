@@ -27,6 +27,12 @@ def calc_fs(inp: Dataset | DataArray) -> float:
         interval, which resample, avg_4sc, convert_fac and rotate_tensor
         accept).
 
+    Raises
+    ------
+    TypeError
+        If `inp` is not a DataArray or a Dataset, or if its times are not
+        datetime64.
+
     """
     # Check input type
     if not isinstance(inp, (Dataset, DataArray)):
