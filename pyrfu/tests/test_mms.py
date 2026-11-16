@@ -2649,6 +2649,41 @@ class EisSpecCombineScTestCase(unittest.TestCase):
         )
         return out if spin_avg else out.assign_coords(sector=("time", sector))
 
+    def test_eis_spec_combine_sc_attributes(self):
+        # The attributes of the spacecraft with the fewest samples labelled the
+        # combination (CATDESC "MMS4 ExTOF-S", FIELDNAM mms4_..., its SCALEMAX
+        # and file, on MMS2-4 2017-07-23): those common to the spacecraft, the
+        # combined name (mmsx, as SPEDAS) and SCALEMAX
+        omnis = []
+        for mms_id, n_pts in [(2, 16), (3, 16), (4, 12)]:
+            omni = self._omni("2017-07-23T16:10:00", n_pts, 0, np.ones_like)
+            omni.attrs = {
+                **omni.attrs,
+                "species": "proton",
+                "CATDESC": f"MMS{mms_id} ExTOF-S",
+                "FIELDNAM": f"mms{mms_id}_epd_eis_srvy_l2_extof_proton_P4_flux_omni",
+                "SCALEMAX": np.array([100.0 * mms_id]),
+                "GLOBAL": {"Project": "STP>MMS", "Source_name": f"MMS{mms_id}>"},
+            }
+            omnis.append(omni)
+
+        for method, scale_max in [("mean", 300.0), ("sum", 900.0)]:
+            with self.subTest(method=method):
+                result = mms.eis_spec_combine_sc(omnis, method=method)
+                self.assertEqual(result.attrs["CATDESC"], "MMSX ExTOF-S")
+                self.assertEqual(
+                    result.attrs["FIELDNAM"],
+                    "mmsx_epd_eis_srvy_l2_extof_proton_P4_flux_omni",
+                )
+                np.testing.assert_array_equal(result.attrs["SCALEMAX"], [scale_max])
+                self.assertDictEqual(result.attrs["GLOBAL"], {"Project": "STP>MMS"})
+                self.assertEqual(result.attrs["UNITS"], omnis[0].attrs["UNITS"])
+                self.assertEqual(result.attrs["species"], "proton")
+
+        # Names that differ by more than the spacecraft: none
+        omnis[0].attrs["FIELDNAM"] = "mms2_epd_eis_brst_l2_extof_proton_P4_flux_omni"
+        self.assertNotIn("FIELDNAM", mms.eis_spec_combine_sc(omnis).attrs)
+
     def test_eis_spec_combine_sc_species(self):
         # Spectra of different species raise ValueError (they were combined)
         one = self._omni("2017-07-11T22:00:00", 16, 0, lambda x: np.ones(len(x)))
