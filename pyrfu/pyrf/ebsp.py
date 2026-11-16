@@ -371,7 +371,7 @@ def ebsp(
         Time series of the position time series of spacecraft used for field
         aligned coordinates.
     freq_int : str or array_like
-        Frequency interval :
+        Frequency interval (the strings case-insensitive, as irfu-matlab):
             * "pc12" : [0.1, 5.0]
             * "pc35" : [2e-3, 0.1]
             * [fmin, fmax] : arbitrary interval [fmin,fmax]
@@ -512,7 +512,7 @@ def ebsp(
     if isinstance(freq_int, (list, np.ndarray)):
         if len(freq_int) != 2:
             raise ValueError("freq_int list must contain two elements")
-    elif freq_int not in ["pc12", "pc35"]:
+    elif freq_int.lower() not in ["pc12", "pc35"]:
         raise ValueError("string freq_int must be pc12 or pc35")
 
     # Compute magnetic field fluctuations sampling frequency

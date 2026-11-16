@@ -3688,6 +3688,21 @@ class EbspTestCase(unittest.TestCase):
             )
         )
 
+    def test_ebsp_freq_int_case(self):
+        # Case-insensitive, as irfu-matlab irf_ebsp (lower): "PC12" raised
+        # ValueError; another string still raises
+        inputs = [generate_ts(64.0, 4096, tensor_order=1) for _ in range(5)]
+        expected = pyrf.ebsp(*inputs, "pc12")
+        result = pyrf.ebsp(*inputs, "PC12")
+
+        self.assertEqual(result.keys(), expected.keys())
+        for key, value in expected.items():
+            if isinstance(value, xr.DataArray):
+                xr.testing.assert_identical(result[key], value)
+
+        with self.assertRaisesRegex(ValueError, "pc12 or pc35"):
+            pyrf.ebsp(*inputs, "PC13")
+
     @data(random.random(), np.random.random(3), "bazinga", [1, 100])
     def test_ebsp_freq_int_fail(self, value):
         # TypeError and ValueError (AssertionError)
