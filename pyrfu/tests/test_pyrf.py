@@ -8579,6 +8579,21 @@ class TsSkymapTestCase(unittest.TestCase):
         self.assertEqual(result.phi.dims, ("time", "idx1"))
         xr.testing.assert_identical(result, expected)
 
+    def test_ts_skymap_energy_tables_step_one_first(self):
+        # A step table starting with 1 (energy[0] and energy[1] were swapped):
+        # the default tables are those of the first time of each step
+        energy = np.vstack([np.arange(1.0, 33.0), np.arange(2.0, 34.0)])
+        result = pyrf.ts_skymap(
+            generate_timeline(64.0, 2),
+            np.random.random((2, 32, 32, 16)),
+            energy,
+            np.ones((2, 32)),
+            np.arange(16.0),
+            esteptable=np.array([1, 0], dtype=np.uint8),
+        )
+        np.testing.assert_array_equal(result.attrs["energy0"], energy[1])
+        np.testing.assert_array_equal(result.attrs["energy1"], energy[0])
+
     def test_ts_skymap_energy_tables(self):
         energy = np.vstack([np.arange(1.0, 33.0), np.arange(2.0, 34.0)])
         args = (np.random.random((2, 32, 32, 16)), energy, np.ones((2, 32)))

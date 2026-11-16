@@ -43,11 +43,13 @@ def ts_skymap(
         Elevation angles.
     energy0 : np.ndarray, Optional
         Energy table of the times with `esteptable` 0 (the FPI burst
-        ``energy0``). Default is the energies of the first time.
+        ``energy0``). Default is the energies of the first time with
+        `esteptable` 0, or of the first time.
     energy1 : np.ndarray, Optional
         Energy table of the times with `esteptable` 1 (the FPI burst
-        ``energy1``). Default is the energies of the second time, or of the
-        first one for a single time.
+        ``energy1``). Default is the energies of the first time with
+        `esteptable` 1, else of the second time, or of the first one for a
+        single time.
     esteptable : np.ndarray, Optional
         Time series of the stepping table between energies (burst).
     attrs : dict, Optional
@@ -92,26 +94,34 @@ def ts_skymap(
     if phi.ndim == 1:
         phi = np.tile(phi, (len(time), 1))
 
-    # Energy tables of the steps 0 and 1 of esteptable, and the energy step
-    # table, if provided
-    if energy0 is None:
-        energy0 = energy[0, :]
-    else:
-        if not isinstance(energy0, np.ndarray):
-            raise TypeError("energy0 must be a numpy.ndarray")
-
-    if energy1 is None:
-        # A single time (e.g. a distribution selected at one time) has one table
-        energy1 = energy[1, :] if energy.shape[0] > 1 else energy[0, :]
-    else:
-        if not isinstance(energy1, np.ndarray):
-            raise TypeError("energy1 must be a numpy.ndarray")
-
+    # Energy step table, and the energy tables of its steps 0 and 1, if
+    # provided
     if esteptable is None:
         esteptable = np.zeros(len(time), dtype=np.uint8)
     else:
         if not isinstance(esteptable, np.ndarray):
             raise TypeError("esteptable must be a numpy.ndarray")
+
+    # Default tables: those of the first time of each step (energy[0] and
+    # energy[1] were swapped when esteptable starts with 1); without a time
+    # of step 1, the second time, or the first one for a single time
+    first_0 = np.flatnonzero(np.ravel(esteptable) == 0)
+    first_1 = np.flatnonzero(np.ravel(esteptable) == 1)
+
+    if energy0 is None:
+        energy0 = energy[first_0[0] if first_0.size else 0, :]
+    else:
+        if not isinstance(energy0, np.ndarray):
+            raise TypeError("energy0 must be a numpy.ndarray")
+
+    if energy1 is None:
+        if first_1.size:
+            energy1 = energy[first_1[0], :]
+        else:
+            energy1 = energy[1, :] if energy.shape[0] > 1 else energy[0, :]
+    else:
+        if not isinstance(energy1, np.ndarray):
+            raise TypeError("energy1 must be a numpy.ndarray")
 
     # Check attributes are dictionaries
     if attrs is None:
