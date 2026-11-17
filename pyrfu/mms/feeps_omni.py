@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
 from copy import copy
 from typing import Literal
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
+
+# Local imports
+from pyrfu.mms._internal.epd import _nan_reduce
 
 energies_ = {
     "electron": np.array(
@@ -186,20 +188,7 @@ def feeps_omni(
 
     eyes, dalleyes, energies, g_fact = _eyes_on_omni_energies(inp_dataset)
 
-    n_eyes = np.sum(np.isfinite(dalleyes), axis=2)
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-
-        if combine == "mean":
-            omni_data = np.nanmean(dalleyes, axis=2)
-        elif combine == "sum":
-            omni_data = np.where(n_eyes > 0, np.nansum(dalleyes, axis=2), np.nan)
-        else:
-            omni_data = np.sqrt(np.nansum(dalleyes**2, axis=2)) / n_eyes
-            omni_data[n_eyes == 0] = np.nan
-
-    omni_data *= g_fact
+    omni_data = _nan_reduce(dalleyes, 2, combine) * g_fact
 
     attrs = {
         "dtype": inp_dataset.attrs["dtype"],

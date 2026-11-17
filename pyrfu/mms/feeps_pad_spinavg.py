@@ -3,6 +3,7 @@
 
 # Built-in imports
 import warnings
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -11,10 +12,17 @@ import xarray as xr
 # Local imports
 from pyrfu.mms._internal.epd import _spin_reduce
 
+from .feeps_omni import _DEFAULT_METHODS
 from .feeps_spin_avg import _feeps_complete_spins
 
 
-def feeps_pad_spinavg(pad, spin_sectors, bin_size: float | None = None):
+def feeps_pad_spinavg(
+    pad,
+    spin_sectors,
+    bin_size: float | None = None,
+    *,
+    method: Literal["mean", "sum", "quadrature"] | None = None,
+):
     r"""Spin-average the FEEPS pitch angle distributions.
 
     Parameters
@@ -28,6 +36,12 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float | None = None):
 
         .. deprecated:: 2.5.1
             `bin_size` will be removed in a future version.
+    method : {"mean", "sum", "quadrature"}, Optional
+        Combination of the samples of a spin: the mean (intensities, count
+        rates), the sum (counts) or the square root of the sum of the squares
+        divided by the number of samples (errors of the mean). Default is from
+        the units of `pad` (``units_name`` of `pyrfu.mms.feeps_pad`): "sum" for
+        "counts", "quadrature" for "fluxerr", "mean" otherwise.
 
     Returns
     -------
@@ -38,8 +52,9 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float | None = None):
     Raises
     ------
     ValueError
-        If `spin_sectors` and `pad` don't have the same number of times, or if
-        the interval has no complete spin.
+        If `spin_sectors` and `pad` don't have the same number of times, if
+        the interval has no complete spin, or if `method` is not one of the
+        above.
 
     Notes
     -----
@@ -63,6 +78,11 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float | None = None):
             stacklevel=2,
         )
 
+    combine = method or _DEFAULT_METHODS.get(pad.attrs.get("units_name"), "mean")
+
+    if combine not in ["mean", "sum", "quadrature"]:
+        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
+
     # NumPy array, a DataArray would be aligned on time in the comparison
     spin_sectors = np.asarray(spin_sectors)
 
@@ -72,7 +92,9 @@ def feeps_pad_spinavg(pad, spin_sectors, bin_size: float | None = None):
     spin_starts, spin_stops = _feeps_complete_spins(spin_sectors, pad.time.data)
 
     data = pad.data
-    spin_avg_flux = _spin_reduce(data, spin_starts, spin_stops).astype(np.float64)
+    spin_avg_flux = _spin_reduce(data, spin_starts, spin_stops, combine).astype(
+        np.float64
+    )
 
     out = xr.DataArray(
         spin_avg_flux,

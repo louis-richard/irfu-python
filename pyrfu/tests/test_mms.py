@@ -6714,6 +6714,55 @@ class FeepsPadTestCase(unittest.TestCase):
         expected[0, :2], expected[0, 2:4] = 2.0, np.nan  # top-2 NaN
         np.testing.assert_allclose(result.data, expected)
 
+    def test_feeps_pad_method(self):
+        feeps_alle = generate_feeps(64.0, 20, "brst", "electron", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        energy = np.linspace(40.0, 600.0, feeps_alle.sizes["energy"])
+        feeps_alle = feeps_alle.assign_coords(energy=energy)
+
+        # top-1 at 10 and top-2 at 30 degrees, the other eyes are filled; 14
+        # channels from 70 keV
+        pitch_angle = np.full((feeps_alle.sizes["time"], 18), -2147483648.0)
+        pitch_angle[:, :2] = [10.0, 30.0]
+        feeps_alle["pitch_angle"] = (["time", "eye"], pitch_angle)
+        feeps_alle["top-1"].data[:] = 2.0
+        feeps_alle["top-2"].data[:] = 4.0
+        feeps_alle["top-2"].data[0, :] = np.nan
+        feeps_alle["top-2"].data[1, :] = 0.0
+        b_bcs = generate_ts(64.0, 20, tensor_order=1)
+
+        result = {
+            m: mms.feeps_pad(feeps_alle, b_bcs, method=m).data
+            for m in ["mean", "sum", "quadrature"]
+        }
+
+        # Channels then eyes (top-1 in the bins 0-1, top-2 in the bins 0-3)
+        expected = {m: np.full((20, 11), np.nan) for m in result}
+        expected["mean"][:, :2], expected["mean"][:, 2:4] = 3.0, 4.0
+        expected["sum"][:, :2], expected["sum"][:, 2:4] = 84.0, 56.0
+        quad_1, quad_2 = 2.0 / np.sqrt(14), 4.0 / np.sqrt(14)
+        expected["quadrature"][:, :2] = np.sqrt(quad_1**2 + quad_2**2) / 2
+        expected["quadrature"][:, 2:4] = quad_2
+
+        # top-2 NaN at the first time; at the second, its zeros are left out
+        # of the mean and the quadrature (as IDL SPEDAS), summed as counts
+        for m, value in [("mean", 2.0), ("sum", 28.0), ("quadrature", quad_1)]:
+            expected[m][:2, :2], expected[m][:2, 2:4] = value, np.nan
+        expected["sum"][1, 2:4] = 0.0
+
+        for m in result:
+            np.testing.assert_allclose(result[m], expected[m])
+
+        # Default from the units of the eyes
+        for units, m in [("counts", "sum"), ("fluxerr", "quadrature")]:
+            feeps_alle.attrs["units_name"] = units
+            np.testing.assert_array_equal(
+                mms.feeps_pad(feeps_alle, b_bcs).data, result[m]
+            )
+
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.feeps_pad(feeps_alle, b_bcs, method="median")
+
     def test_feeps_pad_nan_energies(self):
         feeps_alle = generate_feeps(64.0, 20, "brst", "electron", "l2", "flux", 1)
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
@@ -6804,6 +6853,30 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.feeps_pad_spinavg(pad, spin_sectors[:-1])
+
+    def test_feeps_pad_spin_avg_method(self):
+        # 5 complete spins of 8 samples equal to the spin number
+        theta = 8.1818 + 16.3636 * np.arange(11)
+        spin_sectors, pad = _spin_avg_case("theta", theta)
+        spin = np.arange(1.0, 6.0)[:, None]
+
+        for m, expected in [
+            ("mean", spin),
+            ("sum", 8 * spin),
+            ("quadrature", spin / np.sqrt(8)),
+        ]:
+            result = mms.feeps_pad_spinavg(pad, spin_sectors, method=m)
+            np.testing.assert_allclose(result.data, np.tile(expected, (1, 11)))
+
+        # Default from the units of the PAD
+        pad.attrs["units_name"] = "counts"
+        np.testing.assert_allclose(
+            mms.feeps_pad_spinavg(pad, spin_sectors).data,
+            np.tile(8 * spin, (1, 11)),
+        )
+
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.feeps_pad_spinavg(pad, spin_sectors, method="median")
 
 
 @ddt

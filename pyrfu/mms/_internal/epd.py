@@ -16,6 +16,29 @@ from pyrfu.mms.db_get_variable import db_get_variable
 from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 
 
+def _nan_reduce(data, axis, method: str = "mean"):
+    r"""Mean, sum or quadrature (sqrt of the sum of the squares over the
+    number of values, the error of the mean of independent errors) of `data`
+    along `axis`, NaN-aware: the NaN are left out, and the result is NaN
+    without any value (also for the sum)."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+
+        if method == "sum":
+            return np.where(
+                np.isfinite(data).any(axis=axis), np.nansum(data, axis=axis), np.nan
+            )
+
+        if method == "quadrature":
+            n_valid = np.isfinite(data).sum(axis=axis)
+            quadrature = np.sqrt(
+                np.nansum(np.asarray(data, dtype=np.float64) ** 2, axis=axis)
+            )
+            return np.where(n_valid > 0, quadrature / np.maximum(n_valid, 1), np.nan)
+
+        return np.nanmean(data, axis=axis)
+
+
 def _spin_reduce(data, starts, stops, method: str = "mean"):
     r"""Mean, sum or quadrature (sqrt of the sum of the squares over the
     number of samples, the error of the mean of independent errors) of `data`
@@ -41,20 +64,7 @@ def _spin_reduce(data, starts, stops, method: str = "mean"):
     if method == "sum" and spins.dtype.kind in "iub":
         return spins.sum(axis=1)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-
-        if method == "sum":
-            return np.where(
-                np.isfinite(spins).any(axis=1), np.nansum(spins, axis=1), np.nan
-            )
-
-        if method == "quadrature":
-            n_valid = np.isfinite(spins).sum(axis=1)
-            quadrature = np.sqrt(np.nansum(spins.astype(np.float64) ** 2, axis=1))
-            return np.where(n_valid > 0, quadrature / np.maximum(n_valid, 1), np.nan)
-
-        return np.nanmean(spins, axis=1)
+    return _nan_reduce(spins, 1, method)
 
 
 # Shared by get_hpca_dist and hpca_pad (hpca_pad imported it from
