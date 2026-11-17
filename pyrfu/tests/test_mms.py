@@ -6477,6 +6477,56 @@ class FeepsOmniTestCase(unittest.TestCase):
 
         np.testing.assert_allclose(result.data, np.tile(expected, (len(time), 1)))
 
+    def test_feeps_omni_method(self):
+        # Mean (intensities), sum (counts) or quadrature (errors) of the eyes,
+        # NaN eyes left out, by default from the units; the factor of the
+        # spacecraft (0.84 for MMS1 ions) whatever the method
+        feeps_alle = generate_feeps(64.0, 10, "brst", "ion", "l2", "flux", 1)
+        feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
+        eyes = [k for k in feeps_alle if k.startswith(("top", "bottom"))]
+        values = np.arange(1.0, len(eyes) + 1)
+        for k, value in zip(eyes, values):
+            feeps_alle[k].data[:] = value
+        feeps_alle[eyes[0]].data[0] = np.nan
+        feeps_alle = feeps_alle.assign_coords(
+            {
+                feeps_alle[k].dims[1]: mms.feeps_omni(feeps_alle).energy.data
+                for k in eyes
+            }
+        )
+
+        expected = {
+            "mean": [values[1:].mean(), values.mean()],
+            "sum": [values[1:].sum(), values.sum()],
+            "quadrature": [
+                np.sqrt(np.sum(values[1:] ** 2)) / (len(values) - 1),
+                np.sqrt(np.sum(values**2)) / len(values),
+            ],
+        }
+        for method, (first, other) in expected.items():
+            with self.subTest(method=method):
+                result = mms.feeps_omni(feeps_alle, method=method)
+                np.testing.assert_allclose(result.data[0], 0.84 * first)
+                np.testing.assert_allclose(result.data[1:], 0.84 * other)
+
+        for units_name, method in [("counts", "sum"), ("fluxerr", "quadrature")]:
+            with self.subTest(units_name=units_name):
+                inp = feeps_alle.assign_attrs(units_name=units_name)
+                xr.testing.assert_identical(
+                    mms.feeps_omni(inp), mms.feeps_omni(inp, method=method)
+                )
+
+        feeps_alle[eyes[0]].data[:] = np.nan
+        for k in eyes[1:]:
+            feeps_alle[k].data[0] = np.nan
+        for method in expected:
+            with self.subTest(method=method, eyes="none"):
+                result = mms.feeps_omni(feeps_alle, method=method)
+                self.assertTrue(np.isnan(result.data[0]).all())
+
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.feeps_omni(feeps_alle, method="median")
+
     def test_feeps_omni_unsplit(self):
         # Unsplit eyes (16 channels) used to fail with a broadcasting error
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)

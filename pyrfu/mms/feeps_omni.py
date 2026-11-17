@@ -4,6 +4,7 @@
 # Built-in imports
 import warnings
 from copy import copy
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
@@ -121,13 +122,26 @@ def _eyes_on_omni_energies(inp_dataset):
     return eyes, dalleyes, energies, g_fact_[d_type][mms_id - 1]
 
 
-def feeps_omni(inp_dataset):
+# Combination of the eyes by default for the units of get_feeps_alleyes:
+# the counts are summed, the intensity errors added in quadrature
+_DEFAULT_METHODS = {"counts": "sum", "fluxerr": "quadrature"}
+
+
+def feeps_omni(
+    inp_dataset, *, method: Literal["mean", "sum", "quadrature"] | None = None
+):
     r"""Calculates the omni-directional FEEPS spectrogram.
 
     Parameters
     ----------
     inp_dataset : xarray.Dataset
         Dataset with all active telescopes data.
+    method : {"mean", "sum", "quadrature"}, Optional
+        Combination of the eyes at each time and energy: the mean (intensities,
+        count rates), the sum (counts) or the square root of the sum of the
+        squares divided by the number of eyes (errors of the mean). Default is
+        from the units of `inp_dataset` (``units_name``): "sum" for "counts",
+        "quadrature" for "fluxerr", "mean" otherwise.
 
     Returns
     -------
@@ -137,7 +151,8 @@ def feeps_omni(inp_dataset):
     Raises
     ------
     ValueError
-        If the integral channel of the eyes is not split (16 channels).
+        If the integral channel of the eyes is not split (16 channels), or if
+        `method` is not one of the above.
 
     See Also
     --------
@@ -154,14 +169,37 @@ def feeps_omni(inp_dataset):
     than 10 % away from the omni-directional energy are not averaged (except
     for SITL data). Eyes with NaN energies are kept, as in IDL and pyspedas.
 
+    The eyes without data (NaN) are left out of the combination, which is NaN
+    without any eye. The correction factor of the spacecraft (0.84 for the
+    MMS1 ions) multiplies the result whatever the method, as IDL SPEDAS does
+    whatever the units: the one-count level (omni intensity / omni counts) is
+    unchanged. The errors of the mean ("quadrature") assume independent eyes;
+    IDL SPEDAS and pyspedas average every unit, also the counts.
+
     """
+    combine = method or _DEFAULT_METHODS.get(
+        inp_dataset.attrs.get("units_name"), "mean"
+    )
+
+    if combine not in ["mean", "sum", "quadrature"]:
+        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
+
     eyes, dalleyes, energies, g_fact = _eyes_on_omni_energies(inp_dataset)
+
+    n_eyes = np.sum(np.isfinite(dalleyes), axis=2)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        flux_omni = np.nanmean(dalleyes, axis=2)
 
-    flux_omni *= g_fact
+        if combine == "mean":
+            omni_data = np.nanmean(dalleyes, axis=2)
+        elif combine == "sum":
+            omni_data = np.where(n_eyes > 0, np.nansum(dalleyes, axis=2), np.nan)
+        else:
+            omni_data = np.sqrt(np.nansum(dalleyes**2, axis=2)) / n_eyes
+            omni_data[n_eyes == 0] = np.nan
+
+    omni_data *= g_fact
 
     attrs = {
         "dtype": inp_dataset.attrs["dtype"],
@@ -171,7 +209,7 @@ def feeps_omni(inp_dataset):
     }
 
     flux_omni = xr.DataArray(
-        flux_omni,
+        omni_data,
         coords=[inp_dataset.time.data, energies],
         dims=["time", "energy"],
         attrs=attrs,
