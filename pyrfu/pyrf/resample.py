@@ -99,7 +99,7 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     return out_data.reshape(len(ref_time), *shape)
 
 
-def _interp_finite(inp_time, inp_data, ref_time, method):
+def _interp_finite(inp_time, inp_data, ref_time, method, fill_value):
     r"""Interpolation of each component through its finite samples (NaN for
     a component without any), as MATLAB interp1 with "spline" or "pchip"
     (Interp1DStripNaN); a NaN would spread to all the times otherwise."""
@@ -114,7 +114,8 @@ def _interp_finite(inp_time, inp_data, ref_time, method):
                 inp_time[finite],
                 data[finite, k],
                 kind=method,
-                fill_value="extrapolate",
+                bounds_error=False,
+                fill_value=fill_value,
             )(ref_time)
 
     return out_data.reshape(len(ref_time), *np.shape(inp_data)[1:])
@@ -131,7 +132,7 @@ def _resampled_like(inp, out_data, time):
     return xr.DataArray(out_data, coords=coords, dims=inp.dims, attrs=inp.attrs)
 
 
-def _resample_dataarray(inp, ref, method, f_s, window, thresh):
+def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
     r"""Resample for time series (xarray.DataArray)"""
 
     flag_do = "check"
@@ -197,16 +198,19 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
             return _resampled_like(inp, inp.data.copy(), ref.coords["time"].data)
 
         # Extrapolation outside the time range of inp with the interpolant,
-        # as irf_resamp (MATLAB interp1 with 'extrap')
+        # as irf_resamp (MATLAB interp1 with 'extrap'), or NaN there
+        fill_value = "extrapolate" if extrapolate else np.nan
+
         if method in _GLOBAL_METHODS and not np.all(np.isfinite(inp.data)):
-            out_data = _interp_finite(inp_time, inp.data, ref_time, method)
+            out_data = _interp_finite(inp_time, inp.data, ref_time, method, fill_value)
         else:
             tck = interpolate.interp1d(
                 inp_time,
                 inp.data,
                 kind=method,
                 axis=0,
-                fill_value="extrapolate",
+                bounds_error=False,
+                fill_value=fill_value,
             )
             out_data = tck(ref_time)
 
@@ -257,6 +261,8 @@ def resample(
     f_s: float | None = None,
     window: int | None = None,
     thresh: float = 0,
+    *,
+    extrapolate: bool = True,
 ):
     r"""Resample inp to the time line of ref. If sampling of X is more than two
     times higher than Y, we average X, otherwise we interpolate X.
@@ -283,6 +289,12 @@ def resample(
     thresh : float, Optional
         Points farther than thresh * STD from the mean of an averaging window are
         disregarded (per component). Default is 0 (all points are used).
+    extrapolate : bool, Optional
+        Extrapolate the interpolation outside the time range of inp with the
+        interpolant, as irf_resamp. False gives NaN at the reference times
+        outside the time range of the samples (of the finite samples of each
+        component with "quadratic" or "cubic"). Default is True. Averages
+        are NaN where a window has no samples in both cases.
 
     Returns
     -------
@@ -310,8 +322,8 @@ def resample(
       of the wave numbers of `pyrfu.mms.fk_power_spectrum` on a 1 s burst
       interval).
     * Interpolation extrapolates outside the time range of inp with the
-      interpolant (linearly with "linear"): clip ref to the time range of inp
-      (e.g., with time_clip) if this is not wanted.
+      interpolant (linearly with "linear"); ``extrapolate=False`` gives NaN
+      there instead.
     * With "quadratic" or "cubic", whose interpolant depends on all the
       samples, each component is interpolated through its finite samples, as
       MATLAB interp1 ("spline"): NaN samples are skipped. With "linear" or
@@ -363,7 +375,13 @@ def resample(
         ref = ref.assign_coords(time=ref.time.astype("datetime64[ns]"))
 
     # Define options for resampling
-    options = {"method": method, "f_s": f_s, "window": window, "thresh": thresh}
+    options = {
+        "method": method,
+        "f_s": f_s,
+        "window": window,
+        "thresh": thresh,
+        "extrapolate": extrapolate,
+    }
 
     if isinstance(inp, xr.DataArray):
         out = _resample_dataarray(inp, ref, **options)

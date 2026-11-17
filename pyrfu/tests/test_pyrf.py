@@ -6802,6 +6802,35 @@ class ResampleTestCase(unittest.TestCase):
             out.append(window.mean())
         return np.array(out)
 
+    def test_resample_extrapolate(self):
+        # extrapolate=False: NaN at the reference times outside the time range
+        # of the samples, the same values inside; True (default) extrapolates
+        # with the interpolant, as irf_resamp
+        time = np.datetime64("2019-09-14T07:54:00", "ns") + np.arange(
+            10
+        ) * np.timedelta64(1, "s")
+        inp = pyrf.ts_vec_xyz(time[2:8], np.tile(np.arange(6.0)[:, None], (1, 3)))
+        inp.data[3, 1] = np.nan
+        ref = pyrf.ts_scalar(time + np.timedelta64(500, "ms"), np.zeros(10))
+        outside = np.arange(10) < 2
+        outside[7:] = True
+
+        for method in ["linear", "cubic"]:
+            with self.subTest(method=method):
+                extrap = pyrf.resample(inp, ref, method=method)
+                result = pyrf.resample(inp, ref, method=method, extrapolate=False)
+                self.assertTrue(np.all(np.isfinite(extrap.data[outside, 0])))
+                self.assertTrue(np.all(np.isnan(result.data[outside])))
+                np.testing.assert_array_equal(
+                    result.data[~outside], extrap.data[~outside]
+                )
+
+        # The distributions (Dataset) as their data
+        vdf = generate_vdf(64.0, 10, (4, 4, 2), energy01=False)
+        ref = pyrf.ts_scalar(vdf.time.data - np.timedelta64(1, "s"), np.zeros(10))
+        result = pyrf.resample(vdf, ref, method="linear", extrapolate=False)
+        self.assertTrue(np.all(np.isnan(result.data.data[:64])))
+
     def test_resample_average_window(self):
         # 128 Hz ramp to 32 Hz with samples on the window edges: each sample is in
         # one window (they were in two, or one, depending on round-off)
