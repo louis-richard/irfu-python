@@ -6356,6 +6356,40 @@ class FeepsCorrectionsTestCase(unittest.TestCase):
         self.assertTrue(np.isfinite(result["top-6"].data[:, 1:]).any())
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_feeps_corrections_units(self):
+        # The corrections of the intensities apply unchanged to the counts and
+        # the intensity errors: the same NaN, the intensity per count and the
+        # relative errors unchanged on the channels kept
+        flux = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", 2)
+        time = flux.time.data - flux.time.data[0]
+        flux = flux.assign_coords(time=time + np.datetime64("2017-07-11T22:00", "ns"))
+        flux["spinsectnum"].data = np.arange(100) % 64
+        counts = flux.copy(deep=True)
+        errors = flux.copy(deep=True)
+        eyes = list(filter(lambda x: x[:3] in ["top", "bot"], flux))
+        for k in eyes:
+            counts[k] = flux[k] * 0 + np.arange(1, 17)
+            errors[k] = flux[k] / np.sqrt(counts[k])
+        counts.attrs["units_name"], errors.attrs["units_name"] = "counts", "fluxerr"
+
+        result = [mms.feeps_corrections(d) for d in [flux, counts, errors]]
+
+        for k in eyes:
+            j_c, n_c, dj_c = (r[k].data for r in result)
+            np.testing.assert_array_equal(np.isnan(n_c), np.isnan(j_c))
+            np.testing.assert_array_equal(np.isnan(dj_c), np.isnan(j_c))
+            ok = np.isfinite(j_c)
+            np.testing.assert_allclose(
+                (j_c / n_c)[ok], (flux[k].data / counts[k].data)[:, :-1][ok]
+            )
+            np.testing.assert_allclose(
+                (dj_c / j_c)[ok], (1 / np.sqrt(counts[k].data))[:, :-1][ok]
+            )
+
+        # Bad eye, sunlight and bad channels removed from all units
+        self.assertTrue(np.isnan(result[1]["bottom-7"].data).all())
+        self.assertTrue(np.isnan(result[2]["bottom-7"].data).all())
+
 
 @ddt
 class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
