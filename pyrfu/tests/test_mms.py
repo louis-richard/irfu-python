@@ -6170,6 +6170,35 @@ class FeepsAvg4scTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["mmsId"], "4sc_avg")
         self.assertEqual(omni[0].attrs["mmsId"], 1)
 
+    def test_feeps_avg_4sc_method(self):
+        # Spacecraft at 1, 2 and 4 and one without data
+        omni = _feeps_omni_4sc([1.0, 2.0, 4.0, np.nan])
+        omni[0].data[2] = np.nan
+
+        for m, expected in [
+            ("mean", 7.0 / 3.0),
+            ("sum", 7.0),
+            ("quadrature", np.sqrt(21.0) / 3.0),
+        ]:
+            result = mms.feeps_avg_4sc(omni, method=m)
+            np.testing.assert_allclose(result.data[[0, 1, 3]], expected)
+
+        # A time with one spacecraft less
+        np.testing.assert_allclose(mms.feeps_avg_4sc(omni, method="sum").data[2], 6.0)
+
+        # Default from the units of the first spacecraft
+        omni[0].attrs["units_name"] = "counts"
+        np.testing.assert_allclose(mms.feeps_avg_4sc(omni).data[0], 7.0)
+        omni[0].attrs["units_name"] = "fluxerr"
+        np.testing.assert_allclose(mms.feeps_avg_4sc(omni).data[0], np.sqrt(21.0) / 3.0)
+
+        # The spacecraft without data at all: NaN, also for the sum
+        nan = _feeps_omni_4sc([np.nan] * 4)
+        self.assertTrue(np.isnan(mms.feeps_avg_4sc(nan, method="sum").data).all())
+
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.feeps_avg_4sc(omni, method="median")
+
     @staticmethod
     def _omni(time, data, mms_id):
         energy = np.array([50.0, 70.0])

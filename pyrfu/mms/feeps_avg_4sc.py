@@ -7,6 +7,7 @@ from collections.abc import Sequence
 
 # 3rd party imports
 from copy import deepcopy
+from typing import Literal
 
 import numpy as np
 import xarray as xr
@@ -18,12 +19,15 @@ from pyrfu._core.units import _check_same_units
 from ..pyrf.calc_fs import calc_fs
 from ..pyrf.nanavg_4sc import _valid_count, _without_gaps
 from ..pyrf.resample import resample
+from .feeps_omni import _DEFAULT_METHODS
 
 
 def feeps_avg_4sc(
     b_list: Sequence[DataArray],
     flag: str = "omni",
     combined_energies: dict | None = None,
+    *,
+    method: Literal["mean", "sum", "quadrature"] | None = None,
 ) -> DataArray:
     r"""Average data from 4 spacecrafts while ignoring NaN values.
     Computes the input quantity at the center of mass of the MMS
@@ -49,6 +53,14 @@ def feeps_avg_4sc(
         the combined channels. The default is None, which averages the channels
         with the same index on all spacecraft, even if their energies differ.
 
+    method : {"mean", "sum", "quadrature"}, optional
+        Combination of the spacecraft: the mean (intensities, count rates),
+        the sum (counts) or the square root of the sum of the squares divided
+        by the number of spacecraft (errors of the mean). The default is from
+        the units of the first spacecraft (``units_name`` of
+        `pyrfu.mms.feeps_omni` or `pyrfu.mms.feeps_pad`): "sum" for "counts",
+        "quadrature" for "fluxerr", "mean" otherwise.
+
     Returns
     -------
     b_avg : DataArray
@@ -62,7 +74,8 @@ def feeps_avg_4sc(
         is not a dict.
     ValueError
         If flag is not "omni" or "pad", if the spacecraft have different
-        ``UNITS``, or with "pad" different pitch-angle bins.
+        ``UNITS``, with "pad" different pitch-angle bins, or if `method` is
+        not one of the above.
 
     Notes
     -----
@@ -71,6 +84,10 @@ def feeps_avg_4sc(
     samples more than 1.5 sampling periods apart), and before the start and
     after the end of its data (beyond half a sampling period). Times where the
     quantity is NaN on all the spacecraft give NaN.
+
+    The counts and the errors are resampled as the intensities: on other
+    times than their own, the counts are interpolated (not integers) and the
+    errors are those of the interpolated values only approximately.
 
     """
     # Check input type
@@ -95,6 +112,13 @@ def feeps_avg_4sc(
     # The units of the first spacecraft were taken
     _check_same_units(b_list, "spacecraft")
 
+    combine = method or _DEFAULT_METHODS.get(
+        b_list[0].attrs.get("units_name", ""), "mean"
+    )
+
+    if combine not in ["mean", "sum", "quadrature"]:
+        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
+
     # The PADs were averaged by bin index, whatever their pitch angles
     if flag == "pad" and not all(
         np.array_equal(b.theta.data, b_list[0].theta.data) for b in b_list
@@ -103,6 +127,10 @@ def feeps_avg_4sc(
 
     b_list_count_nans = deepcopy(b_list_r)
     b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]
+
+    if combine == "quadrature":
+        # the squares are summed
+        b_list_r = [b**2 for b in b_list_r]
     b_avg_data = np.zeros(b_list_r[0].shape)
     b_nan_denom = np.zeros(b_list_r[0].shape)
 
@@ -147,7 +175,12 @@ def feeps_avg_4sc(
 
     # NaN (without warning) where no spacecraft has data
     with np.errstate(divide="ignore", invalid="ignore"):
-        b_avg_data = b_avg_data / b_nan_denom
+        if combine == "mean":
+            b_avg_data = b_avg_data / b_nan_denom
+        elif combine == "sum":
+            b_avg_data = np.where(b_nan_denom > 0, b_avg_data, np.nan)
+        else:
+            b_avg_data = np.sqrt(b_avg_data) / b_nan_denom
 
     b_avg = xr.DataArray(
         b_avg_data,
