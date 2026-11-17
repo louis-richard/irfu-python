@@ -7456,6 +7456,40 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
         self.assertIsInstance(result, xr.DataArray)
 
+    def test_feeps_spin_avg_method(self):
+        # Mean, sum or quadrature of the samples of a spin, by default from the
+        # units of the omni spectrum (counts summed, errors in quadrature)
+        time = generate_timeline(1.0, 24)
+        spin_sectors = np.tile(np.arange(12), 2)
+        values = np.tile(np.arange(1.0, 13.0), 2)
+        omni = xr.DataArray(
+            np.tile(values[:, None], (1, 3)),
+            coords=[time, np.arange(3.0)],
+            dims=["time", "energy"],
+            attrs={"units_name": "flux"},
+        )
+        expected = {
+            "mean": values[:12].mean(),
+            "sum": values[:12].sum(),
+            "quadrature": np.sqrt(np.sum(values[:12] ** 2)) / 12,
+        }
+
+        for method, value in expected.items():
+            with self.subTest(method=method):
+                result = mms.feeps_spin_avg(omni, spin_sectors, method=method)
+                np.testing.assert_allclose(result.data, value)
+
+        for units_name, method in [("counts", "sum"), ("fluxerr", "quadrature")]:
+            with self.subTest(units_name=units_name):
+                inp = omni.assign_attrs(units_name=units_name)
+                xr.testing.assert_identical(
+                    mms.feeps_spin_avg(inp, spin_sectors),
+                    mms.feeps_spin_avg(inp, spin_sectors, method=method),
+                )
+
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.feeps_spin_avg(omni, spin_sectors, method="median")
+
     def test_feeps_spin_avg_input_types(self):
         feeps_alle = generate_feeps(64.0, 100, "srvy", "electron", "l2", "flux", 1)
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
@@ -14610,6 +14644,15 @@ class SpinReduceTestCase(unittest.TestCase):
         np.testing.assert_array_equal(
             self.module._spin_reduce(data, starts, stops, "sum"),
             [[2.0, 4.0], [np.nan, np.nan], [18.0, 11.0]],
+        )
+        # The error of the mean of independent errors
+        np.testing.assert_allclose(
+            self.module._spin_reduce(data, starts, stops, "quadrature"),
+            [
+                [np.sqrt(4) / 2, np.sqrt(10) / 2],
+                [np.nan, np.nan],
+                [np.sqrt(164) / 2, 11.0],
+            ],
         )
 
         # Counts in integers are summed as integers

@@ -17,9 +17,11 @@ from pyrfu.pyrf.datetime642iso8601 import datetime642iso8601
 
 
 def _spin_reduce(data, starts, stops, method: str = "mean"):
-    r"""Mean or sum of `data` along its first axis (time) over each spin
-    [starts[i], stops[i]), NaN-aware: NaN for a spin without data (also for
-    the sum, which was 0, as data). The spins have the same number of samples,
+    r"""Mean, sum or quadrature (sqrt of the sum of the squares over the
+    number of samples, the error of the mean of independent errors) of `data`
+    along its first axis (time) over each spin [starts[i], stops[i]),
+    NaN-aware: NaN for a spin without data (also for the sum, which was 0, as
+    data). The spins have the same number of samples,
     as the complete spins of EIS, FEEPS and HPCA (one array for all of them; it
     was a loop over the spins in each routine)."""
     data = np.asarray(data)
@@ -46,6 +48,11 @@ def _spin_reduce(data, starts, stops, method: str = "mean"):
             return np.where(
                 np.isfinite(spins).any(axis=1), np.nansum(spins, axis=1), np.nan
             )
+
+        if method == "quadrature":
+            n_valid = np.isfinite(spins).sum(axis=1)
+            quadrature = np.sqrt(np.nansum(spins.astype(np.float64) ** 2, axis=1))
+            return np.where(n_valid > 0, quadrature / np.maximum(n_valid, 1), np.nan)
 
         return np.nanmean(spins, axis=1)
 
