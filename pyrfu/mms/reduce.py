@@ -63,6 +63,19 @@ def _angle_widths(vdf, theta, tint):
     }
 
 
+def _time_seed(seed, i_t):
+    r"""Seed of the Monte-Carlo particles at the time i_t from `seed` (None
+    without seed): one per time, so that the Monte-Carlo noise of the times is
+    independent (the same seed at every time repeated the same draw)."""
+    if seed is None:
+        return None
+
+    if isinstance(seed, bool) or not isinstance(seed, (int, np.integer)) or seed < 0:
+        raise ValueError(f"seed must be a non-negative integer, not {seed!r}")
+
+    return int(np.random.SeedSequence([int(seed), i_t]).generate_state(1)[0])
+
+
 def reduce(
     vdf,
     xyz,
@@ -80,6 +93,7 @@ def reduce(
     v_int=(-np.inf, np.inf),
     a_int=(-180.0, 180.0),
     verbose=True,
+    seed: int | None = None,
 ):
     r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
 
@@ -128,6 +142,11 @@ def reduce(
         default).
     verbose : bool, Optional
         Show a progress bar. Default True.
+    seed : int, Optional
+        Seed of the Monte-Carlo particles (a non-negative integer), a
+        different one at each time derived from it: the same seed gives the
+        same result (bit for bit with the same number of numba threads).
+        Default is None, a different draw at each call.
 
     Returns
     -------
@@ -436,6 +455,7 @@ def reduce(
             "projection_dim": dim,
             "projection_base": base,
             "velocity_grid_edges": velocity_grid_edges,
+            "seed": _time_seed(seed, i_t),
             **speed_widths,
             **angle_options,
         }

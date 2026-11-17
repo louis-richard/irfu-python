@@ -10162,6 +10162,25 @@ class ReduceTestCase(unittest.TestCase):
         result = mms.reduce(vdf, np.eye(3), n_mc=2, verbose=False)
         np.testing.assert_array_equal(result.time.data, times)
 
+    def test_reduce_seed(self):
+        # The same seed gives the same result, bit for bit, with a different
+        # draw at each time (the same distribution at the times gives
+        # different Monte-Carlo noise, 5 % here in 2d cartesian); a negative
+        # seed raises
+        vdf = generate_vdf(64.0, 3, [8, 4, 4], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+        vdf.data.data[1:] = vdf.data.data[0]
+        options = {"dim": "2d", "base": "cart", "n_mc": 20, "verbose": False}
+
+        result = mms.reduce(vdf, np.eye(3), seed=3, **options)
+        xr.testing.assert_identical(
+            mms.reduce(vdf, np.eye(3), seed=3, **options), result
+        )
+        self.assertFalse(np.array_equal(result.data[0], result.data[1]))
+
+        with self.assertRaisesRegex(ValueError, "seed"):
+            mms.reduce(vdf, np.eye(3), seed=-3, **options)
+
     def test_reduce_xyz_per_time(self):
         # One matrix per time as an array (n_t, 3, 3) (TypeError), as the
         # same matrices as a time series; a wrong number of times raises

@@ -51,6 +51,9 @@ from ..pyrf.shock_normal import _shock_angle
 from ..pyrf.wavelet import _power_c, _power_r, _ww
 from . import generate_data, generate_timeline, generate_ts, generate_vdf
 
+# No seed for the Monte-Carlo kernel of int_sph_dist (numba's generator as it is)
+_NO_SEEDS = np.zeros(0, dtype=np.int64)
+
 
 @ddt
 class AnisotropyThresholdsTestCase(unittest.TestCase):
@@ -4825,6 +4828,41 @@ class IntSphDistTestCase(unittest.TestCase):
             pyrf.int_sph_dist(vdf, speed, phi, theta, speed_grid, phi_grid, **value)
 
     @data(
+        {"projection_base": "pol", "projection_dim": "1d"},
+        {"projection_base": "cart", "projection_dim": "2d"},
+    )
+    def test_int_sph_dist_seed(self, value):
+        # The same seed gives the same result, bit for bit (random.seed and
+        # np.random.seed do not reach the numba generator: two calls differed
+        # by 0.05 % median); another seed or none, another draw
+        rng = np.random.default_rng(5)
+        args = (
+            rng.random((20, 8, 4)),
+            np.linspace(1, 2, 20),
+            np.arange(8.0) * np.pi / 4,
+            (np.arange(4.0) - 1.5) * np.pi / 8,
+            np.linspace(-2, 2, 41),
+            np.linspace(0, 2 * np.pi, 8, endpoint=False),
+        )
+        options = {"n_mc": 20, **value}
+        result = pyrf.int_sph_dist(*args, seed=11, **options)["f"]
+
+        np.testing.assert_array_equal(
+            pyrf.int_sph_dist(*args, seed=11, **options)["f"], result
+        )
+        for other in [12, None]:
+            with self.subTest(seed=other):
+                self.assertFalse(
+                    np.array_equal(
+                        pyrf.int_sph_dist(*args, seed=other, **options)["f"], result
+                    )
+                )
+
+        for seed in [-1, 1.5, True]:
+            with self.subTest(seed=seed), self.assertRaisesRegex(ValueError, "seed"):
+                pyrf.int_sph_dist(*args, seed=seed, **options)
+
+    @data(
         {},
         {"weight": "lin"},
         {"weight": "log"},
@@ -4879,9 +4917,20 @@ class IntSphDistTestCase(unittest.TestCase):
         # (three kernels before), the bins flattened
         vdf, args, edges = self._kernel_args(n_dim)
         v_step = _uniform_step(edges) if n_dim > 1 else 0.0
-        result = _mc_project(vdf, *args, v_step, n_dim, numba.get_num_threads())
+        result = _mc_project(
+            vdf, *args, v_step, n_dim, _NO_SEEDS, numba.get_num_threads()
+        )
         self.assertEqual(result.shape, (101**n_dim,))
         self.assertGreater(np.count_nonzero(result), 0)
+
+        # With seeds (one per speed), the same particles whatever the thread
+        # (the pure-Python kernel, as the jitted one)
+        seeds = np.arange(len(vdf), dtype=np.int64) + 7
+        seeded = [
+            _mc_project.__wrapped__(vdf, *args, v_step, n_dim, seeds, n_chunks)
+            for n_chunks in [1, 3]
+        ]
+        np.testing.assert_allclose(seeded[1], seeded[0], rtol=1e-12)
 
     def test_grid_index(self):
         # MATLAB's discretize: an interior edge in the upper bin, the last
@@ -4917,7 +4966,9 @@ class IntSphDistTestCase(unittest.TestCase):
         results = []
         for v_step in [_uniform_step(edges), 0.0]:
             random.seed(0)
-            results.append(_mc_project.__wrapped__(vdf, *args, v_step, n_dim, 1))
+            results.append(
+                _mc_project.__wrapped__(vdf, *args, v_step, n_dim, _NO_SEEDS, 1)
+            )
 
         self.assertGreater(_uniform_step(edges), 0.0)
         self.assertGreater(np.count_nonzero(results[0]), 0)
@@ -5127,7 +5178,7 @@ class IntSphDistTestCase(unittest.TestCase):
 
         shape = (len(k_args[8]) - 1,) * n_dim
         results = [
-            func(*k_args, step, n_dim, n_threads).reshape(shape)
+            func(*k_args, step, n_dim, _NO_SEEDS, n_threads).reshape(shape)
             for func in [_mc_project.__wrapped__, _mc_project]
             for step in steps
         ]
