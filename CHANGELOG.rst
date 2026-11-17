@@ -1,6 +1,83 @@
 Changelog
 =========
 
+2.6.0 (unreleased)
+------------------
+
+This release adds options that keep the previous behaviour by default
+(extrapolation in ``pyrf.resample``, a seed for the Monte-Carlo integrations,
+time decoding in ``pyrf.read_cdf``), and the counting statistics of FEEPS: the
+counts and the intensity errors of the L2 files, combined exactly through the
+omni-directional spectra, spin averages, pitch-angle distributions, skymaps
+and four-spacecraft averages, and the one-count level of spectra.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- The FEEPS counts (``counts{s}_{rate}_{level}`` of
+  ``mms.get_feeps_alleyes``) are summed: over the eyes and the samples of a
+  spin by ``mms.feeps_omni``, ``mms.feeps_spin_avg`` and
+  ``mms.get_feeps_omni``, over the energy channels and the eyes of a
+  pitch-angle bin by ``mms.feeps_pad`` (their zeros kept), over the samples
+  of a skymap bin by ``mms.feeps_skymap``, and over the spacecraft by
+  ``mms.feeps_avg_4sc``. They were averaged as intensities, as IDL SPEDAS and
+  pySPEDAS do. The intensities and count rates are averaged as before, with
+  the same results.
+
+New features
+^^^^^^^^^^^^
+
+- FEEPS L2 counts and intensity errors: ``mms.get_feeps_alleyes`` (and
+  ``mms.get_feeps_omni``) read ``counts{s}_{rate}_l2`` (``ValueError``: the
+  L2 files have no counts) as :math:`N = (100 / p)^2` from the
+  ``percent_error`` :math:`p = 100 / \sqrt{N}` of the files (exact integers),
+  0 where the count rate is 0 and NaN without data, and the new
+  ``fluxerr{s}_{rate}_l2``, the intensity times :math:`p / 100`. Neither IDL
+  SPEDAS nor pySPEDAS reads ``percent_error``.
+- Keyword-only ``method`` ("mean", "sum" or "quadrature") of
+  ``mms.feeps_omni``, ``mms.feeps_spin_avg``, ``mms.feeps_pad``,
+  ``mms.feeps_pad_spinavg``, ``mms.feeps_skymap`` and ``mms.feeps_avg_4sc``:
+  the eyes, samples or spacecraft are averaged, summed, or combined as the
+  error of the mean (the square root of the sum of the squares over their
+  number). The default follows the units: the counts are summed, the
+  intensity errors (``fluxerr``) combined in quadrature, the other units
+  averaged. The correction factor of the spacecraft (0.84 for the MMS1 ions)
+  multiplies every method, as IDL SPEDAS. The errors are propagated exactly:
+  the intensity over the square root of the summed counts underestimates
+  them where the eyes have different intensities per count (by 7 % or more
+  in 5 % of the omni samples of MMS3 electrons, 2017-07-11).
+- ``mms.vdf_counts``, ``mms.vdf_one_count`` and ``mms.vdf_error`` accept
+  spectra (``xarray.DataArray``) as well as distributions: e.g. the one-count
+  level of an omni-directional FEEPS spectrum is
+  ``mms.vdf_one_count(flux_omni, counts_omni)``, and that of each bin of a
+  FEEPS skymap ``mms.vdf_one_count(skymap, counts_skymap)``.
+- ``pyrf.resample(..., extrapolate=True)``: with ``extrapolate=False``, the
+  times outside the time range of the input are NaN instead of extrapolated.
+- ``pyrf.int_sph_dist(..., seed=None)`` and ``mms.reduce(..., seed=None)``:
+  with a seed, the Monte-Carlo particles are reproducible (bit for bit with
+  the same number of numba threads); ``mms.reduce`` derives a seed per time.
+- ``pyrf.read_cdf(path, *, decode_epochs=False, squeeze=True)``:
+  ``decode_epochs=True`` decodes the CDF times (TT2000, EPOCH, EPOCH16) to
+  datetime64[ns], and ``squeeze=False`` keeps the shapes as stored.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.feeps_flat_field_corrections``: the gains multiply every unit, the
+  counts and the intensity errors included, as IDL SPEDAS (unchanged): the
+  intensity per count and the relative errors are unchanged.
+- ``mms.feeps_corrections``: the corrections apply to the counts and the
+  intensity errors as to the intensities (tested).
+- ``mms.get_feeps_omni``: how the units are combined.
+- ``mms.feeps_avg_4sc``: the counts and errors are resampled as the
+  intensities (interpolated on the times of another spacecraft).
+
+Development
+^^^^^^^^^^^
+
+- The NaN-aware mean, sum and quadrature of the EPD routines are one helper,
+  ``_nan_reduce`` (``mms/_internal/epd.py``).
+
 2.5.16 (2026-11-16)
 -------------------
 
