@@ -14,7 +14,7 @@ from pyrfu._core.time import _ns
 
 from ..pyrf.ts_skymap import ts_skymap
 from .dpf2psd import dpf2psd
-from .feeps_omni import _eyes_on_omni_energies
+from .feeps_omni import _DEFAULT_METHODS, _eyes_on_omni_energies
 from .feeps_pitch_angles import t_bot, t_top, v_fcs
 from .feeps_spin_avg import _feeps_complete_spins, _spin_bounds
 
@@ -196,6 +196,8 @@ def feeps_skymap(
     n_phi: int | None = None,
     to_psd: bool = True,
     fill_empty: Literal["ring", "omni"] | None = None,
+    *,
+    method: Literal["mean", "sum", "quadrature"] | None = None,
 ):
     r"""Skymaps of the FEEPS data, one per spin.
 
@@ -223,6 +225,15 @@ def feeps_skymap(
         all the samples of the spin, i.e. the spin-averaged omni-directional
         flux ("omni"). Filling assumes gyrotropy around the spin axis ("ring")
         or isotropy ("omni"); the ``coverage`` attribute is that of the data.
+        Only with the mean (`method`).
+    method : {"mean", "sum", "quadrature"}, Optional
+        Combination of the samples of the eyes in each bin and spin: the mean
+        (intensities, count rates), the sum (counts) or the square root of the
+        sum of the squares divided by the number of samples (errors of the
+        mean). Default is from the units of `inp_dataset` (``units_name`` of
+        `pyrfu.mms.get_feeps_alleyes`): "sum" for "counts", "quadrature" for
+        "fluxerr", "mean" otherwise. The counts and the errors need
+        ``to_psd=False``.
 
     Returns
     -------
@@ -234,8 +245,9 @@ def feeps_skymap(
     ------
     ValueError
         If the integral channel of the eyes is not split, if `to_psd` is True
-        and the data are not intensities (or have no ``UNITS``), or if
-        `fill_empty` is invalid.
+        and the data are not intensities (or have no ``UNITS``), if
+        `fill_empty` is invalid or given with another method than the mean,
+        or if `method` is invalid.
 
     See Also
     --------
@@ -267,7 +279,9 @@ def feeps_skymap(
     (``delta_theta_minus/plus``) reach halfway to the next cone, so that the
     bins cover the sphere: moments are coarse partial moments above about 30
     keV. The eyes measure the total ion flux, which is converted to phase-space
-    density as protons. Zero intensities are kept, as in `feeps_omni`.
+    density as protons. Zero intensities are kept, as in `feeps_omni`. With
+    the counts ("sum"), the one-count level of each bin is
+    ``vdf_one_count(skymap of the intensities, skymap of the counts)``.
 
     Bad eyes, the energy check and the sun masks leave bins, sometimes whole
     rings, without data. They count as zero in `psd_moments`, so the moments
@@ -309,6 +323,14 @@ def feeps_skymap(
     if fill_empty not in [None, "ring", "omni"]:
         raise ValueError(f"Invalid fill_empty {fill_empty}: must be None, ring or omni")
 
+    combine = method or _DEFAULT_METHODS.get(attrs.get("units_name"), "mean")
+
+    if combine not in ["mean", "sum", "quadrature"]:
+        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
+
+    if fill_empty is not None and combine != "mean":
+        raise ValueError(f"fill_empty needs the mean, not the {combine}")
+
     if n_phi is None:
         n_phi = 32 if tmmode == "brst" else 8
 
@@ -318,22 +340,29 @@ def feeps_skymap(
     rings = _RINGS[d_type]
     phi_edges = np.linspace(0.0, 360.0, n_phi + 1)
 
-    sums, counts = _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges)
+    # Sums (of the squares for the errors) and numbers of samples per bin
+    values = dalleyes**2 if combine == "quadrature" else dalleyes
+    sums, n_samples = _bin_spins(values, eyes, psi, bounds, rings, phi_edges)
 
     # The complete spins only
     complete = np.isin(
         bounds[:-1], _feeps_complete_spins(spin_sectors, inp_dataset.time.data)[0]
     )
-    sums, counts = sums[complete], counts[complete]
+    sums, n_samples = sums[complete], n_samples[complete]
 
-    with np.errstate(invalid="ignore"):
-        data = g_fact * sums / counts
+    with np.errstate(invalid="ignore", divide="ignore"):
+        if combine == "mean":
+            data = g_fact * sums / n_samples
+        elif combine == "sum":
+            data = np.where(n_samples > 0, g_fact * sums, np.nan)
+        else:
+            data = g_fact * np.sqrt(sums) / n_samples
 
     theta_edges = np.hstack([0.0, (np.array(rings[1:]) + rings[:-1]) / 2.0, 180.0])
     coverage = _coverage(data, phi_edges, theta_edges)
 
     if fill_empty is not None:
-        data = _fill_empty(data, g_fact * sums, counts, fill_empty)
+        data = _fill_empty(data, g_fact * sums, n_samples, fill_empty)
 
     time = inp_dataset.time.data[bounds[:-1][complete]]
     n_spins = len(time)

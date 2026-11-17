@@ -7518,6 +7518,46 @@ class FeepsSkymapTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.feeps_skymap(feeps_alle, fill_empty="nearest")
 
+    def test_feeps_skymap_method(self):
+        # Every eye at 2 in every sample: sum 2 n and quadrature 2 / sqrt(n),
+        # n the number of samples of each bin
+        flux = _feeps_skymap_case("brst", 128)
+        quad = mms.feeps_skymap(flux, to_psd=False, method="quadrature").data.data
+        n_samples = (2.0 / quad) ** 2
+        np.testing.assert_allclose(n_samples, np.round(n_samples))
+        self.assertTrue((n_samples >= 1).all())
+        sums = mms.feeps_skymap(flux, to_psd=False, method="sum").data.data
+        np.testing.assert_allclose(sums, 2.0 * n_samples)
+
+        # top-1 at 0 in the first spin: its zeros kept, in all the methods
+        feeps_alle = flux.copy(deep=True)
+        feeps_alle["top-1"].data[:64] = 0.0
+        result = {
+            m: mms.feeps_skymap(feeps_alle, to_psd=False, method=m).data.data
+            for m in ["mean", "sum", "quadrature"]
+        }
+        self.assertTrue((result["sum"] < sums).any())
+        np.testing.assert_allclose(result["mean"], result["sum"] / n_samples)
+        np.testing.assert_array_less(result["quadrature"], quad + 1e-12)
+
+        # Default from the units of the eyes
+        for units, m in [("counts", "sum"), ("fluxerr", "quadrature")]:
+            feeps_alle.attrs["units_name"] = units
+            np.testing.assert_array_equal(
+                mms.feeps_skymap(feeps_alle, to_psd=False).data.data, result[m]
+            )
+
+        # One-count level of each bin: intensity skymap / counts skymap
+        counts = mms.feeps_skymap(flux, to_psd=False, method="sum")
+        one = mms.vdf_one_count(mms.feeps_skymap(flux, to_psd=False), counts)
+        np.testing.assert_allclose(one.data.data, 1.0 / n_samples)
+
+        with self.assertRaisesRegex(ValueError, "method"):
+            mms.feeps_skymap(feeps_alle, to_psd=False, method="median")
+
+        with self.assertRaisesRegex(ValueError, "fill_empty"):
+            mms.feeps_skymap(feeps_alle, to_psd=False, fill_empty="ring")
+
     def test_feeps_skymap_psd(self):
         feeps_alle = _feeps_skymap_case("brst", 128)
         flux = mms.feeps_skymap(feeps_alle, to_psd=False)
