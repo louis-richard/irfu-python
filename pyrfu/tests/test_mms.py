@@ -8580,8 +8580,51 @@ class GetFeepsTestCase(unittest.TestCase):
         )
         self.assertIn("energy_top-3", out_l1b["top-3"].dims)
 
-        with self.assertRaisesRegex(ValueError, "l1b"):
-            mms.get_feeps_alleyes("countse_brst_l2", self.TINT, 2)
+        # The intensity errors are derived from the L2 files only
+        with self.assertRaisesRegex(ValueError, "fluxerre_brst_l2"):
+            mms.get_feeps_alleyes("fluxerre_brst_l1b", self.TINT, 2)
+
+    def test_get_feeps_alleyes_counts_errors_l2(self):
+        # L2 counts (100 / percent_error)^2 (ValueError: the counts were only
+        # read from the L1b files), 0 where the count rate is 0 (percent_error
+        # 100 or a negative fill there), NaN where the count rate is NaN (no
+        # data: percent_error 100 there, 1 count); intensity errors intensity
+        # * percent_error / 100, 0 without counts
+        percent_error = np.array([50.0, 10.0, 100.0, -2147483648.0, 100.0])
+        count_rate = np.array([2.0, 50.0, 0.0, 0.0, np.nan])
+        intensity = 7.0 * count_rate
+
+        def fake_read(dset_name, cdf_names, tint, *args, **kwargs):
+            out = self._fake_read(dset_name, cdf_names, tint, *args, **kwargs)
+            for name in cdf_names:
+                for key, value in [
+                    ("percent_error", percent_error),
+                    ("count_rate", count_rate),
+                    ("intensity", intensity),
+                ]:
+                    if f"_{key}_" in name:
+                        out[name] = out[name].copy(data=np.tile(value[:, None], 3))
+                        out[name].attrs["UNITS"] = key
+            return out
+
+        with mock.patch.object(self.module, "_db_get_ts_dict", side_effect=fake_read):
+            counts = mms.get_feeps_alleyes(
+                "countse_brst_l2", self.TINT, 2, quality_flag=None
+            )
+            errors = mms.get_feeps_alleyes(
+                "fluxerre_brst_l2", self.TINT, 2, quality_flag=None
+            )
+
+        np.testing.assert_array_equal(
+            counts["top-3"].data[:, 0], [4, 100, 0, 0, np.nan]
+        )
+        np.testing.assert_allclose(
+            errors["top-3"].data[:, 0], [7.0, 35.0, 0, 0, np.nan]
+        )
+        self.assertEqual(counts["top-3"].attrs["UNITS"], "counts")
+        self.assertEqual(errors["top-3"].attrs["UNITS"], "intensity")
+        self.assertIn("energy_top-3", counts["top-3"].dims)
+        self.assertEqual(counts.attrs["units_name"], "counts")
 
     def test_get_feeps_alleyes_energy_bounds(self):
         # Channel bounds read once (not per time), along the eye energies

@@ -15,7 +15,51 @@ data_units_keys = {
     "counts": "counts",
     "cps": "count_rate",
     "mask": "sector_mask",
+    "fluxerr": "intensity_error",
 }
+
+# Variables of the L2 files from which the counts and the intensity errors
+# are derived (percent_error = 100 / sqrt(counts))
+_DERIVED = {
+    "counts": ["percent_error", "count_rate"],
+    "intensity_error": ["percent_error", "count_rate", "intensity"],
+}
+
+
+def _counts(percent_error, count_rate):
+    r"""Counts (100 / percent_error)^2 of the L2 files, 0 where the count rate
+    is 0 (percent_error 100 or a negative fill value there), NaN where the
+    count rate is NaN (no data: percent_error 100 there, 1 count) or
+    percent_error is not valid with counts (quality indicator 3)."""
+    valid = np.isfinite(percent_error) & (percent_error > 0)
+    counts = np.full(percent_error.shape, np.nan)
+    np.divide(100.0, percent_error, out=counts, where=valid)
+    counts = np.round(counts**2)
+
+    counts = np.where(count_rate == 0, 0.0, counts)
+
+    return np.where(np.isnan(count_rate), np.nan, counts)
+
+
+def _derived_eye(name, data, e_id, cdf_name):
+    r"""Counts (name "counts") or intensity errors ("intensity_error") of the
+    eye e_id from its L2 variables in data, with the coordinates and
+    attributes of its count rate (intensity)."""
+    percent_error = np.asarray(data[cdf_name(e_id, "percent_error")].data, float)
+    count_rate = data[cdf_name(e_id, "count_rate")]
+    counts = _counts(percent_error, np.asarray(count_rate.data, float))
+
+    if name == "counts":
+        attrs = {**count_rate.attrs, "UNITS": "counts"}
+        return count_rate.copy(data=counts).assign_attrs(attrs)
+
+    # Relative error of the intensity, that of the counts (a constant factor
+    # per channel between the two); 0 without counts
+    intensity = data[cdf_name(e_id, "intensity")]
+    error = np.where(
+        counts == 0, 0.0, np.asarray(intensity.data, float) * percent_error / 100
+    )
+    return intensity.copy(data=np.where(np.isnan(counts), np.nan, error))
 
 
 def _eye_cdf_name(pref, name, e_id, mms_id):
@@ -41,7 +85,10 @@ def get_feeps_alleyes(
     ----------
     tar_var : str
         Key of the target variable like
-        {data_unit}{specie}_{data_rate}_{data_lvl}, e.g. "fluxe_brst_l2".
+        {data_unit}{specie}_{data_rate}_{data_lvl}, e.g. "fluxe_brst_l2". The
+        units are "flux" (intensity, 1/(cm^2 s sr keV)), "cps" (count rate),
+        "counts", "fluxerr" (error of the intensity, L2) and "mask" (sector
+        masks).
     tint : array_like or xarray.DataArray
         Time interval: the start and stop times as ISO 8601 str, datetime64
         or datetime.datetime, or a time series (its first and last times), as
@@ -75,9 +122,8 @@ def get_feeps_alleyes(
     Raises
     ------
     ValueError
-        If the units or the species in `tar_var` are invalid, or if counts are
-        requested from the L2 files: they are only in the L1b files
-        (``counts{specie}_{data_rate}_l1b``).
+        If the units or the species in `tar_var` are invalid, or if the
+        intensity errors are requested from other than the L2 files.
 
     Notes
     -----
@@ -87,6 +133,17 @@ def get_feeps_alleyes(
     science: contaminated, or survey sector fully masked onboard, with zero
     counts) and 4 (calibration). The MMS CMAD (section 6.4.3) recommends not
     to use 3 and 4 for science. IDL SPEDAS doesn't use the quality indicators.
+
+    The L2 files have no counts: the L2 counts ("counts") are derived from
+    the statistical error ``percent_error`` = 100 / sqrt(N) of the files,
+    N = (100 / percent_error)^2 (an integer), 0 where the count rate is 0,
+    NaN where the count rate is NaN (no data) or ``percent_error`` is not
+    valid with a count rate (quality indicator 3). The intensity errors
+    ("fluxerr") are intensity * percent_error / 100, 0 without counts: the
+    intensity is the count rate times a calibration factor of each eye and
+    channel, so that its relative error is that of the counts. The L1b counts
+    are read from the L1b files. IDL SPEDAS and pyspedas don't use
+    ``percent_error``.
 
     The data are clipped to `tint` when they are read, so the spin averages
     (`feeps_spin_avg`, `feeps_pad_spinavg`) and the sector spectrograms
@@ -138,10 +195,13 @@ def get_feeps_alleyes(
 
     data_units = data_units_keys[var["units_name"]]
 
-    if data_units == "counts" and var["lev"] == "l2":
+    # Counts and intensity errors derived from percent_error (L2)
+    derived = data_units in _DERIVED and var["lev"] == "l2"
+
+    if data_units == "intensity_error" and not derived:
         raise ValueError(
-            "FEEPS counts are only in the L1b files: use "
-            f"counts{specie}_{var['tmmode']}_l1b"
+            f"FEEPS intensity errors are derived from the L2 files: use "
+            f"fluxerr{specie}_{var['tmmode']}_l2"
         )
 
     dset_name = f"mms{mms_id:d}_feeps_{var['tmmode']}_{var['lev']}_{var['dtype']}"
@@ -151,12 +211,25 @@ def get_feeps_alleyes(
 
     e_ids = [f"{k}-{s:d}" for k in active_eyes for s in active_eyes[k]]
 
+    def eye_cdf_name(e_id, name):
+        return _eye_cdf_name(pref, name, e_id, mms_id)
+
     # Read all the variables at once (one download per file from the SDC or AWS)
     cdf_names = {
         "spinsectnum": f"mms{mms_id:d}_{pref}_spinsectnum",
         "pitch_angle": f"mms{mms_id:d}_{pref}_pitch_angle",
-        **{e_id: _eye_cdf_name(pref, data_units, e_id, mms_id) for e_id in e_ids},
     }
+
+    if derived:
+        sources = {
+            f"{name}_{e_id}": eye_cdf_name(e_id, name)
+            for e_id in e_ids
+            for name in _DERIVED[data_units]
+        }
+    else:
+        sources = {e_id: eye_cdf_name(e_id, data_units) for e_id in e_ids}
+
+    cdf_names.update(sources)
 
     # Quality indicators of the eyes (L2 only)
     quality_cut = (
@@ -188,7 +261,15 @@ def get_feeps_alleyes(
         source,
         support_names=list(bounds.values()),
     )
-    out_dict = {key: data[cdf_name] for key, cdf_name in cdf_names.items()}
+    out_dict = {
+        key: data[cdf_name]
+        for key, cdf_name in cdf_names.items()
+        if not (derived and key in sources)
+    }
+
+    if derived:
+        for e_id in e_ids:
+            out_dict[e_id] = _derived_eye(data_units, data, e_id, eye_cdf_name)
 
     for e_id in e_ids:
         eye = out_dict[e_id]
