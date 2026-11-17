@@ -5,7 +5,7 @@
 import numpy as np
 
 # Local imports
-from pyrfu.mms._internal.vdf_bins import _check_same_bins, _like
+from pyrfu.mms._internal.vdf_bins import _check_same_bins, _like, _units, _values
 
 
 def vdf_one_count(vdf, counts):
@@ -21,11 +21,12 @@ def vdf_one_count(vdf, counts):
 
     Parameters
     ----------
-    vdf : xarray.Dataset
-        Skymap distribution (or its time average).
-    counts : xarray.Dataset
-        Its counts (``vdf_counts``, or their sum over the same windows), at
-        the same times.
+    vdf : xarray.Dataset or xarray.DataArray
+        Skymap distribution (or its time average), or a spectrum, e.g. the
+        FEEPS omni-directional intensity (`pyrfu.mms.feeps_omni`).
+    counts : xarray.Dataset or xarray.DataArray
+        Its counts (``vdf_counts``, or their sum over the same windows; for
+        FEEPS, the "counts" of `pyrfu.mms.feeps_omni`), at the same times.
 
     Returns
     -------
@@ -35,7 +36,8 @@ def vdf_one_count(vdf, counts):
     Raises
     ------
     TypeError
-        If `vdf` or `counts` is not a xarray.Dataset.
+        If `vdf` and `counts` are not both xarray.Dataset or both
+        xarray.DataArray.
     ValueError
         If `counts` does not have the times and the shape of `vdf`.
 
@@ -66,13 +68,19 @@ def vdf_one_count(vdf, counts):
     >>> counts_sum = pyrf.average_vdf(counts_i, 5, method="sum")
     >>> one_count_avg = mms.vdf_one_count(vdf_avg, counts_sum)
 
+    One-count level of the FEEPS omni-directional ion intensity
+
+    >>> flux = mms.get_feeps_omni("fluxi_srvy_l2", tint, 1)
+    >>> counts = mms.get_feeps_omni("countsi_srvy_l2", tint, 1)
+    >>> one_count_feeps = mms.vdf_one_count(flux, counts)
+
     """
     _check_same_bins(vdf, counts, "counts")
 
-    f_data = np.asarray(vdf.data.data, dtype=np.float64)
-    n_counts = np.asarray(counts.data.data, dtype=np.float64)
+    f_data = np.asarray(_values(vdf), dtype=np.float64)
+    n_counts = np.asarray(_values(counts), dtype=np.float64)
 
     with np.errstate(divide="ignore", invalid="ignore"):
         one_count = np.where(n_counts > 0.0, f_data / n_counts, np.nan)
 
-    return _like(vdf, one_count, vdf.data.attrs.get("UNITS"))
+    return _like(vdf, one_count, _units(vdf))

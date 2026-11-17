@@ -12455,6 +12455,33 @@ class VdfCountsTestCase(unittest.TestCase):
             rtol=1e-12,
         )
 
+    def test_vdf_counts_spectra(self):
+        # Spectra (xarray.DataArray, e.g. the FEEPS omni intensity and counts):
+        # the counts, the one-count level and the error as for the
+        # distributions (they raised TypeError)
+        vdf, vdf_err, k, n = self._poisson_vdf()
+        flux, flux_err = vdf.data[:, :, 0, 0], vdf_err.data[:, :, 0, 0]
+        n, k = n[:, :, 0, 0], k[:, :, 0, 0]
+
+        counts = mms.vdf_counts(flux, flux_err)
+        self.assertIsInstance(counts, xr.DataArray)
+        np.testing.assert_allclose(counts.data, n, rtol=1e-12)
+        self.assertEqual(counts.attrs["UNITS"], "counts")
+        self.assertEqual(flux.attrs["UNITS"], "s^3/cm^6")
+
+        one_count = mms.vdf_one_count(flux, counts)
+        np.testing.assert_allclose(
+            one_count.data, np.where(n > 0, k, np.nan), rtol=1e-12
+        )
+        self.assertEqual(one_count.attrs["UNITS"], "s^3/cm^6")
+
+        np.testing.assert_allclose(
+            mms.vdf_error(flux, counts).data, flux_err.data, rtol=1e-12
+        )
+        xr.testing.assert_identical(
+            mms.vdf_error(flux, counts).coords.to_dataset(), flux.coords.to_dataset()
+        )
+
     def test_vdf_counts_inputs(self):
         vdf, vdf_err, _, _ = self._poisson_vdf()
         counts = mms.vdf_counts(vdf, vdf_err)
@@ -12465,11 +12492,14 @@ class VdfCountsTestCase(unittest.TestCase):
             (mms.vdf_error, counts),
         ]:
             with self.subTest(func=func.__name__):
-                with self.assertRaisesRegex(TypeError, "must be a xarray.Dataset"):
+                with self.assertRaisesRegex(TypeError, "must both be"):
                     func(vdf.data, other)
 
-                with self.assertRaisesRegex(TypeError, "must be a xarray.Dataset"):
+                with self.assertRaisesRegex(TypeError, "must both be"):
                     func(vdf, other.data)
+
+                with self.assertRaisesRegex(TypeError, "must both be"):
+                    func(vdf.data.data, other.data.data)
 
                 with self.assertRaisesRegex(ValueError, "shape"):
                     func(vdf, other.isel(time=slice(0, -1)))

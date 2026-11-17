@@ -15,31 +15,56 @@ from pyrfu.pyrf.resample import resample
 # functions (irfu-matlab PDist methods)
 
 
-def _check_same_bins(vdf, other, name, units=False):
-    r"""Raises if `vdf` and `other` are not distributions (xarray.Dataset) with
-    the same times and shape (and units, if `units`)."""
-    for inp, label in [(vdf, "vdf"), (other, name)]:
-        if not isinstance(inp, xr.Dataset):
-            raise TypeError(f"{label} must be a xarray.Dataset")
+def _values(inp):
+    r"""Values of a distribution (xarray.Dataset, its "data") or of a spectrum
+    (xarray.DataArray)."""
+    return inp.data.data if isinstance(inp, xr.Dataset) else inp.data
 
-    if other.data.shape != vdf.data.shape:
+
+def _units(inp):
+    r"""Units of a distribution (of its "data") or of a spectrum."""
+    return (inp.data if isinstance(inp, xr.Dataset) else inp).attrs.get("UNITS")
+
+
+def _check_same_bins(vdf, other, name, units=False):
+    r"""Raises if `vdf` and `other` are not both distributions (xarray.Dataset)
+    or both spectra (xarray.DataArray, e.g. the FEEPS omni-directional
+    intensity) with the same times and shape (and units, if `units`)."""
+    both = [
+        all(isinstance(x, kind) for x in (vdf, other))
+        for kind in (xr.Dataset, xr.DataArray)
+    ]
+
+    if not any(both):
+        raise TypeError(
+            f"vdf and {name} must both be xarray.Dataset (distributions) or "
+            "xarray.DataArray (spectra)"
+        )
+
+    shape_vdf, shape_other = (_values(x).shape for x in (vdf, other))
+
+    if shape_other != shape_vdf:
         raise ValueError(
-            f"{name} must have the shape of vdf {vdf.data.shape}, "
-            f"not {other.data.shape}"
+            f"{name} must have the shape of vdf {shape_vdf}, not {shape_other}"
         )
 
     if not np.array_equal(other.time.data, vdf.time.data):
         raise ValueError(f"{name} must have the times of vdf")
 
-    units_vdf, units_other = (inp.data.attrs.get("UNITS") for inp in [vdf, other])
+    units_vdf, units_other = (_units(inp) for inp in [vdf, other])
 
     if units and units_vdf != units_other:
         raise ValueError(f"{name} must have the units of vdf ({units_vdf!r})")
 
 
 def _like(vdf, data, units):
-    r"""Distribution with the coordinates and attributes of `vdf`, the values
-    `data` and the units `units`."""
+    r"""Distribution (or spectrum) with the coordinates and attributes of
+    `vdf`, the values `data` and the units `units`."""
+    if isinstance(vdf, xr.DataArray):
+        out = vdf.copy(data=data)
+        out.attrs["UNITS"] = units
+        return out
+
     out = vdf.copy()
     out["data"] = vdf.data.copy(data=data)
     out.data.attrs["UNITS"] = units
