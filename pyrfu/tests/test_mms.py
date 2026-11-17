@@ -6370,6 +6370,28 @@ class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
         result = mms.feeps_flat_field_corrections(feeps_alle)
         self.assertIsInstance(result, xr.Dataset)
 
+    def test_feeps_flat_field_corrections_units(self):
+        # The gains apply to every unit, as IDL SPEDAS (counts and intensity
+        # errors included): the one-count level (intensity / counts) and the
+        # relative error are unchanged
+        flux = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", 1)
+        counts = flux.copy(deep=True)
+        errors = flux.copy(deep=True)
+        for k in filter(lambda x: x[:3] in ["top", "bot"], flux):
+            counts[k] = flux[k] * 0 + np.arange(1, 17)
+            errors[k] = flux[k] / np.sqrt(counts[k])
+        counts.attrs["units_name"], errors.attrs["units_name"] = "counts", "fluxerr"
+
+        result = [mms.feeps_flat_field_corrections(d) for d in [flux, counts, errors]]
+
+        for k in filter(lambda x: x[:3] in ["top", "bot"], flux):
+            np.testing.assert_allclose(
+                result[0][k].data / result[1][k].data, flux[k].data / counts[k].data
+            )
+            np.testing.assert_allclose(
+                result[2][k].data / result[0][k].data, errors[k].data / flux[k].data
+            )
+
     @idata(range(1, 5))
     def test_feeps_flat_field_corrections_values(self, mms_id):
         feeps_alle = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", mms_id)
