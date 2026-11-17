@@ -6789,6 +6789,27 @@ class ReadCdfTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result["density"].data, [1.0, 2.0, 3.0])
         np.testing.assert_array_equal(pycdfpp.to_datetime64(result["epoch"].data), time)
 
+    def test_read_cdf_decode_epochs_squeeze(self):
+        # decode_epochs: the times as datetime64[ns]; squeeze=False: the shape
+        # as stored; the defaults as before (TT2000, size-1 dims removed)
+        time = np.datetime64("2023-01-01T00:00:00", "ns")
+        time = time + np.arange(3) * np.timedelta64(1, "s")
+        cdf = pycdfpp.CDF()
+        cdf.add_variable("Epoch", time)
+        cdf.add_variable("DENSITY", np.array([[1.0], [2.0], [3.0]]))
+        path = os.path.join(self.directory, "density.cdf")
+        pycdfpp.save(cdf, path)
+
+        result = pyrf.read_cdf(path, decode_epochs=True, squeeze=False)
+
+        self.assertEqual(result["epoch"].dtype, np.dtype("datetime64[ns]"))
+        np.testing.assert_array_equal(result["epoch"].data, time)
+        np.testing.assert_array_equal(result["density"].data, [[1.0], [2.0], [3.0]])
+
+        result = pyrf.read_cdf(path)
+        self.assertNotEqual(result["epoch"].dtype.kind, "M")
+        self.assertTupleEqual(result["density"].shape, (3,))
+
 
 @ddt
 class ResampleTestCase(unittest.TestCase):
