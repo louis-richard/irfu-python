@@ -8823,6 +8823,25 @@ class GetFeepsTestCase(unittest.TestCase):
 
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
+    def test_get_feeps_omni_counts(self):
+        # Counts summed over the eyes and the spins (they were averaged as
+        # intensities), from the units of the eyes
+        module = importlib.import_module("pyrfu.mms.get_feeps_omni")
+        feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
+        feeps_alle = mms.feeps_correct_energies(feeps_alle)
+        feeps_alle.attrs["units_name"] = "counts"
+        feeps_ref = feeps_alle.copy(deep=True)
+
+        with mock.patch.object(module, "get_feeps_alleyes", return_value=feeps_alle):
+            result = mms.get_feeps_omni("countse_brst_l2", self.TINT, 1, spin_avg=True)
+
+        expected, _ = mms.feeps_split_integral_ch(mms.feeps_remove_bad_data(feeps_ref))
+        expected = mms.feeps_omni(mms.feeps_remove_sun(expected), method="sum")
+        expected = mms.feeps_spin_avg(
+            expected, feeps_ref.spinsectnum.data, method="sum"
+        )
+        xr.testing.assert_identical(result, expected)
+
     def test_get_feeps_omni_source(self):
         module = importlib.import_module("pyrfu.mms.get_feeps_omni")
 
