@@ -13314,6 +13314,49 @@ class TokenizeTestCase(unittest.TestCase):
         self.assertEqual(result["inst"], "fgm")
         self.assertEqual(result["cdf_name"], "fgm_b_gse_brst_l2")
 
+    @idata(
+        itertools.product(["hplus", "heplus", "heplusplus", "oplus"], ["srvy", "brst"])
+    )
+    @unpack
+    def test_tokenize_hpca_velocity_gsm_deprecated(self, species, data_rate):
+        # Deprecated since 2.6.0 (the GSM velocities of the files lack the
+        # rotation by the tilt of the spin axis), in any case, pointing at the
+        # caller; the DBCS key is the alternative and does not warn
+        var_str = f"v{species}_gsm_hpca_{data_rate}_l2"
+        message = (
+            rf"^key '{var_str.upper()}' is deprecated since pyrfu 2\.6\.0 and will "
+            rf"be removed in pyrfu 3\.0\.0; use the DBCS velocity "
+            rf"'v{species}_dbcs_hpca_{data_rate}_l2' rotated with "
+            r"pyrfu\.mms\.dsl2gsm .* tilt of the spin axis"
+        )
+
+        with self.assertWarnsRegex(FutureWarning, message) as context:
+            result = mms.tokenize(var_str.upper())
+
+        self.assertEqual(context.filename, __file__)
+        self.assertEqual(result["cs"], "gsm")
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            mms.tokenize(f"v{species}_dbcs_hpca_{data_rate}_l2")
+
+    def test_get_data_hpca_velocity_gsm_deprecated(self):
+        # One warning, pointing at the caller of get_data (tokenize is not
+        # called), before the files are listed
+        module = importlib.import_module("pyrfu.mms.get_data")
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always")
+            with mock.patch.object(module, "list_files", return_value=[]):
+                with self.assertRaises(FileNotFoundError):
+                    mms.get_data("vhplus_gsm_hpca_brst_l2", tint, 1, source="local")
+
+        self.assertEqual(len(record), 1)
+        self.assertIs(record[0].category, FutureWarning)
+        self.assertIn("'vhplus_gsm_hpca_brst_l2' is deprecated", str(record[0].message))
+        self.assertEqual(record[0].filename, __file__)
+
     @data("vel_gsm_mec_srvy_l2", "vel_gsm_mec_brst_l2")
     def test_tokenize_mec_velocity_gsm(self, var_str):
         # The GSM velocity keys read the GSE velocity (mec_v_gse)

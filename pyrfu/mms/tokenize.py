@@ -8,6 +8,18 @@ import json
 import os
 from collections.abc import Mapping
 
+# Local imports
+from pyrfu._core.deprecation import warn_deprecated
+
+# Keys deprecated since 2.6.0: the HPCA velocities in GSM of the files are the
+# DBCS velocities rotated from GSE to GSM as if DBCS were GSE (the rotation by
+# the tilt of the spin axis, 2 to 4 degrees, is missing)
+_DEPRECATED_KEYS = {
+    f"v{species}_gsm_hpca_{data_rate}_l2": f"v{species}_dbcs_hpca_{data_rate}_l2"
+    for species in ["hplus", "heplus", "heplusplus", "oplus"]
+    for data_rate in ["srvy", "brst"]
+}
+
 # Parameters with keys in mms_keys.json, or kept for keys to come (irfu-matlab
 # names: energyi/e, es12/34, adcoff, flux-amb-pm2). Removed for want of data:
 # nbge, pbge, defbge (the FPI background is DIS only), tsi, tse (computed in
@@ -253,6 +265,25 @@ def _mms_keys() -> dict:
         return json.load(file)
 
 
+def _warn_deprecated_key(var_str: str, stacklevel: int = 2) -> None:
+    r"""Warn (FutureWarning) if `var_str` is a deprecated key, pointing at the
+    caller of the function that calls this one (`stacklevel` 2)."""
+    var_key = var_str.lower()
+
+    if var_key in _DEPRECATED_KEYS:
+        warn_deprecated(
+            f"key {var_str!r}",
+            "2.6.0",
+            "3.0.0",
+            f"the DBCS velocity {_DEPRECATED_KEYS[var_key]!r} rotated with "
+            "pyrfu.mms.dsl2gsm and the definitive attitude (defatt, "
+            "pyrfu.mms.load_ancillary)",
+            "The HPCA velocities in GSM of the files lack the rotation by the "
+            "tilt of the spin axis (2 to 4 degrees).",
+            stacklevel=stacklevel + 1,
+        )
+
+
 def tokenize(var_str: str) -> Mapping[str, str]:
     r"""Parse the variable keys.
 
@@ -280,7 +311,25 @@ def tokenize(var_str: str) -> Mapping[str, str]:
         If the key does not have 4 or 5 parts, if a part is invalid, or if
         the variable is not supported (not listed in mms_keys.json).
 
+    Notes
+    -----
+    The keys of the HPCA velocities in GSM (``v{s}_gsm_hpca_{srvy,brst}_l2``)
+    are deprecated, with a FutureWarning: those of the files lack the rotation
+    by the tilt of the spin axis (see `pyrfu.mms.get_data`).
+
+    .. deprecated:: 2.6.0
+        The ``v{s}_gsm_hpca_*`` keys will be removed in pyrfu 3.0.0; rotate the
+        DBCS velocities (``v{s}_dbcs_hpca_*``) with `pyrfu.mms.dsl2gsm`.
+
     """
+    _warn_deprecated_key(var_str)
+
+    return _tokenize(var_str)
+
+
+def _tokenize(var_str: str) -> Mapping[str, str]:
+    r"""Parse the variable key `var_str`, without the deprecation warnings
+    (`tokenize`)."""
     # Case-insensitive, as the irfu-matlab names ("B_gse_fgm_srvy_l2")
     var_key = var_str.lower()
     splitted_key = var_key.split("_")

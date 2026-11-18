@@ -28,7 +28,7 @@ from pyrfu.mms.get_ts import get_ts
 from pyrfu.mms.list_files import list_files
 from pyrfu.mms.list_files_aws import _s3_resource, list_files_aws
 from pyrfu.mms.list_files_sdc import SDC_TIMEOUT, _login_lasp, list_files_sdc
-from pyrfu.mms.tokenize import tokenize
+from pyrfu.mms.tokenize import _tokenize, _warn_deprecated_key
 from pyrfu.pyrf.dist_append import dist_append
 from pyrfu.pyrf.time_clip import _time_interval
 from pyrfu.pyrf.ts_append import ts_append
@@ -60,7 +60,7 @@ def _var_and_cdf_name(var_str: str, mms_id: str | int) -> tuple[Mapping[str, str
         Corresponding cdf name.
 
     """
-    var = tokenize(var_str)
+    var = _tokenize(var_str)
     cdf_name = f"mms{mms_id}_{var['cdf_name']}"
     return var, cdf_name
 
@@ -491,6 +491,9 @@ def get_data(
     `pyrfu.mms.load_ancillary`). The HPCA magnetic field ``B_GSE_spin_avg``
     of the files is in DMPA (``b_dmpa_hpca_*``).
 
+    .. deprecated:: 2.6.0
+        The ``v*_gsm_hpca_*`` keys will be removed in pyrfu 3.0.0.
+
     Examples
     --------
     >>> from pyrfu import mms
@@ -510,6 +513,9 @@ def get_data(
     """
     # Convert mms_id to string
     mms_id = str(mms_id)
+
+    # The HPCA velocities in GSM (deprecated since 2.6.0)
+    _warn_deprecated_key(var_str)
 
     var, cdf_name = _var_and_cdf_name(var_str, mms_id)
 

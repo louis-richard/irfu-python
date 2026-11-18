@@ -14,6 +14,11 @@ and four-spacecraft averages, and the one-count level of spectra.
 Deprecations
 ^^^^^^^^^^^^
 
+- The keys of the HPCA velocities in GSM, ``v{s}_gsm_hpca_{srvy,brst}_l2``
+  (``mms.get_data``, ``mms.tokenize``): those of the files lack the rotation
+  by the tilt of the spin axis (2 to 4 degrees); rotate the DBCS velocities
+  (``v{s}_dbcs_hpca_*``) with ``mms.dsl2gsm`` and the definitive attitude
+  instead.
 - ``mms.eis_moments(n_bg=, p_bg=)``: the EIS files have no background
   product; subtract a background from the returned density and pressure
   instead (the temperature from the differences).
