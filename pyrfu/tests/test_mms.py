@@ -12619,6 +12619,24 @@ class VdfCountsTestCase(unittest.TestCase):
         vdf.data.data[0, 0, 0, 0] = np.nan
         self.assertTrue(np.isnan(mms.vdf_error(vdf, counts).data.data[0, 0, 0, 0]))
 
+    def test_vdf_one_count_n(self):
+        # The level of n counts, n f / N, NaN without counts (n was 1)
+        vdf, vdf_err, k, n = self._poisson_vdf()
+        counts = mms.vdf_counts(vdf, vdf_err)
+
+        for n_level in [2, 0.5]:
+            result = mms.vdf_one_count(vdf, counts, n=n_level)
+            np.testing.assert_allclose(
+                result.data.data, np.where(n > 0.0, n_level * k, np.nan), rtol=1e-12
+            )
+        xr.testing.assert_identical(
+            mms.vdf_one_count(vdf, counts, n=1), mms.vdf_one_count(vdf, counts)
+        )
+
+        for n_level in [0, -1.0, np.nan, np.inf]:
+            with self.assertRaisesRegex(ValueError, "positive"):
+                mms.vdf_one_count(vdf, counts, n=n_level)
+
     def test_vdf_one_count_time_average(self):
         # Average of M = 3 distributions with their counts summed: the
         # one-count level is the counts-weighted mean of k over the window

@@ -8,9 +8,9 @@ import numpy as np
 from pyrfu.mms._internal.vdf_bins import _check_same_bins, _like, _units, _values
 
 
-def vdf_one_count(vdf, counts):
+def vdf_one_count(vdf, counts, *, n: float = 1.0):
     r"""One-count level of a distribution: the distribution of one count in
-    each bin, f / N.
+    each bin, f / N, or of `n` counts, n f / N.
 
     For a measured distribution, it equals delta f^2 / f (irfu-matlab
     Example_MMS_ePSD_1count_level). For the time average of M distributions
@@ -27,11 +27,16 @@ def vdf_one_count(vdf, counts):
     counts : xarray.Dataset or xarray.DataArray
         Its counts (``vdf_counts``, or their sum over the same windows; for
         FEEPS, the "counts" of `pyrfu.mms.feeps_omni`), at the same times.
+    n : float, Optional
+        Number of counts of the level, positive. Default is 1, the one-count
+        level; e.g. 2 for the floor of about 2 counts per bin of the FPI fast
+        survey distributions (`get_dist`).
 
     Returns
     -------
-    one_count : xarray.Dataset
-        One-count level, in the units of `vdf`; NaN where there are no counts.
+    one_count : xarray.Dataset or xarray.DataArray
+        One-count level (n-count level), as `vdf` and in its units; NaN where
+        there are no counts.
 
     Raises
     ------
@@ -39,7 +44,8 @@ def vdf_one_count(vdf, counts):
         If `vdf` and `counts` are not both xarray.Dataset or both
         xarray.DataArray.
     ValueError
-        If `counts` does not have the times and the shape of `vdf`.
+        If `counts` does not have the times and the shape of `vdf`, or if `n`
+        is not positive and finite.
 
     See Also
     --------
@@ -77,6 +83,12 @@ def vdf_one_count(vdf, counts):
     >>> counts_sum = pyrf.average_vdf(counts_i, 5, method="sum")
     >>> one_count_avg = mms.vdf_one_count(vdf_avg, counts_sum)
 
+    Level of 2 counts per bin, the floor of the fast survey distributions
+
+    >>> vdf_e = mms.get_data("pde_fpi_fast_l2", tint, 1)
+    >>> err_e = mms.get_data("pderre_fpi_fast_l2", tint, 1)
+    >>> floor_e = mms.vdf_one_count(vdf_e, mms.vdf_counts(vdf_e, err_e), n=2)
+
     One-count level of the FEEPS omni-directional ion intensity
 
     >>> flux = mms.get_feeps_omni("fluxi_srvy_l2", tint, 1)
@@ -84,12 +96,15 @@ def vdf_one_count(vdf, counts):
     >>> one_count_feeps = mms.vdf_one_count(flux, counts)
 
     """
+    if not np.isfinite(n) or n <= 0:
+        raise ValueError(f"n must be positive and finite, not {n}")
+
     _check_same_bins(vdf, counts, "counts")
 
     f_data = np.asarray(_values(vdf), dtype=np.float64)
     n_counts = np.asarray(_values(counts), dtype=np.float64)
 
     with np.errstate(divide="ignore", invalid="ignore"):
-        one_count = np.where(n_counts > 0.0, f_data / n_counts, np.nan)
+        one_count = np.where(n_counts > 0.0, n * f_data / n_counts, np.nan)
 
     return _like(vdf, one_count, _units(vdf))

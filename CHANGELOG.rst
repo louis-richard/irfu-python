@@ -57,6 +57,8 @@ New features
   resampled with the times (``pyrf.resample`` interpolates it, to a fraction
   between 0 and 1); ``pyrf.average_vdf`` marks an average lossy if one of its
   distributions is.
+- ``mms.vdf_one_count(..., n=1)``: the level of ``n`` counts per bin, e.g.
+  ``n=2`` for the floor of the FPI fast survey distributions.
 - ``pyrf.resample(..., extrapolate=True)``: with ``extrapolate=False``, the
   times outside the time range of the input are NaN instead of extrapolated.
 - ``pyrf.int_sph_dist(..., seed=None)`` and ``mms.reduce(..., seed=None)``:
