@@ -73,8 +73,8 @@ def read_cdf(path: str, *, decode_epochs: bool = False, squeeze: bool = True) ->
     keys = list(map(lambda x: x[0], file.items()))
 
     for key in keys:
-        # Get data (the times decoded and the dimensions of size 1 removed, if
-        # asked) and coordinates
+        # Get data (times decoded, size-1 dimensions removed, if asked) and
+        # coordinates
         data = file[key].values
 
         if decode_epochs and file[key].type in _EPOCH_TYPES:
@@ -85,8 +85,7 @@ def read_cdf(path: str, *, decode_epochs: bool = False, squeeze: bool = True) ->
 
         coords = [np.arange(dim_size) for dim_size in data.shape]
 
-        # Construct xarray DataArray, with the attributes of the variable (they
-        # were not read)
+        # Construct xarray DataArray, with the attributes of the variable
         out_dict[key.lower()] = xr.DataArray(
             data, coords=coords, attrs=_pycdfpp_attributes_to_dict(file[key].attributes)
         )

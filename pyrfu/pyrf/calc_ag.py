@@ -81,6 +81,7 @@ def calc_ag(p_xyz: DataArray) -> DataArray:
     >>> ag_cr_e = ag_e ** (1 / 3)
 
     """
+
     # Check input type
     if not isinstance(p_xyz, xr.DataArray):
         raise TypeError("p_xyz must be a xarray.DataArray")

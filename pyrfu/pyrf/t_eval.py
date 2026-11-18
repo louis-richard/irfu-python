@@ -31,15 +31,14 @@ def t_eval(inp, times):
 
     """
 
-    # First sample at or after each target time (a loop with bisect)
+    # First sample at or after each target time
     times = np.asarray(times)
     idx = np.searchsorted(inp.time.data, times, side="left")
 
     if np.any(idx >= len(inp.time)):
         raise IndexError("a target time is after the last sample of inp")
 
-    # Any shape, with the coordinates and attributes of inp (the second
-    # dimension had to be "comp", e.g. not the FGM represent_vec_tot)
+    # Any shape, with the coordinates and attributes of inp
     out = inp.isel(time=idx).assign_coords(time=times)
     out.attrs = dict(inp.attrs)
 

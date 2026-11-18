@@ -35,6 +35,7 @@ _GLOBAL_METHODS = ("quadratic", "cubic")
 def _guess_sampling_frequency(ref_time):
     r"""Sampling frequency of the time line (in seconds), from the median time
     step (robust to an irregular first interval)."""
+
     d_t = np.median(np.diff(ref_time))
 
     if not np.isfinite(d_t) or d_t <= 0:
@@ -49,6 +50,7 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     without samples, or with a NaN, gives NaN. With thresh, the points farther
     than thresh * std from the mean of the window are disregarded.
     """
+
     inp_data = np.asarray(inp_data, dtype=np.float64)
     shape = inp_data.shape[1:]
     data = inp_data.reshape(len(inp_data), -1)
@@ -103,6 +105,7 @@ def _interp_finite(inp_time, inp_data, ref_time, method, fill_value):
     r"""Interpolation of each component through its finite samples (NaN for
     a component without any), as MATLAB interp1 with "spline" or "pchip"
     (Interp1DStripNaN); a NaN would spread to all the times otherwise."""
+
     data = np.asarray(inp_data, dtype=np.float64).reshape(len(inp_time), -1)
     out_data = np.full((len(ref_time), data.shape[1]), np.nan)
 
@@ -124,8 +127,9 @@ def _interp_finite(inp_time, inp_data, ref_time, method, fill_value):
 def _resampled_like(inp, out_data, time):
     r"""DataArray of out_data at the times time, with the dimensions, the
     dimension coordinates and the attributes of inp. A dimension without
-    coordinate (e.g. dims ["time", "comp"], coords time only) raised
-    ValueError."""
+    coordinate (e.g. dims ["time", "comp"], coords time only) is
+    allowed."""
+
     coords = {inp.dims[0]: time}
     coords.update({k: inp.coords[k].data for k in inp.dims[1:] if k in inp.coords})
 
@@ -149,7 +153,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
 
     # Both datetime64 (checked in resample) or both numeric
     if np.issubdtype(inp.time.dtype, np.datetime64):
-        # Integer nanoseconds for the averaging windows, float seconds otherwise
+        # Integer ns for the averaging windows, float seconds otherwise
         inp_time_ns = _ns(inp.time.data)
         ref_time_ns = _ns(ref.time.data)
         inp_time = _seconds(inp.time.data, inp.time.data[0])
@@ -233,8 +237,7 @@ def _resample_dataset(inp, ref, **kwargs):
     out_dict = {**out_dict, **{k: inp[k] for k in ndepnd_zvars}}
 
     # The per-time attributes are resampled, the others kept, with the rule of
-    # time_clip (any array as long as time was resampled: the energy tables of
-    # 32 channels with 32 times, and a 0-d array raised IndexError)
+    # time_clip (_is_time_attr)
     out_attrs = {}
 
     for k in sorted(inp.attrs):
@@ -370,8 +373,7 @@ def resample(
         )
 
     # Both datetime64 or both numeric, checked before the times are cast to
-    # datetime64[ns] (numeric ref times became 1970 epochs: values
-    # extrapolated decades away, or a RuntimeError on the sampling)
+    # datetime64[ns] (numeric times would be read as 1970 epochs)
     is_datetime = [np.issubdtype(x.time.dtype, np.datetime64) for x in [inp, ref]]
 
     if is_datetime[0] != is_datetime[1]:

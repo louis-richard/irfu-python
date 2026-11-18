@@ -35,6 +35,7 @@ def _to_ts(out_data: NDArray[Any], time: DataArray) -> DataArray:
         Time series of the input field.
 
     """
+
     if out_data.ndim == 1:
         out = xr.DataArray(out_data, coords=[time], dims=["time"])
 
@@ -68,6 +69,7 @@ def _derivative(
     sums over the spacecraft are in the order of the loops they replaced.
     Shared with c_4_j, which computes three derivatives with one resampling
     and one c_4_k."""
+
     # Divergence of a tensor: d T_ij / d x_i
     if b_s.ndim == 4:
         return np.sum(np.einsum("sti,stij->stj", k_s, b_s), axis=0)
@@ -78,8 +80,8 @@ def _derivative(
     if method == "curl":
         return np.sum(np.cross(k_s, b_s, axis=2), axis=0)
 
-    # Gradient of a scalar (time, i) or of a vector (time, j, i) = d b_j / d x_i
-    # (for "grad" and "bdivb" only; it was computed for every method)
+    # Gradient of a scalar (time, i) or of a vector (time, j, i),
+    # d b_j / d x_i
     if b_s.ndim == 2:
         grad_b = np.sum(k_s * b_s[:, :, np.newaxis], axis=0)
     else:
@@ -199,7 +201,7 @@ def c_4_grad(
     is_tensor = b_list[0].ndim == 3
 
     # Units: those of the field per those of the positions, the field squared
-    # for (B.grad)B, per those of the positions for the curvature (none)
+    # for (B.grad)B, per those of the positions for the curvature
     units_b = _units(b_list[0])
     units_r = _units(r_list[0])
     units = {
@@ -229,13 +231,11 @@ def c_4_grad(
     time = b_list[0].time
 
     if method == "bdivb":
-        # (B.grad)B with B at the center of mass of the tetrahedron (computed
-        # for this method only; it was on every call)
+        # (B.grad)B with B at the center of mass of the tetrahedron
         out_data = _derivative(k_s, b_s, method, avg_4sc(b_list).data)
     elif method == "curv":
         # Curvature: (b.grad)b of the unit vectors, with the same reciprocal
-        # vectors (c_4_grad of the unit vectors resampled the positions and
-        # computed them again)
+        # vectors
         b_hat_list = [normalize(b) for b in b_list]
         b_hat_s = np.stack([b.data for b in b_hat_list])
         out_data = _derivative(k_s, b_hat_s, "bdivb", avg_4sc(b_hat_list).data)

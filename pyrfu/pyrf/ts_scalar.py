@@ -35,6 +35,7 @@ def ts_scalar(
         0th order tensor time series.
 
     """
+
     # Check input type
     if not isinstance(time, np.ndarray):
         raise TypeError("time must be a numpy.ndarray")

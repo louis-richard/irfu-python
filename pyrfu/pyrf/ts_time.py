@@ -36,7 +36,7 @@ def ts_time(time, attrs: dict | None = None):
         raise TypeError("time must be a numpy.ndarray")
 
     if np.issubdtype(time.dtype, np.floating):
-        # Rounded to the ns (6.5e-5 * 1e9 = 64999.99999999999 was truncated)
+        # Rounded to the ns, not truncated (6.5e-5 * 1e9 = 64999.99999999999)
         time = unix2datetime64(time.astype(np.float64))
     elif np.issubdtype(time.dtype, np.datetime64):
         time = time.astype("datetime64[ns]")

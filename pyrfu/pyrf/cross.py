@@ -59,6 +59,7 @@ def cross(inp1: DataArray, inp2: DataArray) -> DataArray:
     >>> v_xyz_exb = pyrf.cross(e_xyz, b_xyz) / b_mag ** 2
 
     """
+
     # Check type
     if not isinstance(inp1, DataArray):
         raise TypeError("inp1 must be a xarray.DataArray")
@@ -79,7 +80,7 @@ def cross(inp1: DataArray, inp2: DataArray) -> DataArray:
 
     out_data = np.cross(inp1.data, inp2.data, axis=1)
 
-    # Product of the units (none)
+    # Product of the units
     out = ts_vec_xyz(
         inp1.time.data, out_data, attrs=_attrs({}, _product(_units(inp1), _units(inp2)))
     )

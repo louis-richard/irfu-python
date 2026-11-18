@@ -39,9 +39,8 @@ def datetime642unix(
     if not isinstance(time, (list, np.ndarray)):
         raise TypeError("time must be list or numpy.ndarray of datetime64")
 
-    # Check the type of the elements from the dtype, not the first element
-    # (an empty input raised IndexError): an empty list has no type, and an
-    # object array may hold datetime64
+    # Check the type of the elements from the dtype, not the first element:
+    # an empty list has no type, and an object array may hold datetime64
     time = np.asarray(time)
 
     if time.size == 0 or (
@@ -52,7 +51,7 @@ def datetime642unix(
     if time.dtype.kind != "M":
         raise TypeError("time must be list or numpy.ndarray of datetime64")
 
-    # Unix times, NaN for NaT (it was -9.2e9 s, the int64 of NaT)
+    # Unix times, NaN for NaT
     out = _unix(time)
 
     return out

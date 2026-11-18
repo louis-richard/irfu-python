@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
-
 # Built-in imports
+import logging
 from typing import Literal
 
 # 3rd party imports
@@ -46,6 +45,7 @@ def _bin_edges(data, bins, bin_range, log):
         range is not strictly positive.
 
     """
+
     # Explicit bin edges are used as they are.
     if not isinstance(bins, (int, np.integer)):
         return np.asarray(bins, dtype=float)
@@ -98,6 +98,7 @@ def _bin_centers(edges, log):
         Bin centers, shape (n,).
 
     """
+
     if log:
         return np.sqrt(edges[:-1] * edges[1:])
 

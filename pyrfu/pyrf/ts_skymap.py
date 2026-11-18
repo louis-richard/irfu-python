@@ -74,6 +74,7 @@ def ts_skymap(
         If attrs, glob_attrs, or coords_attrs are not dict.
 
     """
+
     # Check input type
     if not isinstance(time, np.ndarray):
         raise TypeError("time must be a numpy.ndarray")
@@ -101,9 +102,8 @@ def ts_skymap(
     elif not isinstance(esteptable, np.ndarray):
         raise TypeError("esteptable must be a numpy.ndarray")
 
-    # Default tables: those of the first time of each step (energy[0] and
-    # energy[1] were swapped when esteptable starts with 1); without a time
-    # of step 1, the second time, or the first one for a single time
+    # Default tables: those of the first time of each step; without a time of
+    # step 1, the second time, or the first one for a single time
     first_0 = np.flatnonzero(np.ravel(esteptable) == 0)
     first_1 = np.flatnonzero(np.ravel(esteptable) == 1)
 

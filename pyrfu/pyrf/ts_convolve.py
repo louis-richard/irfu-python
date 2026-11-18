@@ -45,6 +45,7 @@ def ts_convolve(inp, kernel, mode: str = "nearest"):
         If inp has no "time" dimension or more than 2 dimensions.
 
     """
+
     if not isinstance(inp, xr.DataArray):
         raise TypeError("Invalid input type. Input must be xarray.DataArray")
 

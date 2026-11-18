@@ -73,8 +73,7 @@ def ts_spectr(
     if comp_name is None:
         comp_name = "energy"
 
-    # As ts_scalar and ts_vec_xyz (attrs that were not a dict were replaced
-    # by {}); a copy, the caller's dict is unchanged
+    # As ts_scalar and ts_vec_xyz: a copy, the caller's dict is unchanged
     if attrs is None:
         attrs = {}
     elif isinstance(attrs, dict):
@@ -97,7 +96,7 @@ def ts_spectr(
         )
         out.attrs["TENSOR_ORDER"] = 0
     else:
-        # The attributes of the spectrum on its data (they were dropped)
+        # The attributes of the spectrum on its data
         out = xr.Dataset(
             {"data": (["time", "idx0"], data, {**attrs, "TENSOR_ORDER": 0})},
             coords={

@@ -17,8 +17,9 @@ from .ts_tensor_xyz import ts_tensor_xyz
 from .ts_vec_xyz import ts_vec_xyz
 from .unix2datetime64 import unix2datetime64
 
-# Unix times of J2000 (2000-01-01T12:00:00 TT) and of 2000-01-01T12:00:00 UT. The
-# first one gives TT seconds since J2000 after 2017 (TT - UTC = 69.184 s).
+# Unix times of J2000 (2000-01-01T12:00:00 TT) and of 2000-01-01T12:00:00
+# UT. The first one gives TT seconds since J2000 after 2017 (TT - UTC =
+# 69.184 s).
 J2000_TT_UNIX = 946727930.8160001
 J2000_UT_UNIX = 946728000.0
 
@@ -81,8 +82,8 @@ def _transformation_matrix(t, tind, hapgood, *args):
     transf_mat_out[:, 1, 1] = np.ones(len(t))
     transf_mat_out[:, 2, 2] = np.ones(len(t))
 
-    # Dipole direction in GSE, for the transformations to and from GSM and SM,
-    # computed once (it was computed for each of them, e.g., twice for GSE>SM)
+    # Dipole direction in GSE, computed once for the transformations to and
+    # from GSM and SM
     dipole_direction_gse_ = None
 
     if any(abs(t_num) in [3, 4] for t_num in tind):
@@ -333,8 +334,8 @@ def cotrans(inp, flag, hapgood: bool = True):
         # Julian date (of req. time) from J2000, for the Sun's position
         d_j2000 = tts / 86400
 
-        # The sidereal time formula takes UT days since 2000-01-01T12:00 UT. TT is
-        # 69.184 s ahead, which would rotate GEO by 0.29 deg.
+        # The sidereal time formula takes UT days since 2000-01-01T12:00 UT.
+        # TT is 69.184 s ahead, which would rotate GEO by 0.29 deg.
         d_ut = (t - J2000_UT_UNIX) / 86400
 
         # Julian date (of preceding midnight of req. time) from J2000

@@ -60,7 +60,7 @@ def wave_fft(
     Notes
     -----
     Each frame is transformed as it is, without removing its mean, as
-    irfu-matlab ``irf_wavefft`` (``scipy.signal.spectrogram`` removed it by
+    irfu-matlab ``irf_wavefft`` (``scipy.signal.spectrogram`` removes it by
     default, 63 % off in the lowest bins of a signal with an offset). With
     ``scaled=False``, the result is that of ``irf_wavefft`` (see `scaled`).
     In both conventions, the frame lengths are in seconds (``irf_wavefft``:
@@ -70,7 +70,7 @@ def wave_fft(
     """
 
     if f_s is None:
-        # From the times in ns (they were taken as ns in any unit)
+        # From the times in ns
         f_s = calc_fs(inp)
 
     # Frame length and overlap in samples

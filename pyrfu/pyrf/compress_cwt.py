@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party import
+# 3rd party imports
 import numba
 import numpy as np
 import xarray as xr

@@ -4,9 +4,9 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
 from pyrfu._core.units import _check_units
 
-# Local imports
 from ..constants import R_E
 from .cotrans import cotrans
 from .ts_scalar import ts_scalar
@@ -38,7 +38,7 @@ def l_shell(r_xyz):
 
     """
 
-    # Positions in R_E gave L = r / (6371.2 R_E), with no message
+    # Positions in km (a warning otherwise)
     _check_units(r_xyz, "km", "r_xyz")
 
     # Transform spacecraft coordinates to solar magnetic system

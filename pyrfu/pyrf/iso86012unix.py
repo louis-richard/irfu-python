@@ -44,8 +44,7 @@ def iso86012unix(time):
     if not isinstance(time, (str, list, tuple, np.ndarray)):
         raise TypeError("time must be a str or array_like")
 
-    # The same parsing as iso86012datetime64 (tuples raised TypeError and "Z"
-    # gave a numpy warning)
+    # The same parsing as iso86012datetime64
     out = datetime642unix(iso86012datetime64(time))
 
     return out

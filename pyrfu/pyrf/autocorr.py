@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -49,6 +47,7 @@ def autocorr(
     in double precision.
 
     """
+
     # Check input type
     if not isinstance(inp, DataArray):
         raise TypeError("inp must be a DataArray")
@@ -57,8 +56,7 @@ def autocorr(
     if inp.ndim > 2:
         raise ValueError("inp must be a scalar or a vector")
 
-    # Double precision (the FFT of float32 data loses precision, and the
-    # normalisation of integer data failed)
+    # Double precision (the FFT of float32 data loses precision)
     x = np.asarray(inp.data, dtype=np.float64)
 
     if inp.ndim == 1:
@@ -77,8 +75,7 @@ def autocorr(
     out_data = np.zeros((maxlags + 1, x.shape[1]))
 
     for i in range(x.shape[1]):
-        # Non-negative lags of the full correlation, directly or with FFT (it
-        # was always direct, O(len(inp)^2))
+        # Non-negative lags of the full correlation, directly or with FFT
         correls = signal.correlate(x[:, i], x[:, i], mode="full")
         correls = correls[n_t - 1 : n_t + maxlags]
 
@@ -94,14 +91,13 @@ def autocorr(
         coords = [lags, inp[inp.dims[1]].data]
         dims = ["lag", str(inp.dims[1])]
 
-    # Dimensionless when normed, the units squared otherwise (none)
+    # Dimensionless when normed, the units squared otherwise
     if normed:
         units = ""
     else:
         units = _power(_units(inp), 2)
 
-    # The lag axis kept for one lag, and the component axis of a (n, 1)
-    # vector (squeeze dropped it: ValueError)
+    # Keep the lag axis for one lag and the component axis of a (n, 1) vector
     if inp.ndim == 1:
         out_data = out_data[:, 0]
 

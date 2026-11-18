@@ -36,6 +36,7 @@ def unix2datetime64(time: list[float] | NDArray[Any]) -> TimeArray:
     pyrfu.pyrf.datetime642unix
 
     """
+
     # Check input type
     if isinstance(time, (list, np.ndarray)):
         time_array = np.array(time)

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 from xarray import DataArray, Dataset
@@ -34,6 +32,7 @@ def calc_fs(inp: Dataset | DataArray) -> float:
         datetime64.
 
     """
+
     # Check input type
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")

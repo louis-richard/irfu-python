@@ -58,8 +58,8 @@ def datetime2iso8601(
             time_iso8601.append(datetime2iso8601(t))
 
     elif isinstance(time, datetime):
-        # Through numpy.datetime64 (pandas was imported for the nanoseconds of
-        # a datetime, always 0); the wall time, the time zone is not converted
+        # Through numpy.datetime64: the wall time, the time zone is not
+        # converted
         time_dt64 = np.datetime64(time.replace(tzinfo=None), "ns")
         time_iso8601 = str(datetime642iso8601(time_dt64)[0])
 

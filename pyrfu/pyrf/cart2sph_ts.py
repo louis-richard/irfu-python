@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -78,8 +79,8 @@ def cart2sph_ts(inp, direction_flag: Literal[1, -1] = 1):
 
         out_data = np.transpose(np.vstack([r_data, theta, phi]))
 
-    # [r, theta, phi] has no UNITS (r in those of inp, the angles in deg: the
-    # units of inp were copied onto the angles); [x, y, z] in the units of r
+    # [r, theta, phi] has no UNITS (r in those of inp, the angles in deg);
+    # [x, y, z] in the units of r
     if direction_flag == -1:
         attrs = inp.attrs
     else:

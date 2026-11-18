@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 from xarray import Dataset
 
@@ -40,6 +40,7 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
         if one of its distributions is.
 
     """
+
     # Check input type
     if not isinstance(vdf, Dataset):
         raise TypeError("vdf must be a xarray.Dataset")
@@ -47,7 +48,7 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
     if n_pts is not None and (not isinstance(n_pts, int) or isinstance(n_pts, bool)):
         raise TypeError("n_pts must be an integer or None")
 
-    # More points than distributions raised "need at least one array to stack"
+    # No more points than distributions
     if n_pts is not None and not 1 <= n_pts <= len(vdf.time):
         raise ValueError(
             f"n_pts must be between 1 and the number of distributions ({len(vdf.time)})"
@@ -103,10 +104,8 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
     for k in vdf:
         vdf_avg[k].attrs = vdf[k].attrs
 
-    # Energy widths (time, energy) averaged over each window; without them
-    # (get_dist leaves them out) or per channel (energy,), as they are (they
-    # raised KeyError or TypeError, and widths per channel were sliced as
-    # times)
+    # Energy widths (time, energy) averaged over each window; left as they
+    # are when missing (get_dist leaves them out) or per channel (energy,)
     for k in ["delta_energy_minus", "delta_energy_plus"]:
         if vdf.attrs.get(k) is None:
             continue

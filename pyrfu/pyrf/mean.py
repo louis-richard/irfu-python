@@ -8,10 +8,9 @@ from typing import cast
 import numpy as np
 import xarray as xr
 
+# Local imports
 from .cross import cross
 from .normalize import normalize
-
-# Local imports
 from .resample import resample
 from .ts_vec_xyz import ts_vec_xyz
 

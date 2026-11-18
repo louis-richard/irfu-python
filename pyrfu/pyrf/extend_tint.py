@@ -4,11 +4,10 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
 from pyrfu._core.time import _timedelta
 
 from .datetime642iso8601 import datetime642iso8601
-
-# Local imports
 from .iso86012datetime64 import iso86012datetime64
 
 
@@ -62,8 +61,7 @@ def extend_tint(tint, ext: list | None = None):
         if len(inp) != 2:
             raise ValueError(f"{name} must have 2 elements")
 
-    # Convert extension to timedelta64[ns], rounded (0.0157 * 1e9 is
-    # 15699999.999999998, which was truncated to 1 ns less)
+    # Convert extension to timedelta64[ns], rounded to the nanosecond
     ext = _timedelta(ext)
 
     # Original time interval to datetime64[ns]

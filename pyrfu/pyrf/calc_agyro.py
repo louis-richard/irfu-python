@@ -61,6 +61,7 @@ def calc_agyro(p_xyz: DataArray) -> DataArray:
     >>> agyro_e = pyrf.calc_agyro(p_fac_e_qq)
 
     """
+
     # Check input type
     if not isinstance(p_xyz, xr.DataArray):
         raise TypeError("p_xyz must be a xarray.DataArray")

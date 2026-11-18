@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import datetime
 import urllib.request
-
-# Built-in imports
 from typing import Literal
 
 # 3rd party imports
@@ -105,8 +104,8 @@ var_omni_2 = {
 }
 
 
-# Fill values of the variables (by code) for the 1-minute (HRO) and hourly (OMNI2)
-# data, from https://omniweb.gsfc.nasa.gov/html/omni_min_data.html and
+# Fill values (by code) of the 1-minute (HRO) and hourly (OMNI2) data, from
+# https://omniweb.gsfc.nasa.gov/html/omni_min_data.html and
 # https://omniweb.gsfc.nasa.gov/html/ow_data.html (word number = code + 1)
 fill_omni_1 = {
     **dict.fromkeys([4, 5], 99.0),
@@ -151,8 +150,7 @@ _DATABASES = {
 
 
 def _omni_url(tint, omni_database, codes):
-    # OMNIWeb returns whole days (hourly data) or hours (1-minute data), up to and
-    # including the end date
+    # OMNIWeb gives whole days (hourly) or hours (1-minute), end date included
     data_source, _, _, date_format, _ = _DATABASES[omni_database]
 
     url_ = "https://omniweb.gsfc.nasa.gov/cgi/nx1.cgi?activity=retrieve"
@@ -266,7 +264,7 @@ def get_omni_data(
 
         codes.append(var_codes[variable])
 
-    # Each code is requested once (e.g., "bx" and "bxgse" are the same variable)
+    # Each code requested once (e.g., "bx" and "bxgse" are the same variable)
     codes_unique = list(dict.fromkeys(codes))
 
     tint = iso86012datetime64(np.array(tint)).astype("datetime64[ns]")
@@ -277,8 +275,7 @@ def get_omni_data(
 
     times, values = _parse_omni(text, len(codes_unique))
 
-    # Fill values to NaN
-    # (NaN, never close, for a code without fill value)
+    # Fill values to NaN (NaN, never close, for a code without fill value)
     fills = np.array([fill_values.get(code, np.nan) for code in codes_unique])
     values[np.isclose(values, fills[None, :])] = np.nan
 
@@ -294,7 +291,7 @@ def get_omni_data(
     in_tint = (data.index > t_start - resolution) & (data.index <= t_end)
     data = data.loc[in_tint].to_xarray()
 
-    # Units of each variable (none)
+    # Units of each variable
     for var in data.data_vars:
         data[var].attrs["UNITS"] = _UNITS[var]
 

@@ -121,8 +121,7 @@ def pid_4sc(r_mms, v_mms, p_mms):
     pid = -np.sum(np.sum(pi_xyz.data * d_xyz.data, axis=1), axis=1)
     pid = ts_scalar(v_mms[0].time.data, pid)
 
-    # Units composed from the inputs, e.g. (km/s)/km and nPa ((km/s)/km), that
-    # is 1/s and nW/m^3 (none)
+    # Units composed from the inputs, e.g. 1/s and nW/m^3
     units_d = _ratio(_units(v_mms[0]), _units(r_mms[0]))
     units_p = _units(p_mms[0])
 
@@ -209,8 +208,7 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
     # Compute reciprocal vectors in barycentric coordinates (see c_4_k)
     k_list = c_4_k(r_mms)
 
-    # sigma^2 of d_i v_j: the sum over the spacecraft of k_i^2 dv_j^2, all (i, j)
-    # at once (a loop over i, j and the spacecraft; same order of the sums)
+    # sigma^2 of d_i v_j: the sum over the spacecraft of k_i^2 dv_j^2
     sigma_grad_v_xyz = np.zeros((k_list[0].shape[0], 3, 3))
 
     for k_alpha, errv_alpha in zip(k_list, errv_mms):
@@ -288,8 +286,7 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
     sigma_pi_xyz[:, 2, 1] = sigma_pi_xyz[:, 1, 2]  # Symmetry
     sigma_pi_xyz = np.sqrt(sigma_pi_xyz)
 
-    # Error on each Pi_ij D_ij, without dividing by Pi or D (NaN where either
-    # is 0)
+    # Error on each Pi_ij D_ij, not divided by Pi or D (which can be 0)
     sigma_pid_xyz = np.sqrt(
         (pi_xyz.data * sigma_d_xyz) ** 2 + (d_xyz.data * sigma_pi_xyz) ** 2
     )
@@ -304,7 +301,7 @@ def pid_4sc_err(r_mms, v_mms, p_mms, errv_mms, errp_mms):
     )
     sigma_pid = ts_scalar(v_mms[0].time.data, sigma_pid)
 
-    # The units of Pi-D (none)
+    # Units of Pi-D
     units = _product(_units(p_mms[0]), _ratio(_units(v_mms[0]), _units(r_mms[0])))
     sigma_pid.attrs = _attrs(sigma_pid.attrs, units)
 

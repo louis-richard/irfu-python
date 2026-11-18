@@ -50,15 +50,16 @@ def dist_append(inp0, inp1):
     if not isinstance(inp0, xr.Dataset):
         raise TypeError("inp0 must be a xarray.Dataset")
 
-    # A skymap without records has no data nor energy tables: keep the other one
+    # A skymap without records has no data nor energy tables: keep the other
+    # one
     if inp0.sizes["time"] == 0:
         return inp1
 
     if inp1.sizes["time"] == 0:
         return inp0
 
-    # Global attributes (copy: the stacked delta energies must not overwrite the
-    # caller's)
+    # Global attributes (copy: the stacked delta energies must not overwrite
+    # the caller's)
     glob_attrs = dict(inp0.attrs)
 
     # Stack coordinates
@@ -80,9 +81,7 @@ def dist_append(inp0, inp1):
 
     # Energy widths (time, energy), half widths of the accumulations (time,)
     # and compression indicator (time,), joined when both have them, left out
-    # otherwise (a missing key raised KeyError, a None from get_dist
-    # AttributeError, and the half widths and compression indicator of inp0
-    # alone were kept)
+    # otherwise
     for key in [
         "delta_energy_plus",
         "delta_energy_minus",

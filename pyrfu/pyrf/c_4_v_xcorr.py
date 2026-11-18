@@ -80,6 +80,7 @@ class _BandLimited:
     def exact(self, pos):
         r"""Values at any (fractional) sample positions: the trigonometric
         polynomial of the DFT (the Nyquist term as a cosine)."""
+
         weights = np.full(len(self.freq), 2.0)
         weights[0] = 1.0
 
@@ -99,6 +100,7 @@ class _BandLimited:
     def __call__(self, grid, taus):
         r"""Values at the times grid = (t_start, d_t, n_t) shifted by each
         delay in taus: (n_tau, n_t) or (n_tau, n_t, n_comp)."""
+
         t_start, d_t, n_t = grid
         taus = np.atleast_1d(np.asarray(taus, dtype=np.float64))
         ratio = d_t / self.d_t
@@ -153,6 +155,7 @@ def _msd_ts(taus, s_sc, p_pat, grid, fit="none"):
 
     Also returns, for the last tau, the scale, the offset and the residuals in
     units of the pattern, h / a (eq. 48)."""
+
     n_t = grid[2]
     centred = fit == "scale_offset"
 
@@ -211,6 +214,7 @@ def _get_tau(s_sc, p_pat, grid, start_tau, max_lag, fit):
     when the grid minimum is at the edge of the window; inverted is True when
     an inverted copy of the pattern fits better than any copy (a < 0, with
     a fitted scale)."""
+
     t_samp = grid[1]
     k_max = int(np.floor(max_lag / t_samp + 1e-9))
     taus = start_tau + t_samp * np.arange(-k_max, k_max + 1)
@@ -245,6 +249,7 @@ def _lagged_mean(x, y):
     r"""< x(t) . y(t + Delta) > over the overlapping samples, for all the
     shifts Delta = k t_samp, k = -(N - 1), ..., N - 1 (dot product over the
     components; MATLAB: the mean over the non-zero values)."""
+
     n_pts = x.shape[0]
     x = x.reshape(n_pts, -1)
     y = y.reshape(n_pts, -1)
@@ -258,6 +263,7 @@ def _lagged_mean(x, y):
 def _corr_g(p_prime, t_w, t_samp):
     r"""G(Delta), eq. (49), for all the shifts at once (irfu-matlab corrG):
     (1 - |Delta| / T_w) < P'(t) P'(t + Delta) > / < P'^2 >."""
+
     n_pts = p_prime.shape[0]
     delta = t_samp * np.arange(-n_pts + 1, n_pts)
     p_prime2 = np.mean(np.sum(p_prime.reshape(n_pts, -1) ** 2, axis=1))
@@ -268,6 +274,7 @@ def _corr_g(p_prime, t_w, t_samp):
 def _corr_h(h_a, h_b):
     r"""H_ab(Delta), eq. (50), for all the shifts at once (irfu-matlab corrH):
     < h_a(t) h_b(t + Delta) > / (sqrt(< h_a^2 >) sqrt(< h_b^2 >))."""
+
     n_pts = h_a.shape[0]
     rms_a, rms_b = [
         np.sqrt(np.mean(np.sum(h.reshape(n_pts, -1) ** 2, axis=1))) for h in [h_a, h_b]
@@ -283,6 +290,7 @@ def _get_disc_vel(r_xyz, tau, dtau2):
     r"""Velocity with errors with the timing method (irfu-matlab get_disc_vel;
     Vogt et al. 2011, sections 3 and 4): the errors in speed and direction
     from the slowness covariance, with the correlations of the delays."""
+
     # Position vectors with origin in the tetrahedron center
     r_star = r_xyz - np.mean(r_xyz, axis=0)
 
@@ -324,6 +332,7 @@ def _get_disc_vel(r_xyz, tau, dtau2):
 def _positions(r_mms, t_center, offsets=None):
     r"""Positions of the four spacecraft at t_center plus their offsets (s)
     (linear interpolation; MATLAB: R?.resample(T), at t_center)."""
+
     r_xyz = np.zeros((4, 3))
 
     if offsets is None:
@@ -621,6 +630,7 @@ def c_4_v_xcorr(
     >>> res["v"], res["d_speed"]
 
     """
+
     # %% Input
     if not isinstance(s_mms, (list, tuple)) or len(s_mms) != 4:
         raise TypeError("s_mms must be a list of the 4 signals")

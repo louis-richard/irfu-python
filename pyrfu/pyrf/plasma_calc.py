@@ -177,7 +177,7 @@ def plasma_calc(b_xyz, t_i, t_e, n_i, n_e):
         },
     )
 
-    # SI units (they had none)
+    # SI units
     units = {
         **dict.fromkeys(["w_pe", "w_ce", "w_pp"], "rad/s"),
         **dict.fromkeys(["f_pe", "f_ce", "f_uh", "f_pp", "f_cp", "f_lh"], "Hz"),

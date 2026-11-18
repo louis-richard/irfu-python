@@ -29,6 +29,7 @@ def datetime642iso8601(
     pyrfu.pyrf.datetime642iso8601
 
     """
+
     if isinstance(time, np.datetime64):
         time_datetime64 = np.atleast_1d(time).astype("datetime64[ns]")
     elif isinstance(time, np.ndarray) and time.dtype.kind == "M":

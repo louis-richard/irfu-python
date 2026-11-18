@@ -4,10 +4,9 @@
 # 3rd party imports
 import numpy as np
 
+# Local imports
 from .dot import dot
 from .norm import norm
-
-# Local imports
 from .resample import resample
 
 
@@ -74,8 +73,7 @@ def pvi_4sc(b_mms):
 
     # Compute magnetic field shear angle
     def shear_angle(b_i, b_j):
-        # Clipped to [-1, 1]: rounding gave cosines just above 1 for parallel
-        # fields, and arccos NaN instead of 0
+        # Clip to [-1, 1]: rounding can give cosines just above 1 (arccos NaN)
         cos_ij = dot(b_i, b_j) / (norm(b_i) * norm(b_j))
         return np.arccos(cos_ij.clip(-1.0, 1.0))
 
@@ -83,7 +81,7 @@ def pvi_4sc(b_mms):
     for i, j in zip(i_indices, j_indices):
         theta_ij.append(shear_angle(b_mms[i], b_mms[j]))
 
-    # PVI dimensionless, shear angles in rad (they kept the units of b)
+    # PVI dimensionless, shear angles in rad
     for pvi_, theta_ in zip(pvi_ij, theta_ij):
         pvi_.attrs["UNITS"], theta_.attrs["UNITS"] = "", "rad"
 

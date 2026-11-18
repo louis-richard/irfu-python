@@ -7,7 +7,7 @@ import functools
 import json
 import os
 
-# Third party imports
+# 3rd party imports
 import numpy as np
 import xarray as xr
 from scipy import constants, interpolate, optimize
@@ -151,9 +151,8 @@ def shock_normal(spec, leq90: bool = True):
     if not isinstance(spec, dict):
         raise TypeError("spec must be a dictionary")
 
-    # Work on a copy, with the fields and plasma parameters as arrays: lists
-    # are accepted, and the caller's dict is not modified (delta_b and delta_v
-    # are added below)
+    # A copy, with the fields and plasma parameters as arrays (lists are
+    # accepted, and delta_b and delta_v are added below)
     spec = {
         k: (
             np.asarray(v, dtype=np.float64)
@@ -302,8 +301,8 @@ def _monte_carlo(spec, leq90):
             draws[f"{q}_{side}"] = interpolate.interp1d(grid, values, axis=0)(position)
 
     # The models with fixed parameters depend on the position only: fitted
-    # once (two optimize.minimize for each model and each pair before); the
-    # Slavin-Holzer model is rotated by the upstream velocity of each pair
+    # once; the Slavin-Holzer model is rotated by the upstream velocity of each
+    # pair
     fits = {}
 
     if "r_xyz" in spec:
@@ -352,7 +351,8 @@ def _stack(values):
 @functools.lru_cache(maxsize=1)
 def _shock_models_parameters():
     r"""Parameters of the shock models (shock_models_parameters.json), read
-    once (on every call before); not to be changed."""
+    once; not to be changed."""
+
     pkg_path = os.path.dirname(os.path.abspath(__file__))
 
     with open(

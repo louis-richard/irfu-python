@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 from xarray import DataArray, Dataset
@@ -32,12 +30,12 @@ def calc_dt(inp: Dataset | DataArray) -> float:
         datetime64.
 
     """
+
     # Check input type
     if not isinstance(inp, (Dataset, DataArray)):
         raise TypeError("Input must be a time series")
 
-    # Times as datetime64 (other numbers were read as nanoseconds and
-    # truncated: a time step of 0, inf Hz, for times in seconds)
+    # Times must be datetime64 (other numbers would be read as ns)
     if not np.issubdtype(inp.time.dtype, np.datetime64):
         raise TypeError(f"the times must be datetime64, not {inp.time.dtype}")
 

@@ -37,18 +37,18 @@ def iso86012datetime(
         If time has NaT (not a time).
 
     """
-    # Check input type (tuples raised TypeError)
+
+    # Check input type
     if not isinstance(time, (list, tuple, np.ndarray)):
         raise TypeError("time must be list, tuple or numpy.ndarray")
 
-    # The same parsing as iso86012datetime64 ("Z" gave a numpy warning)
+    # The same parsing as iso86012datetime64
     time_datetime64 = iso86012datetime64(time)
 
     if np.any(np.isnat(time_datetime64)):
         raise ValueError("time has NaT, which has no datetime")
 
-    # Convert to datetime format, with microseconds precision (max precision for
-    # datetime), at once (it parsed the ISO 8601 str of each time)
+    # Convert to datetime, with microseconds precision (max for datetime)
     time_datetime = time_datetime64.astype("datetime64[us]").astype(datetime.datetime)
 
     out = time_datetime.tolist()

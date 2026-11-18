@@ -16,6 +16,7 @@ def _eig(m_mu_nu):
     are zero here, so the real parts are the values given by older versions.
 
     """
+
     lamb, lmn = np.linalg.eig(m_mu_nu)
 
     return np.real(lamb), np.real(lmn)
@@ -25,6 +26,7 @@ def _variance_frame(data, centred: bool = True):
     r"""Eigenvalues (decreasing) and eigenvectors (columns, right-handed) of
     the variance matrix <B_i B_j> - <B_i> <B_j> of data (time, 3), or
     <B_i B_j> if not centred, the averages ignoring NaN, as irf_minvar."""
+
     idx_1, idx_2 = [[0, 1, 2, 0, 0, 1], [0, 1, 2, 1, 2, 2]]
     m_mu_nu_m = np.nanmean(data[:, idx_1] * data[:, idx_2], 0)
 
@@ -139,9 +141,7 @@ def mva(inp, flag: str = "mvar"):
     lamb, lmn = _variance_frame(inp_data, flag != "td")
 
     if flag == "<bn>=0":
-        # Averages of the field along L, M and N (they were summed over time
-        # and averaged over the components, n_t / 3 times the averages, which
-        # gives the same roots and normal, but NaN with a NaN sample)
+        # Averages of the field along L, M and N, ignoring NaN
         inp_mvar_mean = np.nanmean(inp_data @ lmn, axis=0)
 
         coeffs = np.zeros(3)
@@ -169,8 +169,7 @@ def mva(inp, flag: str = "mvar"):
         inp_data_2 -= np.tile(b_vec, (3, 1)).T * np.tile(n_vec, (n_t, 1))
 
         # L and M of the field without its normal component, and the
-        # constrained minimum variance (it was the variance along n of that
-        # field, zero)
+        # constrained minimum variance
         lamb, lmn = _variance_frame(inp_data_2)
         lamb[2] = l_min
 

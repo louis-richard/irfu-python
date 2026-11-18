@@ -42,8 +42,8 @@ def c_4_k(r_list: Sequence[DataArray]) -> Sequence[DataArray]:
     if len(r_list) != 4:
         raise ValueError("r_list must contain exactly 4 elements.")
 
-    # The differences of positions on other time lines were on their common
-    # times only (none for shifted times: IndexError)
+    # Positions on the times of the first spacecraft (the differences keep
+    # only the common times)
     r_list = [
         (
             r

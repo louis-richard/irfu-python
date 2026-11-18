@@ -135,7 +135,7 @@ class MvaGui:
         for txt in ax5.texts:
             txt.set_visible(False)
 
-        # No selection: get_minvar returned the normal of the whole interval
+        # No selection, no normal
         self.minvar = None
         plt.draw()
 

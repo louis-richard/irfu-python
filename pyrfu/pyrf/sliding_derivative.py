@@ -87,7 +87,7 @@ def sliding_derivative(
 
     def _at(values, k, half):
         # values[i + k] for the samples i with a complete stencil of half width
-        # half (one slice instead of a loop over the samples)
+        # half
         return values[half + k : n_pts - half + k]
 
     def _dt(half):
@@ -105,7 +105,7 @@ def sliding_derivative(
             ) / _dt(half)
     elif method == "5ps":
         if n_pts > 4:
-            # The centre sample has no weight: a NaN there no longer gives NaN
+            # The centre sample has no weight (a NaN there is ignored)
             derivative[2:-2] = (
                 1 / 12 * _at(data, -2, 2)
                 - 2 / 3 * _at(data, -1, 2)
@@ -125,7 +125,7 @@ def sliding_derivative(
         ) / (_dt(4) * 1 / 8)
 
     out = time_series.copy(data=derivative)
-    # Attributes of the input, its units per s (they were replaced)
+    # Attributes of the input, its units per s
     out.attrs = _attrs(time_series.attrs, _ratio(_units(time_series), "s"))
     out.attrs["TENSOR_ORDER"] = data.ndim - 1
 

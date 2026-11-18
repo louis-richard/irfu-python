@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import random
 from math import asin, cos, sin, sqrt
-
-# Built-in imports
 from typing import Literal
 
-# Third party imports
+# 3rd party imports
 import numba
 import numpy as np
 
@@ -150,8 +149,7 @@ def int_sph_dist(
 
     """
 
-    # Non-finite values are empty bins (otherwise NaNs spread to the projected
-    # bins, and with a weighting make the whole projection 0)
+    # Non-finite values are empty bins (NaNs would spread to the projection)
     vdf = np.where(np.isfinite(vdf), vdf, 0.0)
 
     # Coordinates system transformation matrix
@@ -169,9 +167,7 @@ def int_sph_dist(
     # Define the rotation matrix from original to primed frame
     r_mat = np.transpose(np.stack([x_phat, y_phat, z_phat]), [1, 0])
 
-    # Number of Monte Carlo iterations and how number of MC points is
-    # weighted to data.
-    # Another weight (e.g. "linear") was taken as None
+    # Check the weighting of the number of Monte Carlo particles
     if weight not in (None, "lin", "log"):
         raise ValueError(f'weight must be None, "lin" or "log", not {weight!r}')
 
@@ -188,8 +184,6 @@ def int_sph_dist(
 
     # Azimuthal and elevation angles steps. Assumed to be constant
     # if not provided. A single bin has no spacing to take its width from
-    # (the median of an empty spacing was NaN: NaN and zeros in the result,
-    # as irfu-matlab)
     for name, angles, widths in [("phi", phi, d_phi), ("theta", theta, d_theta)]:
         if widths is None and np.size(angles) < 2:
             raise ValueError(f"{name} has a single bin: give its width d_{name}")
@@ -200,9 +194,8 @@ def int_sph_dist(
     if d_theta is None:
         d_theta = np.abs(np.median(np.diff(theta))) * np.ones_like(theta)
 
-    # Speed widths below (d_v_m) and above (d_v_p) the speed of each instrument
-    # bin. The Monte-Carlo particles are drawn uniformly in [v - d_v_m, v + d_v_p].
-    # One of them alone was ignored
+    # Speed widths below (d_v_m) and above (d_v_p) the speed of each bin: the
+    # Monte-Carlo particles are drawn uniformly in [v - d_v_m, v + d_v_p]
     if (d_v_m is None) != (d_v_p is None):
         raise ValueError("d_v_m and d_v_p must be given together")
 
@@ -224,8 +217,7 @@ def int_sph_dist(
     d_v = d_v_m + d_v_p
 
     # A polar projection is 1d without the azimuthal grid of the projection
-    # plane; the supported projections are 1d polar, 2d and 3d cartesian (the
-    # azimuthal grid width of the 2d and 3d polar ones was computed, unused)
+    # plane; the supported projections are 1d polar, 2d and 3d cartesian
     if projection_base == "pol" and phi_grid is None:
         projection_dim = "1d"
 
@@ -332,6 +324,7 @@ def _mc_particles(vdf, n_mc, weight):
     r"""Number of Monte-Carlo particles in each bin of vdf: n_mc in every bin
     with data (None), or n_mc on average in proportion to vdf ("lin") or to
     1 + ln(vdf / min(vdf)) ("log")."""
+
     n_sum = n_mc * np.sum(vdf != 0)  # total number of Monte Carlo particles
 
     if weight == "lin":
@@ -358,6 +351,7 @@ def _mc_particles(vdf, n_mc, weight):
 def _speed_seeds(seed, n_v):
     r"""Seeds of the Monte-Carlo particles of the n_v speeds from `seed`
     (int64, from numpy's SeedSequence), or an empty array without seed."""
+
     if seed is None:
         return np.zeros(0, dtype=np.int64)
 
@@ -389,6 +383,7 @@ def _speed_bin_edges(velocity):
         Edges of the speed bins, shape (len(velocity) + 1,).
 
     """
+
     velocity = np.asarray(velocity, dtype=np.float64)
 
     if len(velocity) < 2:
@@ -417,6 +412,7 @@ def _check_speed_widths(velocity, d_v_m, d_v_p):
         i.e., the opposite direction).
 
     """
+
     n_v = len(velocity)
 
     if d_v_m.shape != (n_v,) or d_v_p.shape != (n_v,):
@@ -456,6 +452,7 @@ def _grid_index(value, edges, v_step):
     grid), MATLAB's discretize convention (see the implementation notes):
     computed and checked against the edges for v_step > 0, searched
     otherwise."""
+
     n_g = len(edges) - 1
 
     if v_step > 0.0:
@@ -537,6 +534,7 @@ def _mc_project(
         Projected distribution, (n_g ** n_dim,) with n_g bins on each axis.
 
     """
+
     n_v, n_ph, n_th = vdf.shape
     n_vg = len(vg_edges) - 1
 
@@ -565,8 +563,7 @@ def _mc_project(
                     f_ijk = vdf[i, j, k]
 
                     for l_mc in range(n_mc_ijk):
-                        # Speed, azimuth and elevation of the particle (the first
-                        # at the centre of the bin)
+                        # Speed and azimuth, the first particle at the centre
                         if l_mc == 0:
                             d_v_mc = 0.0
                             d_phi_mc = 0.0
@@ -602,8 +599,8 @@ def _mc_project(
                             r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
                         )
 
-                        # Transverse speed (1d) or out-of-plane speed, and the
-                        # angle from the projection axis or plane, within limits
+                        # Transverse (1d) or out-of-plane speed, and the angle
+                        # from the projection axis or plane, within limits
                         if n_dim == 1:
                             v_z_p = sqrt(v_y_p**2 + v_z_p**2)
 

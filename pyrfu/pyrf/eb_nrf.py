@@ -46,6 +46,7 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
         str flag not "a" or "b".
 
     """
+
     # Check inputs
     for name, inp in [("e_xyz", e_xyz), ("b_xyz", b_xyz)]:
         if not isinstance(inp, xr.DataArray):
@@ -71,8 +72,8 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
     if not isinstance(flag, (str, np.ndarray, list, tuple)):
         raise TypeError("flag must be a str or array_like")
 
-    # Reference direction of M for "b" (the mean of B, without its NaN samples:
-    # one made L and M NaN everywhere) and for a given vector; none for "a"
+    # Reference direction of M for "b" (the mean of B, without its NaN
+    # samples) and for a given vector; none for "a"
     if isinstance(flag, str):
         if flag.lower() not in ["a", "b"]:
             raise ValueError(f'flag must be "a" or "b", not {flag!r}')

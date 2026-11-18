@@ -53,7 +53,7 @@ def optimize_nbins_2d(x, y, n_min: list | None = None, n_max: list | None = None
 
     """
 
-    # `n_min or [1, 1]` raised ValueError for an array (truth value)
+    # Default numbers of bins (compared to None, as they can be arrays)
     if n_min is None:
         n_min = [1, 1]
 
@@ -66,7 +66,7 @@ def optimize_nbins_2d(x, y, n_min: list | None = None, n_max: list | None = None
     if x.shape != y.shape:
         raise ValueError("x and y must have the same number of samples")
 
-    # Samples where both are finite (NaN made the ranges NaN)
+    # Samples where both are finite
     finite = np.isfinite(x) & np.isfinite(y)
     x = x[finite]
     y = y[finite]
@@ -74,7 +74,7 @@ def optimize_nbins_2d(x, y, n_min: list | None = None, n_max: list | None = None
     x_min, x_max = _finite_range(x)
     y_min, y_max = _finite_range(y)
 
-    # #of Bins, n_max included (it was left out)
+    # #of Bins, n_max included
     n_x, n_y = [np.arange(min_, max_ + 1) for min_, max_ in zip(n_min, n_max)]
 
     d_x = (x_max - x_min) / n_x  # Bin size vector
