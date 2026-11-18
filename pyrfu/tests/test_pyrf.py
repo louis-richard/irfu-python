@@ -3095,6 +3095,22 @@ class DistAppendTestCase(unittest.TestCase):
             result.attrs["delta_time_plus"], np.hstack([[0.2] * 10, [0.4] * 5])
         )
 
+    def test_dist_append_compressionloss(self):
+        # The compression indicators of the two files joined (that of inp0
+        # alone was kept), left out if one has none
+        inp0 = generate_vdf(64.0, 4, [32, 32, 16])
+        inp1 = generate_vdf(64.0, 3, [32, 32, 16])
+        inp0.attrs["compressionloss"] = np.zeros(4, dtype=np.uint8)
+        inp1.attrs["compressionloss"] = np.ones(3, dtype=np.uint8)
+
+        result = pyrf.dist_append(inp0, inp1)
+        np.testing.assert_array_equal(
+            result.attrs["compressionloss"], [0, 0, 0, 0, 1, 1, 1]
+        )
+
+        inp1.attrs.pop("compressionloss")
+        self.assertNotIn("compressionloss", pyrf.dist_append(inp0, inp1).attrs)
+
     def test_dist_append_missing_widths(self):
         # Energy widths missing (KeyError) or None as get_dist gives for files
         # without them (AttributeError), half widths in inp0 only (kept with

@@ -53,7 +53,9 @@ New features
   FEEPS skymap ``mms.vdf_one_count(skymap, counts_skymap)``.
 - ``mms.get_dist`` (and ``mms.get_data`` for the FPI distributions) reads
   the compression indicator of each distribution, ``compressionloss`` (0
-  lossless, 1 lossy), as a per-time attribute, clipped, appended and
+  lossless, 1 lossy; that of the file for all its distributions in fast
+  survey), as a per-time attribute, clipped, joined (``pyrf.dist_append``,
+  the files of ``mms.get_data``), appended and
   resampled with the times (``pyrf.resample`` interpolates it, to a fraction
   between 0 and 1); ``pyrf.average_vdf`` marks an average lossy if one of its
   distributions is.

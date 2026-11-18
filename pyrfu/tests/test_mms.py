@@ -9835,9 +9835,11 @@ def _cdf_fpi_dist(
     if mode == "brst":
         cdf.add_variable(f"{pre}_steptable_parity{suf}", values=parity)
     if compressionloss is not None:
+        # One per record, or one per file (non-record-varying, the fast
+        # survey files)
+        loss = np.asarray(compressionloss, dtype=np.uint8)
         cdf.add_variable(
-            f"{pre}_compressionloss{suf}",
-            values=np.asarray(compressionloss, dtype=np.uint8),
+            f"{pre}_compressionloss{suf}", values=loss, is_nrv=loss.size == 1
         )
     cdf.add_variable(
         names[3],
@@ -9957,6 +9959,17 @@ class GetDistTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.attrs["compressionloss"], [1, 1])
 
         result = mms.get_dist(_cdf_fpi_dist(4, mode), f"mms1_dis_dist_{mode}")
+        self.assertNotIn("compressionloss", result.attrs)
+
+    def test_get_dist_compressionloss_file(self):
+        # One indicator for the file (the fast survey files): for all the
+        # distributions (ValueError); of another size, left out
+        content = _cdf_fpi_dist(4, "fast", compressionloss=[1])
+        result = mms.get_dist(content, "mms1_dis_dist_fast")
+        np.testing.assert_array_equal(result.attrs["compressionloss"], [1, 1, 1, 1])
+
+        content = _cdf_fpi_dist(4, "fast", compressionloss=[1, 0])
+        result = mms.get_dist(content, "mms1_dis_dist_fast")
         self.assertNotIn("compressionloss", result.attrs)
 
     @data("2019-09-14T07:54:10", [0, 1])

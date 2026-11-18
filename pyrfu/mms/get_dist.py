@@ -52,8 +52,10 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
         channels are ``delta_energy_minus`` and ``delta_energy_plus``, when
         the file has them. The attribute ``compressionloss`` (time,) is the
         compression indicator of each distribution of the file: 0 lossless, 1
-        lossy, when the file has it (`pyrfu.pyrf.resample` interpolates it as
-        the other per-time attributes, to a fraction between 0 and 1).
+        lossy, when the file has it: one per distribution in burst mode, the
+        indicator of the file for all its distributions in fast survey
+        (`pyrfu.pyrf.resample` interpolates it as the other per-time
+        attributes, to a fraction between 0 and 1).
 
     Notes
     -----
@@ -193,13 +195,20 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
         glob_attrs["delta_energy_plus"] = file[d_en_name].values
         glob_attrs["delta_energy_minus"] = file[d_en_name].values
 
-    # Compression indicator of each distribution: 0 lossless, 1 lossy
+    # Compression indicator of each distribution: 0 lossless, 1 lossy; one
+    # per record in burst, one per file (non-record-varying, "at survey-start
+    # time") in fast survey, then for all its distributions (it was reshaped
+    # to one per record, which raised ValueError)
     compression_name = _fpi_name(cdf_name, "compressionloss")
 
     if compression_name in z_vars and times.size:
-        glob_attrs["compressionloss"] = np.asarray(
-            file[compression_name].values
-        ).reshape(len(times))
+        loss = np.asarray(file[compression_name].values).ravel()
+
+        if loss.size == 1:
+            loss = np.full(len(times), loss[0], dtype=loss.dtype)
+
+        if loss.size == len(times):
+            glob_attrs["compressionloss"] = loss
 
     # Half widths of the accumulation (s) around the (centred) times, as
     # irfu-matlab dt_minus and dt_plus
