@@ -93,7 +93,8 @@ class MagnetopauseNormalTestCase(unittest.TestCase):
         # p_sw <= 0 (ZeroDivisionError) and a bow shock at M_A <= 1 (the
         # Farris and Russell standoff diverges at 1, negative below: -37.9 RE
         # at 0.8) raise ValueError
-        r_mp, r_bs = np.array([10.0, 2.0, 0.0]), np.array([20.0, 2.0, 0.0])
+        r_mp = np.array([10.0, 2.0, 0.0])
+        r_bs = np.array([20.0, 2.0, 0.0])
 
         for model in ["mp_shue1997", "mp_shue1998", "bs97", "bs98"]:
             with self.subTest(model=model), self.assertRaisesRegex(ValueError, "p_sw"):

@@ -581,7 +581,8 @@ class C4VTestCase(unittest.TestCase):
         )
         r_xyz = [pyrf.ts_vec_xyz(time, o + np.outer(t_s, drift)) for o in offsets]
         velocity = np.array([-6.0, 2.5, 4.0])
-        speed, n_hat = np.linalg.norm(velocity), velocity / np.linalg.norm(velocity)
+        speed = np.linalg.norm(velocity)
+        n_hat = velocity / np.linalg.norm(velocity)
         # n.(r_a(t)) = n.(r_1(10)) + speed (t - 10)
         r_1 = offsets[0] + 10.0 * np.asarray(drift)
         t_cross = (offsets @ n_hat - r_1 @ n_hat + 10.0 * speed) / (
@@ -677,8 +678,14 @@ class C4VXcorrTestCase(unittest.TestCase):
         # The structure crosses the centre of the tetrahedron at 0.125 s; each
         # spacecraft samples at its own times (and cadence)
         t_cross = self._crossings()
-        cadence = np.ones(4) if cadence is None else np.asarray(cadence)
-        s_mms, r_mms = [], []
+
+        if cadence is None:
+            cadence = np.ones(4)
+        else:
+            cadence = np.asarray(cadence)
+
+        s_mms = []
+        r_mms = []
 
         for i, offset in enumerate([0.0, 0.31, 0.62, 0.87]):
             t_s = (np.arange(2048) + offset) / (self.F_S * cadence[i])
@@ -774,7 +781,12 @@ class C4VXcorrTestCase(unittest.TestCase):
         # delays to the pattern (irfu-matlab's scalar time error gave 1.23
         # and 1.26)
         rng = np.random.default_rng(0)
-        tau, d_tau, speed, d_speed, normal, d_theta = [], [], [], [], [], []
+        tau = []
+        d_tau = []
+        speed = []
+        d_speed = []
+        normal = []
+        d_theta = []
 
         for _ in range(100):
             s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.05, rng=rng)
@@ -1012,7 +1024,8 @@ class C4VXcorrTestCase(unittest.TestCase):
         # of the delays is 1.7-1.8 times the errors; with f_max at the top of
         # the band of the hole, within x1.4 (exit criterion)
         rng = np.random.default_rng(0)
-        tau, d_tau = [], []
+        tau = []
+        d_tau = []
 
         for _ in range(100):
             s_mms, r_mms, _ = self._synthetic(self._hole, noise=0.12, rng=rng)
@@ -1271,7 +1284,8 @@ class UnitsSpectraTestCase(unittest.TestCase):
         )
 
     def test_units_derivatives_spectra(self):
-        b_x, e_x = self.b_xyz[:, 0], self.e_xyz[:, 0]
+        b_x = self.b_xyz[:, 0]
+        e_x = self.e_xyz[:, 0]
         cases = [
             (pyrf.sliding_derivative(self.b_xyz), "nT/s"),
             (pyrf.psd(b_x), "nT^2/Hz"),
@@ -1415,7 +1429,8 @@ class UnitsFourSpacecraftTestCase(unittest.TestCase):
         ]
 
     def test_units_c_4(self):
-        r_mms, b_mms = self.r_mms, self.b_mms
+        r_mms = self.r_mms
+        b_mms = self.b_mms
         p_mms = [
             pyrf.ts_tensor_xyz(
                 self.time, np.tile(np.eye(3), (16, 1, 1)) * (1 + i), {"UNITS": "nPa"}
@@ -1642,7 +1657,8 @@ class C4GradTestCase(unittest.TestCase):
         time = generate_timeline(1.0, 4)
         tetrahedron = np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
         tetrahedron = 30.0 * tetrahedron + rng.normal(0.0, 5.0, (4, 3))
-        t_0, a_ijk = rng.normal(size=(3, 3)), rng.normal(size=(3, 3, 3))
+        t_0 = rng.normal(size=(3, 3))
+        a_ijk = rng.normal(size=(3, 3, 3))
         r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (4, 1))) for r in tetrahedron]
         t_mms = [
             pyrf.ts_tensor_xyz(time, np.tile(t_0 + a_ijk @ r, (4, 1, 1)))
@@ -1791,7 +1807,9 @@ class C4JTestCase(unittest.TestCase):
 
     def test_c_4_j_linear_field(self):
         # B = (c z, 0, b_0 + a x) nT with x, z in km is reproduced exactly
-        a, b_0, c = 1.0, 20.0, 0.5
+        a = 1.0
+        b_0 = 20.0
+        c = 0.5
         r_sc = 10.0 * np.array(
             [
                 [0.0, 0.0, 0.0],
@@ -1809,7 +1827,8 @@ class C4JTestCase(unittest.TestCase):
         j, div_b, b_avg, jxb, div_t_shear, div_pb = pyrf.c_4_j(r_mms, b_mms)
 
         # B at the center of the tetrahedron [nT]
-        b_x, b_z = c * np.mean(r_sc[:, 2]), b_0 + a * np.mean(r_sc[:, 0])
+        b_x = c * np.mean(r_sc[:, 2])
+        b_z = b_0 + a * np.mean(r_sc[:, 0])
         # nT/km -> T/m and nT^2/km -> T^2/m
         j_y = (c - a) * 1e-12 / constants.mu_0
 
@@ -2122,7 +2141,8 @@ class Cart2SphTestCase(unittest.TestCase):
 
     def test_cart2sph_angles(self):
         # Azimuth in (-pi, pi] (atan2), polar angle from the z axis
-        x_cart, y_cart = np.array([0.0, -1.0]), np.array([-1.0, 0.0])
+        x_cart = np.array([0.0, -1.0])
+        y_cart = np.array([-1.0, 0.0])
         alpha, beta, r = pyrf.cart2sph(x_cart, y_cart, 0.0)
 
         np.testing.assert_allclose(alpha, [-np.pi / 2, np.pi])
@@ -3391,7 +3411,8 @@ class EdbTestCase(unittest.TestCase):
     def test_edb_input_unchanged(self, value):
         # Ez is recomputed in a copy: the caller's E (data and attrs) is unchanged
         e_xyz = generate_ts(64.0, 100, tensor_order=1)
-        e_data, e_attrs = e_xyz.data.copy(), dict(e_xyz.attrs)
+        e_data = e_xyz.data.copy()
+        e_attrs = dict(e_xyz.attrs)
         b_bgd = generate_ts(64.0, 100, tensor_order=1)
 
         e_out, _ = pyrf.edb(e_xyz, b_bgd, 0.0 if value == "e.b=0" else 90.0, value)
@@ -3846,7 +3867,8 @@ class EbspTestCase(unittest.TestCase):
             for k in keys:
                 np.testing.assert_allclose(result[k].data, ref[k].data, rtol=1e-10)
 
-        result, ref = run(fac_matrix=np.eye(3).tolist()), run(fac=False)
+        result = run(fac_matrix=np.eye(3).tolist())
+        ref = run(fac=False)
         for k in keys:
             np.testing.assert_allclose(result[k].data, ref[k].data, rtol=1e-12)
 
@@ -3960,14 +3982,22 @@ class MicrosecondTimesTestCase(unittest.TestCase):
         rng = np.random.default_rng(0)
         time = np.datetime64("2019-01-01T00:00:00", "ns")
         time = time + (np.arange(n_t) / f_s * 1e9).astype("timedelta64[ns]")
-        shape = (n_t,) if n_comp is None else (n_t, n_comp)
-        dims = ["time"] if n_comp is None else ["time", "comp"]
-        coords = [time] if n_comp is None else [time, ["x", "y", "z"]]
+
+        if n_comp is None:
+            shape = (n_t,)
+            dims = ["time"]
+            coords = [time]
+        else:
+            shape = (n_t, n_comp)
+            dims = ["time", "comp"]
+            coords = [time, ["x", "y", "z"]]
+
         out = xr.DataArray(rng.standard_normal(shape), coords=coords, dims=dims)
         return out.assign_coords(time=time.astype(f"datetime64[{unit}]"))
 
     def test_psd_wave_fft(self):
-        ref, inp = self._series("ns"), self._series("us")
+        ref = self._series("ns")
+        inp = self._series("us")
         xr.testing.assert_identical(pyrf.psd(inp, n_fft=256), pyrf.psd(ref, n_fft=256))
 
         for out, expected in zip(
@@ -3977,7 +4007,8 @@ class MicrosecondTimesTestCase(unittest.TestCase):
             np.testing.assert_array_equal(out, expected)
 
     def test_start_end(self):
-        ref, inp = self._series("ns"), self._series("us")
+        ref = self._series("ns")
+        inp = self._series("us")
         self.assertEqual(pyrf.start(inp), pyrf.start(ref))
         self.assertEqual(pyrf.end(inp), pyrf.end(ref))
         self.assertEqual(pyrf.start(ref), 1546300800.0)
@@ -4328,8 +4359,14 @@ class GetOmniDataTestCase(unittest.TestCase):
     ]
 
     def _get(self, rows, variables, tint, database="omni_hour", n_vars=None):
-        header = "YYYY DOY HR MN" if database == "omni_min" else "YEAR DOY HR"
-        n_vars = len(variables) if n_vars is None else n_vars
+        if database == "omni_min":
+            header = "YYYY DOY HR MN"
+        else:
+            header = "YEAR DOY HR"
+
+        if n_vars is None:
+            n_vars = len(variables)
+
         response = _omni_response(f"{header} 1 2 3", rows, n_vars)
 
         with mock.patch("urllib.request.urlopen", return_value=response) as urlopen:
@@ -4721,7 +4758,8 @@ class Histogram2DTestCase(unittest.TestCase):
 
     def test_histogram2d_scale(self):
         # ValueError (AssertionError)
-        x, y = generate_ts(64.0, 100), generate_ts(64.0, 100)
+        x = generate_ts(64.0, 100)
+        y = generate_ts(64.0, 100)
         with self.assertRaisesRegex(ValueError, "scale"):
             pyrf.histogram2d(x, y, scale="lin")
 
@@ -4739,7 +4777,8 @@ class BrazilTestCase(unittest.TestCase):
     def test_brazil_counts_and_pdf(self):
         # Failed on every call (histogram2d paired its inputs by time)
         beta_para, p_aniso = self._samples()
-        beta_para_0, p_aniso_0 = beta_para.copy(), p_aniso.copy()
+        beta_para_0 = beta_para.copy()
+        p_aniso_0 = p_aniso.copy()
         n, h = pyrf.brazil(beta_para, p_aniso, bins=[20, 25], threshold=9)
 
         self.assertIsInstance(n, xr.DataArray)
@@ -4925,7 +4964,12 @@ class IntSphDistTestCase(unittest.TestCase):
         vdf = rng.random((51, 32, 16))
         vdf[vdf < 1e-2] = 0
         edges = np.linspace(-1.01, 1.01, 102)
-        d_a = np.ones(101) * 0.02 if n_dim == 1 else np.full(1, 0.02**n_dim)
+
+        if n_dim == 1:
+            d_a = np.ones(101) * 0.02
+        else:
+            d_a = np.full(1, 0.02**n_dim)
+
         args = (
             np.linspace(0, 1, 51),
             np.arange(32),
@@ -4948,7 +4992,12 @@ class IntSphDistTestCase(unittest.TestCase):
         # One kernel for the 1d polar and the 2d and 3d cartesian projections
         # (three kernels before), the bins flattened
         vdf, args, edges = self._kernel_args(n_dim)
-        v_step = _uniform_step(edges) if n_dim > 1 else 0.0
+
+        if n_dim > 1:
+            v_step = _uniform_step(edges)
+        else:
+            v_step = 0.0
+
         result = _mc_project(
             vdf, *args, v_step, n_dim, _NO_SEEDS, numba.get_num_threads()
         )
@@ -5060,7 +5109,8 @@ class IntSphDistTestCase(unittest.TestCase):
     def _maxwellian(v_d=(300e3, -200e3, 100e3), t_ev=1000.0):
         # Drifting proton Maxwellian (n = 1 cm^-3) on FPI-like bins: 32
         # log-spaced energies (10 eV - 30 keV), 32 azimuths, 16 elevations.
-        q_e, m_p = 1.602176634e-19, 1.67262192369e-27
+        q_e = 1.602176634e-19
+        m_p = 1.67262192369e-27
         energy = 10.0 * 3000.0 ** (np.arange(32) / 31)
         speed = np.sqrt(2 * q_e * energy / m_p)
         phi = np.deg2rad(5.625 + 11.25 * np.arange(32))
@@ -5174,8 +5224,15 @@ class IntSphDistTestCase(unittest.TestCase):
         # f = 1 in every instrument bin, with unit widths and a single
         # Monte-Carlo particle, which is at the bin centre (no random draws), so
         # that each bin carries dtau = speed ** 2 * cos(theta) to a known point.
-        n_v, n_ph, n_th = len(speed), len(phi), len(theta)
-        d_a_grid = np.ones(len(edges) - 1) if n_dim == 1 else np.ones(1)
+        n_v = len(speed)
+        n_ph = len(phi)
+        n_th = len(theta)
+
+        if n_dim == 1:
+            d_a_grid = np.ones(len(edges) - 1)
+        else:
+            d_a_grid = np.ones(1)
+
         return (
             np.ones((n_v, n_ph, n_th)),
             np.array(speed, dtype=np.float64),
@@ -5198,7 +5255,9 @@ class IntSphDistTestCase(unittest.TestCase):
         # both the arithmetic (fast) and the np.searchsorted bin index; with no
         # random draws, all must be identical.
         # (one accumulator row per thread, indexed by numba.get_thread_id())
-        a_lim = (-np.pi, np.pi) if a_lim is None else a_lim
+        if a_lim is None:
+            a_lim = (-np.pi, np.pi)
+
         k_args = self._mc_kernel_args(n_dim, *args, v_lim=v_lim, a_lim=a_lim)
         n_threads = numba.get_num_threads()
 
@@ -5284,7 +5343,11 @@ class IntSphDistTestCase(unittest.TestCase):
         speed = np.hstack([v_abs, np.nextafter(v_abs, 0), np.nextafter(v_abs, 2)])
         speed = np.sort(speed)
         phi = [0.0, np.pi / 2, np.pi, 3 * np.pi / 2]
-        theta = [0.0, np.pi / 2] if n_dim == 3 else [0.0]
+
+        if n_dim == 3:
+            theta = [0.0, np.pi / 2]
+        else:
+            theta = [0.0]
 
         result = self._mc_kernel_runs(n_dim, speed, phi, theta, edges)
 
@@ -5311,7 +5374,10 @@ class IntSphDistTestCase(unittest.TestCase):
         # v_lim/a_lim bound the transverse speed and its angle (1d), or the
         # out-of-plane speed and elevation (2d, 3d). Particle of unit speed.
         edges = np.arange(-1.0, 1.01, 0.25)
-        v_lim = (-np.inf, np.inf) if v_lim is None else v_lim
+
+        if v_lim is None:
+            v_lim = (-np.inf, np.inf)
+
         result = self._mc_kernel_runs(
             n_dim, [1.0], [phi], [theta], edges, v_lim=v_lim, a_lim=a_lim
         )
@@ -5507,7 +5573,8 @@ class IntSphDistTestCase(unittest.TestCase):
         # An unknown weight was taken as None, d_v_m alone was ignored
         vdf = np.random.random((51, 32, 16))
         speed = np.linspace(0.1, 1, 51)
-        phi, theta = np.linspace(0, 360, 32), np.linspace(0, 180, 16)
+        phi = np.linspace(0, 360, 32)
+        theta = np.linspace(0, 180, 16)
         grid = np.linspace(-1, 1, 21)
         args = (vdf, speed, phi, theta, grid, None)
 
@@ -5608,7 +5675,9 @@ class IPlasmaCalcTestCase(unittest.TestCase):
         with mock.patch.object(builtins, "input", fail_input):
             result = pyrf.iplasma_calc(True, False, 10.0, 1.0, 100.0, 1000.0)
 
-        q_e, m_e, ep0 = constants.e, constants.m_e, constants.epsilon_0
+        q_e = constants.e
+        m_e = constants.m_e
+        ep0 = constants.epsilon_0
         gamma = 100.0 * q_e / (m_e * constants.c**2) + 1
         v_te = constants.c * np.sqrt(1 - 1 / gamma**2)
         self.assertAlmostEqual(result["v_te"] / v_te, 1.0, places=12)
@@ -5931,7 +6000,10 @@ class MatchPhibeTestCase(unittest.TestCase):
     # Potential phi(x - v t) along k perpendicular to B = 40 nT z, with
     # E.k = (dphi / dt) / v, dB_par = phi n e mu0 / B and an unrelated E along
     # z x k. For B along z, k = cos(theta) (-y) + sin(theta) x.
-    b_0, n_0, v_ph, theta = 40.0, 10.0, 300.0, np.deg2rad(31.0)
+    b_0 = 40.0
+    n_0 = 10.0
+    v_ph = 300.0
+    theta = np.deg2rad(31.0)
 
     def setUp(self):
         t_sec = np.arange(4096) / 1024.0
@@ -5973,7 +6045,8 @@ class MatchPhibeTestCase(unittest.TestCase):
         _, _, _, corr_vec, int_e_dt, b_z, b_0, *_ = pyrf.match_phibe_dir(
             self.b_xyz, self.e_xyz, f=10.0
         )
-        k_best, sl_ = np.argmax(corr_vec), slice(1024, 3072)
+        k_best = np.argmax(corr_vec)
+        sl_ = slice(1024, 3072)
         n_e = np.array([5.0, 10.0, 20.0])
         v_ph = np.array([100.0, 300.0, 1000.0])
 
@@ -6142,7 +6215,8 @@ class MeanBinsTestCase(unittest.TestCase):
 
     def test_mean_bins_matches_histogram(self):
         rng = np.random.default_rng(0)
-        x, y = rng.normal(size=1000), rng.normal(size=1000)
+        x = rng.normal(size=1000)
+        y = rng.normal(size=1000)
         result = pyrf.mean_bins(*_xy_series(x, y), 12)
         counts, _ = np.histogram(x, 12)
         sums, _ = np.histogram(x, 12, weights=y)
@@ -6150,8 +6224,10 @@ class MeanBinsTestCase(unittest.TestCase):
 
     def test_mean_bins_non_finite(self):
         # One NaN in x made every bin NaN
-        x, y = np.repeat(np.arange(10.0), 10), np.arange(100.0)
-        x_nan, y_inf = x.copy(), y.copy()
+        x = np.repeat(np.arange(10.0), 10)
+        y = np.arange(100.0)
+        x_nan = x.copy()
+        y_inf = y.copy()
         x_nan[3], y_inf[57] = np.nan, np.inf
         result = pyrf.mean_bins(*_xy_series(x_nan, y_inf))
         keep = np.isfinite(x_nan) & np.isfinite(y_inf)
@@ -6197,7 +6273,8 @@ class MedianBinsTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.data.data, 2 * np.arange(10.0))
 
     def test_median_bins_non_finite(self):
-        x, y = np.repeat(np.arange(10.0), 10), np.arange(100.0)
+        x = np.repeat(np.arange(10.0), 10)
+        y = np.arange(100.0)
         x[3], y[57] = np.nan, np.inf
         result = pyrf.median_bins(*_xy_series(x, y))
         self.assertFalse(np.isnan(result.data.data).any())
@@ -6603,14 +6680,20 @@ class Pid4SCTestCase(unittest.TestCase):
     def test_pid_4sc_values(self):
         # u = (S z, C y, 0) and P = diag(p + a, p - a, p) with P_xz = P_zx = pi,
         # measured by a regular tetrahedron (positions in km, u in km/s, P in nPa)
-        s_shear, c_comp, p_iso, a_anis, pi_xz = 0.5, 0.2, 0.5, 0.1, 0.05
+        s_shear = 0.5
+        c_comp = 0.2
+        p_iso = 0.5
+        a_anis = 0.1
+        pi_xz = 0.05
         time = generate_timeline(64.0, 10)
         dr_mms = 20.0 * np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
 
         p_data = np.diag([p_iso + a_anis, p_iso - a_anis, p_iso])
         p_data[0, 2] = p_data[2, 0] = pi_xz
 
-        r_mms, v_mms, p_mms = [], [], []
+        r_mms = []
+        v_mms = []
+        p_mms = []
 
         for dr in dr_mms:
             r_mms.append(pyrf.ts_vec_xyz(time, np.tile(dr + [6.4e4, 0, 0], (10, 1))))
@@ -6639,11 +6722,16 @@ class Pid4SCTestCase(unittest.TestCase):
     def _pid_case(p_data, p_time=None, p_slope=0.0):
         # u = (S z, C y, 0) on a regular tetrahedron; P = p_data (1 + p_slope t)
         time = generate_timeline(64.0, 10)
-        p_time = time if p_time is None else p_time
+
+        if p_time is None:
+            p_time = time
+
         p_t = (p_time - time[0]) / np.timedelta64(1, "s")
         dr_mms = 20.0 * np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
 
-        r_mms, v_mms, p_mms = [], [], []
+        r_mms = []
+        v_mms = []
+        p_mms = []
 
         for dr in dr_mms:
             r_mms.append(pyrf.ts_vec_xyz(time, np.tile(dr + [6.4e4, 0, 0], (10, 1))))
@@ -7028,7 +7116,8 @@ class ResampleTestCase(unittest.TestCase):
         t_s = np.arange(64) / 64.0
         t_q = t_s + 0.3 / 64.0
         values = np.sin(2 * np.pi * 3 * t_s) + 0.5 * np.cos(2 * np.pi * 7 * t_s)
-        inp, ref = self._ts(t_s, values), self._ts(t_q, np.zeros(64))
+        inp = self._ts(t_s, values)
+        ref = self._ts(t_q, np.zeros(64))
         expected = {
             "linear": np.interp(t_q[:-1], t_s, values),
             "cubic": interpolate.CubicSpline(t_s, values)(t_q[:-1]),
@@ -7196,7 +7285,8 @@ class PoyntingFluxTestCase(unittest.TestCase):
         # Same number of samples but times shifted by half a sample: B is
         # resampled to the times of E. With Bx = 1 + t, Sy = (1 + t) S_UNIT at
         # the times t of E (the samples of B are 50 ms later).
-        n_pts, f_s = 100, 10.0
+        n_pts = 100
+        f_s = 10.0
         t_e = np.arange(n_pts) / f_s
         t_b = t_e + 0.05
         e_xyz = pyrf.ts_vec_xyz(
@@ -7237,7 +7327,8 @@ class PsdTestCase(unittest.TestCase):
     def test_psd_vector(self):
         # One spectrum per component (the spectrum was taken over the
         # component axis of the rectified signal and raised a ValueError)
-        amplitudes, freqs = [1.0, 2.0, 3.0], [2.5, 5.0, 10.0]
+        amplitudes = [1.0, 2.0, 3.0]
+        freqs = [2.5, 5.0, 10.0]
         time, data = self._sines(amplitudes, freqs)
         result = pyrf.psd(pyrf.ts_vec_xyz(time, data))
 
@@ -7583,7 +7674,9 @@ class ShockNormalTestCase(unittest.TestCase):
         # (eps = 0.81, L = 24.8 R_E, aberration 3.8 deg): sigma = 1 and the model
         # normal is the aberrated x axis. The model parameters used to be
         # unpacked in the wrong order.
-        eps, l_bs, alpha = 0.81, 24.8, np.deg2rad(3.8)
+        eps = 0.81
+        l_bs = 24.8
+        alpha = np.deg2rad(3.8)
         rot = np.array(
             [
                 [np.cos(alpha), -np.sin(alpha), 0.0],
@@ -7719,7 +7812,8 @@ class ShockNormalTestCase(unittest.TestCase):
 
     def test_shock_normal_time_series_reproducible(self):
         spec = {**self._series(), "n": 5, "random_state": 2}
-        out_1, out_2 = pyrf.shock_normal(spec), pyrf.shock_normal(spec)
+        out_1 = pyrf.shock_normal(spec)
+        out_2 = pyrf.shock_normal(spec)
         np.testing.assert_array_equal(out_1["n"]["mx_3"], out_2["n"]["mx_3"])
 
     def test_shock_normal_time_series_lengths(self):
@@ -8053,7 +8147,8 @@ class StDiffTestCase(unittest.TestCase):
         rng = np.random.default_rng(0)
         lmn = np.linalg.qr(rng.normal(size=(3, 3)))[0]
         lmn[:, 2] = np.cross(lmn[:, 0], lmn[:, 1])
-        v_xyz, b_0 = np.array([100.0, -50.0, 20.0]), np.array([5.0, -3.0, 20.0])
+        v_xyz = np.array([100.0, -50.0, 20.0])
+        b_0 = np.array([5.0, -3.0, 20.0])
         r_sc = 10.0 * rng.normal(size=(4, 3))
         time = generate_timeline(1.0, 10)
         t_s = np.arange(10.0)
@@ -8239,9 +8334,8 @@ class TsAppendTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.energy.data, energy + 0.5)
 
         # Identical axes, and non-numeric ones: unchanged (first input's)
-        vec0, vec1 = generate_ts(64.0, 3, tensor_order=1), generate_ts(
-            64.0, 3, tensor_order=1
-        )
+        vec0 = generate_ts(64.0, 3, tensor_order=1)
+        vec1 = generate_ts(64.0, 3, tensor_order=1)
         vec1 = vec1.assign_coords(time=vec1.time.data + np.timedelta64(1, "s"))
         result = pyrf.ts_append(vec0, vec1)
         self.assertIsInstance(result, xr.DataArray)
@@ -9240,7 +9334,11 @@ def _waverage_loops(t_sec, data, n_pts):
     for j in range(n_data + 1):
         x_ = pad[j : j + n_pts]
         cor = np.sum(weights[x_ == 0])
-        out[j] = 0 if np.isclose(cor, 1) else np.sum(x_ * weights) / (1 - cor)
+
+        if np.isclose(cor, 1):
+            out[j] = 0
+        else:
+            out[j] = np.sum(x_ * weights) / (1 - cor)
     return out[ind]
 
 
@@ -9573,7 +9671,8 @@ class VhtValuesTestCase(unittest.TestCase):
     def test_vht_gaps(self):
         # Gaps in E or B do not bias v_ht
         time, b_xyz, v_ht, e_xyz = _ht_frame()
-        e_gap, b_gap = e_xyz.copy(), b_xyz.copy()
+        e_gap = e_xyz.copy()
+        b_gap = b_xyz.copy()
         e_gap[100:200] = np.nan
         b_gap[500:520] = np.nan
 
@@ -9606,7 +9705,8 @@ class VhtValuesTestCase(unittest.TestCase):
         expected = 1e3 * sigma * np.sqrt(np.diag(np.linalg.inv(k_mat)) / len(b_xyz))
 
         rng = np.random.default_rng(0)
-        v_hts, dv_hts = [], []
+        v_hts = []
+        dv_hts = []
 
         for _ in range(500):
             noise = rng.normal(scale=sigma, size=b_xyz.shape)
@@ -9872,7 +9972,8 @@ class EbspPhysicsTestCase(unittest.TestCase):
     def _wave(f_s=64.0, duration=128.0, f_0=2.0, noise_n=0.0):
         rng = np.random.default_rng(0)
         t = np.arange(int(f_s * duration)) / f_s
-        th, ph = np.deg2rad(40.0), np.deg2rad(30.0)
+        th = np.deg2rad(40.0)
+        ph = np.deg2rad(30.0)
         n = np.array([np.sin(th) * np.cos(ph), np.sin(th) * np.sin(ph), np.cos(th)])
         e1 = np.cross(n, [0.0, 0.0, 1.0])
         e1 /= np.linalg.norm(e1)
@@ -9982,7 +10083,8 @@ class EbspPhysicsTestCase(unittest.TestCase):
         res = pyrf.ebsp(e_xy, b, b_full, b0, None, [0.5, 8], fac=False, de_dot_b0=True)
         ref = pyrf.ebsp(e_perp, b, b_full, b0, None, [0.5, 8], fac=False)
 
-        ee, ee_ref = res["ee_xxyyzzss"].data, ref["ee_xxyyzzss"].data
+        ee = res["ee_xxyyzzss"].data
+        ee_ref = ref["ee_xxyyzzss"].data
         np.testing.assert_allclose(ee, ee_ref, rtol=0, atol=1e-12 * np.nanmax(ee_ref))
 
 

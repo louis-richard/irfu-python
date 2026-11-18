@@ -56,7 +56,10 @@ _AXES = {
 
 def _axis(spec):
     r"""Axis named by `spec` in _AXES, or `spec` itself (None, a number)."""
-    return _AXES[spec]() if isinstance(spec, str) else spec
+
+    if isinstance(spec, str):
+        return _AXES[spec]()
+    return spec
 
 
 @ddt
@@ -148,7 +151,11 @@ class PlotClinesTestCase(unittest.TestCase):
         self.assertEqual(axis.get_yscale(), "log")
 
         # The colors follow the energies on the log colorbar (not the index)
-        c_map = plt.get_cmap(cmap) if isinstance(cmap, str) else cmap
+        if isinstance(cmap, str):
+            c_map = plt.get_cmap(cmap)
+        else:
+            c_map = cmap
+
         expected = c_map(LogNorm(vmin=10.0, vmax=3000.0)(energy))
         colors = [to_rgba(line.get_color()) for line in axis.lines]
         np.testing.assert_allclose(colors, expected)
@@ -797,7 +804,8 @@ class PlotPadPolarTestCase(unittest.TestCase):
         f, ax = plt.subplots(1)
         plot.plot_pad_polar(ax, pad, monte_carlo=True, random_state=0, **kwargs)
         coords = ax.collections[0].get_coordinates() * 1e3
-        par, perp = coords[:, 0, 0], coords[0, :, 1]
+        par = coords[:, 0, 0]
+        perp = coords[0, :, 1]
         values = np.ma.filled(ax.collections[0].get_array(), np.nan)
         values = values.reshape(len(par) - 1, len(perp) - 1)
         volume = np.outer(np.diff(par), np.pi * np.diff(perp**2))
@@ -1201,7 +1209,8 @@ class ColorbarTestCase(unittest.TestCase):
         cax = plot.colorbar(image, ax, pad=0.02, width=0.05)
 
         self.assertIn(cax, f.axes)
-        pos, cpos = ax.get_position(), cax.get_position()
+        pos = ax.get_position()
+        cpos = cax.get_position()
         self.assertAlmostEqual(cpos.x0, pos.x1 + 0.02)
         self.assertAlmostEqual(cpos.width, 0.05)
         self.assertAlmostEqual(cpos.y0, pos.y0)
@@ -1227,7 +1236,12 @@ class ColorbarTestCase(unittest.TestCase):
             cax = plot.colorbar(image, ax, pad=0.02, width=0.03, where=where)
             self.assertIn(cax, f.axes)
             np.testing.assert_allclose(cax.get_position().bounds, expected)
-            side = cax.yaxis if where in ["right", "left"] else cax.xaxis
+
+            if where in ["right", "left"]:
+                side = cax.yaxis
+            else:
+                side = cax.xaxis
+
             self.assertEqual(side.get_label_position(), where)
             self.assertEqual(side.get_ticks_position(), where)
             self.assertIs(image.colorbar.ax, cax)
@@ -1346,7 +1360,8 @@ class MakeLabelsTestCase(unittest.TestCase):
 class PlotContourTestCase(unittest.TestCase):
     def setUp(self):
         _close_new_figures(self)
-        x, y = np.linspace(-2.0, 2.0, 21), np.linspace(-1.0, 1.0, 11)
+        x = np.linspace(-2.0, 2.0, 21)
+        y = np.linspace(-1.0, 1.0, 11)
         self.inp = xr.DataArray(
             np.add.outer(x**2, y**2), coords=[x, y], dims=["x", "y"]
         )
@@ -1439,7 +1454,8 @@ class PlotProjectionTestCase(unittest.TestCase):
 class PlotReduced2dTestCase(unittest.TestCase):
     def setUp(self):
         _close_new_figures(self)
-        v_x, v_y = np.linspace(-3e3, 3e3, 31), np.linspace(-2e3, 2e3, 21)
+        v_x = np.linspace(-3e3, 3e3, 31)
+        v_y = np.linspace(-2e3, 2e3, 21)
         self.f2d = xr.DataArray(
             1e-9 * np.exp(-np.add.outer(v_x**2, v_y**2) / 1e6) + 1e-14,
             coords=[v_x, v_y],

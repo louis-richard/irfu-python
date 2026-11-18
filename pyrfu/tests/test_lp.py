@@ -167,7 +167,8 @@ class LangmuirProbeTestCase(unittest.TestCase):
 
 class PhotoCurrentTestCase(unittest.TestCase):
     # Area 2 m^2 at 0.5 AU: 8 times the photocurrent of 1 m^2 at 1 AU
-    area, distance = 2.0, 0.5
+    area = 2.0
+    distance = 0.5
     u = np.array([-5.0, 0.0, 1.0])
 
     def test_photo_current_material(self):

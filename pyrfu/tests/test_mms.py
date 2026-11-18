@@ -406,7 +406,8 @@ class CalcEpsilonTestCase(unittest.TestCase):
         expected = mms.calculate_epsilon(vdf, model, n_s, sc_pot).data
 
         for units, scale in [("s^3/m^6", 1e12), ("s^3/km^6", 1e30)]:
-            vdf_u, model_u = vdf.copy(deep=True), model.copy(deep=True)
+            vdf_u = vdf.copy(deep=True)
+            model_u = model.copy(deep=True)
             vdf_u.data.data[...] *= scale
             for inp in [vdf_u, model_u]:
                 inp.data.attrs["UNITS"] = units
@@ -709,11 +710,10 @@ class _MemoryKeyring:
 
     def get_credential(self, service, username):
         password = self.passwords.get((service, username))
-        return (
-            keyring.credentials.SimpleCredential(username, password)
-            if password
-            else None
-        )
+
+        if password:
+            return keyring.credentials.SimpleCredential(username, password)
+        return None
 
     def set_password(self, service, username, password):
         self.passwords[(service, username)] = password
@@ -1338,7 +1338,11 @@ class DbInitTestCase(unittest.TestCase):
 
         # A configuration of an earlier version (no cache, or part of it)
         for cache, expected in [(None, True), ({"enabled": False, "x": 1}, False)]:
-            config = {"default": "aws"} if cache is None else {"cache": cache}
+            if cache is None:
+                config = {"default": "aws"}
+            else:
+                config = {"cache": cache}
+
             with open(module.MMS_CFG_PATH, "w", encoding="utf-8") as file:
                 json.dump(config, file)
 
@@ -1428,7 +1432,9 @@ class UnitConversionsTestCase(unittest.TestCase):
 
     @staticmethod
     def _values(inp):
-        return inp.data.data if isinstance(inp, xr.Dataset) else inp.data
+        if isinstance(inp, xr.Dataset):
+            return inp.data.data
+        return inp.data
 
     def test_unit_conversions_round_trip(self):
         for inp in self._inputs():
@@ -1839,7 +1845,8 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
         # the 2021 tables, the columns were stitched and mislabelled)
         e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
         e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
-        phx, ext = self._allt(e_phx, 100), self._allt(e_ex, 1000)
+        phx = self._allt(e_phx, 100)
+        ext = self._allt(e_ex, 1000)
         result = mms.eis_combine_proton_pad(phx, ext, [0, 0, 1])
 
         np.testing.assert_array_equal(result.energy.data, np.hstack([e_phx, e_ex[1:]]))
@@ -1916,7 +1923,8 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         # left out), with their widths (they were stored as edges)
         e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
         e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
-        phx, ext = self._allt(e_phx, [0, 1, 2], 100), self._allt(e_ex, [0, 1, 2], 1000)
+        phx = self._allt(e_phx, [0, 1, 2], 100)
+        ext = self._allt(e_ex, [0, 1, 2], 1000)
         result = mms.eis_combine_proton_spec(phx, ext)
 
         energy = np.hstack([e_phx, e_ex[1:]])
@@ -1936,7 +1944,8 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
 
         e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
         e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
-        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        phx = self._allt(e_phx, [0, 1], 100)
+        ext = self._allt(e_ex, [0, 1], 1000)
         phx.attrs["GLOBAL"] = {"Mission_group": "MMS", "Data_version": "v4.6.100"}
         ext.attrs["GLOBAL"] = {"Mission_group": "MMS", "Data_version": "v4.6.101"}
         result = mms.eis_combine_proton_spec(phx, ext)
@@ -1951,7 +1960,8 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         # both when not
         e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
         e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
-        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        phx = self._allt(e_phx, [0, 1], 100)
+        ext = self._allt(e_ex, [0, 1], 1000)
         phx.attrs["VALIDMIN"], ext.attrs["VALIDMIN"] = np.zeros(2), np.zeros(2)
         phx.attrs["VALIDMAX"], ext.attrs["VALIDMAX"] = np.ones(2), np.full(2, 2.0)
         for allt in [phx, ext]:
@@ -1995,7 +2005,8 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         # ones below the top PHxTOF one, at the geometric mean of their edges
         e_phx = np.array([20.0, 40.0, 60.0, 80.0])
         e_ex = np.array([45.0, 50.0, 70.0, 120.0])
-        phx, ext = self._allt(e_phx, [0, 1], 100), self._allt(e_ex, [0, 1], 1000)
+        phx = self._allt(e_phx, [0, 1], 100)
+        ext = self._allt(e_ex, [0, 1], 1000)
         result = mms.eis_combine_proton_spec(phx, ext)
 
         low = [min(0.9 * 60.0, 0.9 * 50.0), min(0.9 * 80.0, 0.9 * 70.0)]
@@ -2558,7 +2569,8 @@ class UnitsEisTestCase(unittest.TestCase):
         self.assertDictEqual(corrected.attrs, eis.attrs)
         mms.eis_moments(mms.eis_omni(corrected))  # the widths (ValueError)
 
-        omni, omni_cps = mms.eis_omni(eis), mms.eis_omni(eis)
+        omni = mms.eis_omni(eis)
+        omni_cps = mms.eis_omni(eis)
         omni.attrs["UNITS"], omni_cps.attrs["UNITS"] = "1/(cm^2 s sr keV)", "1/s"
         with self.assertRaisesRegex(ValueError, "different UNITS"):
             mms.eis_spec_combine_sc([omni, omni_cps])
@@ -2655,7 +2667,9 @@ class EisSpecCombineScTestCase(unittest.TestCase):
     def _omni(t_0, n_pts, first_sector, value, energies=None, spin_avg=False):
         # Survey-like omni spectrum: a sample every 2.5 s, 8 sectors per spin
         # (0, 4, ..., 28), flux value(sector) at every energy
-        energies = np.array([50.0, 80.0, 120.0]) if energies is None else energies
+        if energies is None:
+            energies = np.array([50.0, 80.0, 120.0])
+
         time = np.datetime64(t_0, "ns") + (
             np.arange(n_pts) * 2.5e9 * (8 if spin_avg else 1)
         ).astype("timedelta64[ns]")
@@ -2667,7 +2681,10 @@ class EisSpecCombineScTestCase(unittest.TestCase):
             dims=["time", "energy"],
             attrs={"delta_energy_plus": energies / 10, "UNITS": "1/(cm^2 s sr keV)"},
         )
-        return out if spin_avg else out.assign_coords(sector=("time", sector))
+
+        if spin_avg:
+            return out
+        return out.assign_coords(sector=("time", sector))
 
     def test_eis_spec_combine_sc_attributes(self):
         # The attributes of the spacecraft with the fewest samples labelled the
@@ -3165,7 +3182,9 @@ def _lh_wave(v_ph, theta, f_s=1024.0, f_w=40.0):
     t_sec = np.arange(n_t) / f_s
     time = np.datetime64("2019-01-01T00:00:00", "ns")
     time = time + (t_sec * 1e9).astype("timedelta64[ns]")
-    b_0, n_0, window = 40.0, 10.0, np.hanning(n_t)
+    b_0 = 40.0
+    n_0 = 10.0
+    window = np.hanning(n_t)
 
     phi = 50.0 * np.sin(2 * np.pi * f_w * t_sec) * window  # V
     e_d = np.gradient(phi, t_sec) / v_ph  # mV/m
@@ -3445,7 +3464,9 @@ class MakeModelVDFTestCase(unittest.TestCase):
             t_par = t_perp = (t_par + 2 * t_perp) / 3
 
         # Ions: the potential is subtracted with the opposite sign
-        sc_pot = sc_pot if species == "electrons" else -sc_pot
+        if species != "electrons":
+            sc_pot = -sc_pot
+
         expected = self._analytic(vdf, mass, sc_pot, 2.0, v_kms, t_par, t_perp)
         above = (vdf.energy.data - sc_pot) >= 0
         np.testing.assert_allclose(result.data.data[above], expected[above], rtol=1e-10)
@@ -3765,7 +3786,8 @@ class GetPitchAngleDistTestCase(unittest.TestCase):
         self.vdf = generate_vdf(64.0, 4, [32, 32, 16], units="s^3/cm^6")
         self.vdf["phi"] = 5.625 + 11.25 * self.vdf.phi
         self.vdf["theta"] = 5.625 + 11.25 * self.vdf.theta
-        e_idx, t_idx = np.arange(32.0)[:, None, None], np.arange(16.0)[None, None, :]
+        e_idx = np.arange(32.0)[:, None, None]
+        t_idx = np.arange(16.0)[None, None, :]
         self.vdf.data.data[:] = (e_idx + 1) * (t_idx + 1) * np.ones((32, 32, 16))
         self.b_xyz = pyrf.ts_vec_xyz(
             self.vdf.time.data, np.tile([0.0, 0.0, 10.0], (4, 1))
@@ -3909,7 +3931,10 @@ class HpcaEnergiesTestCase(unittest.TestCase):
 
 @ddt
 class HpcaPadTestCase(unittest.TestCase):
-    N_AZ, N_PO, N_EN, D_T = 16, 16, 4, 0.625
+    N_AZ = 16
+    N_PO = 16
+    N_EN = 4
+    D_T = 0.625
 
     def _inputs(self, aze_deg, n_spins=2, centred=True, b_dir=None):
         # vdf = 1 at 16 samples per half-spin (start azimuths 0..15), all anodes
@@ -3925,7 +3950,12 @@ class HpcaPadTestCase(unittest.TestCase):
             dims=["time", "rcomp", "ccomp"],
         )
         saz = xr.DataArray(np.arange(n_ti) % self.N_AZ, coords=[times], dims=["time"])
-        offset = 7.5 * self.D_T * 1e9 if centred else 0.0
+
+        if centred:
+            offset = 7.5 * self.D_T * 1e9
+        else:
+            offset = 0.0
+
         t_aze = times[:: self.N_AZ] + np.timedelta64(int(offset), "ns")
         aze = xr.DataArray(
             np.broadcast_to(
@@ -3940,9 +3970,12 @@ class HpcaPadTestCase(unittest.TestCase):
             128.0, int(n_ti * self.D_T * 128) + 256, ref_time="2019-09-14T07:53:59"
         )
         t_s = (t_b - t_0) / np.timedelta64(1, "s")
-        b_data = (
-            b_dir(t_s) if b_dir is not None else np.tile([1.0, 0.0, 0.0], (len(t_b), 1))
-        )
+
+        if b_dir is not None:
+            b_data = b_dir(t_s)
+        else:
+            b_data = np.tile([1.0, 0.0, 0.0], (len(t_b), 1))
+
         b_xyz = pyrf.ts_vec_xyz(t_b, b_data)
 
         return vdf, saz, aze, b_xyz
@@ -4142,7 +4175,9 @@ class HpcaPadTestCase(unittest.TestCase):
 @ddt
 class GetHpcaDistTestCase(unittest.TestCase):
     # 4 azimuth steps per half-spin, 3 anodes, 2 energies, 1 s samples
-    N_AZ, N_PO, N_EN = 4, 3, 2
+    N_AZ = 4
+    N_PO = 3
+    N_EN = 2
     ELEVATION = np.array([123.75, 101.25, 78.75])
 
     def _inputs(self, centred=True):
@@ -4163,7 +4198,11 @@ class GetHpcaDistTestCase(unittest.TestCase):
         )
 
         # Half-spin centres (1.5 samples after the first one) or starts
-        offset = 1.5 if centred else 0.0
+        if centred:
+            offset = 1.5
+        else:
+            offset = 0.0
+
         t_aze = t_vdf[2::4] + np.timedelta64(int(offset * 1e9), "ns")
         aze_deg = 90.0 * np.arange(self.N_AZ)[None, :] + np.arange(1, 6)[:, None]
         aze_deg[2] = 0.0
@@ -4725,7 +4764,8 @@ class ProbeFieldsTestCase(unittest.TestCase):
         # DFT shift gives them at the times of V1 (exact for periodic
         # band-limited signals), the interpolation is that of
         # correct_edp_probe_timing
-        n_t, f_s = 256, 8192.0
+        n_t = 256
+        f_s = 8192.0
         t_s = np.arange(n_t) / f_s
 
         def true(t_k):
@@ -4740,8 +4780,12 @@ class ProbeFieldsTestCase(unittest.TestCase):
         def at(delay_us):
             return true(t_s + delay_us * 1e-6)
 
-        p_0, p_3, p_5 = at(0.0), at(7.629), at(15.259)
-        p_12, p_34, p_56 = at(26.703), at(30.518), at(34.332)
+        p_0 = at(0.0)
+        p_3 = at(7.629)
+        p_5 = at(15.259)
+        p_12 = at(26.703)
+        p_34 = at(30.518)
+        p_56 = at(34.332)
         sampled = np.column_stack(
             [
                 p_0[0],
@@ -5005,7 +5049,10 @@ class PsdMomentsTestCase(unittest.TestCase):
         theta = rng.uniform(5, 175, 6)
         ph = np.deg2rad(phi.astype(np.float64))[:, :, None]
         th = np.deg2rad(theta)[None, None, :]
-        s_t, c_t, s_p, c_p = np.sin(th), np.cos(th), np.sin(ph), np.cos(ph)
+        s_t = np.sin(th)
+        c_t = np.cos(th)
+        s_p = np.sin(ph)
+        c_p = np.cos(ph)
         expected = [
             s_t + 0 * ph,
             -c_p * s_t**2,
@@ -5033,7 +5080,8 @@ class PsdMomentsTestCase(unittest.TestCase):
         # NaN points count as zeros (as np.nansum), and the channels not used
         # as channels of zeros
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
-        vdf_nan, vdf_zero = vdf.copy(deep=True), vdf.copy(deep=True)
+        vdf_nan = vdf.copy(deep=True)
+        vdf_zero = vdf.copy(deep=True)
         vdf_nan.data.data[0, 20, 3, 4] = np.nan
         vdf_zero.data.data[0, 20, 3, 4] = 0.0
         vdf_zero.data.data[:, :4] = 0.0
@@ -5063,10 +5111,14 @@ class PsdMomentsTestCase(unittest.TestCase):
         # Isotropic proton Maxwellian on an FPI-like burst skymap (32
         # log-spaced energies, 32 phi, 16 theta). One energy table unless
         # energy1 is given, in which case samples alternate energy0/energy1.
-        m_p, q_e = constants.proton_mass, constants.elementary_charge
+        m_p = constants.proton_mass
+        q_e = constants.elementary_charge
         ratio = (3e4 / 10.0) ** (1 / 31)
         energy0 = 10.0 * ratio ** np.arange(32)
-        energy1 = energy0 if energy1 is None else energy1
+
+        if energy1 is None:
+            energy1 = energy0
+
         phi = 5.625 + 11.25 * np.arange(32)
         theta = 5.625 + 11.25 * np.arange(16)
 
@@ -5078,7 +5130,8 @@ class PsdMomentsTestCase(unittest.TestCase):
 
         # Particle velocity is minus the FPI look direction
         speed = np.sqrt(2 * q_e * energy / m_p)[..., None, None]
-        ph, th = np.deg2rad(phi)[:, None], np.deg2rad(theta)[None, :]
+        ph = np.deg2rad(phi)[:, None]
+        th = np.deg2rad(theta)[None, :]
         v_x = -speed * np.sin(th) * np.cos(ph)
         v_y = -speed * np.sin(th) * np.sin(ph)
         v_z = -speed * np.cos(th) * np.ones_like(ph)
@@ -5118,7 +5171,8 @@ class PsdMomentsTestCase(unittest.TestCase):
 
         # Off-diagonal elements: T is isotropic (0) and the full second moment
         # p2 reduces to m n Vi Vj (nPa). Pxz/Pyz used the wrong angular kernel.
-        i_row, i_col = [0, 0, 1], [1, 2, 2]
+        i_row = [0, 0, 1]
+        i_col = [1, 2, 2]
         np.testing.assert_allclose(t.data[0][i_row, i_col], 0.0, atol=5.0)
         v_d = np.array(v_kms) * 1e3
         p2_expected = constants.proton_mass * 1e6 * np.outer(v_d, v_d) * 1e9
@@ -5377,11 +5431,18 @@ class PsdMomentsTestCase(unittest.TestCase):
         # Isotropic electron Maxwellian (1 cm^-3, t_ev) seen through a positive
         # spacecraft potential: a channel at energy E samples the ambient
         # distribution at E - sc_pot (Liouville), nothing below sc_pot
-        m_e, q_e = constants.electron_mass, constants.elementary_charge
+        m_e = constants.electron_mass
+        q_e = constants.elementary_charge
         ratio = (3e4 / 6.5) ** (1 / 31)
         energy0 = 6.5 * ratio ** np.arange(32)
-        energy1 = 6.5 * ratio ** (np.arange(32) + 0.5) if energy01 else energy0
-        step_table = np.arange(4, dtype=np.uint8) % 2 if energy01 else np.zeros(4)
+
+        if energy01:
+            energy1 = 6.5 * ratio ** (np.arange(32) + 0.5)
+            step_table = np.arange(4, dtype=np.uint8) % 2
+        else:
+            energy1 = energy0
+            step_table = np.zeros(4)
+
         energy = np.where(step_table[:, None] == 1, energy1, energy0)
 
         v_th2 = 2 * q_e * t_ev / m_e
@@ -5540,9 +5601,8 @@ class PsdMomentsTestCase(unittest.TestCase):
         # underestimates the density by 8 %, the exact integrals don't
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
         n_t = vdf.data.shape[0]
-        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
-            [0, 35, 90, 145, 180]
-        )
+        theta = np.array([5.0, 65.0, 115.0, 175.0])
+        edges = np.array([0, 35, 90, 145, 180])
         coarse = pyrf.ts_skymap(
             vdf.time.data,
             vdf.data.data[:, :, ::4, [0, 5, 10, 15]].copy(),
@@ -5721,17 +5781,16 @@ class PsdMomentsTestCase(unittest.TestCase):
         # phi bins, FEEPS-like): the relativistic moments are the velocity
         # integrals of f with the relativistic speeds, the momentum gamma m v
         # (pressure) and the kinetic energy (gamma - 1) m c^2 (energy flux)
-        m_e, q_e, c_l = (
-            constants.electron_mass,
-            constants.elementary_charge,
-            constants.c,
-        )
-        n_t, ratio = 2, (5e5 / 3e4) ** (1 / 11)
+        m_e = constants.electron_mass
+        q_e = constants.elementary_charge
+        c_l = constants.c
+        n_t = 2
+        ratio = (5e5 / 3e4) ** (1 / 11)
         energy = np.tile(3e4 * ratio ** np.arange(12), (n_t, 1))
-        delta_minus, delta_plus = energy * (1 - ratio**-0.5), energy * (ratio**0.5 - 1)
-        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
-            [0.0, 35.0, 90.0, 145.0, 180.0]
-        )
+        delta_minus = energy * (1 - ratio**-0.5)
+        delta_plus = energy * (ratio**0.5 - 1)
+        theta = np.array([5.0, 65.0, 115.0, 175.0])
+        edges = np.array([0.0, 35.0, 90.0, 145.0, 180.0])
         flux = 1e5 * (energy / 3e4)[:, :, None, None] ** -3 * np.ones((1, 1, 8, 4))
         flux[..., 2:] = 0.0  # 1/(cm^2 s sr keV)
 
@@ -5777,7 +5836,8 @@ class PsdMomentsTestCase(unittest.TestCase):
         )
 
         # Exact angular integrals over the 2 upper rings (velocity -look)
-        c_a, c_b = np.cos(np.deg2rad(edges[:2])), np.cos(np.deg2rad(edges[1:3]))
+        c_a = np.cos(np.deg2rad(edges[:2]))
+        c_b = np.cos(np.deg2rad(edges[1:3]))
         omega = 2 * np.pi * np.sum(c_a - c_b)
         k_z = -np.pi * np.sum(c_a**2 - c_b**2)
         k_zz = 2 * np.pi * np.sum(c_a**3 - c_b**3) / 3
@@ -5794,7 +5854,8 @@ class PsdMomentsTestCase(unittest.TestCase):
         np.testing.assert_allclose(p2.data[:, 2, 2] * 1e-9, p2_zz, rtol=1e-10)
 
         # Energy flux from the heat flux and the bulk-flow terms of psd_moments
-        v_z, p_zz = v.data[:, 2] * 1e3, p.data[:, 2, 2] * 1e-9
+        v_z = v.data[:, 2] * 1e3
+        p_zz = p.data[:, 2, 2] * 1e-9
         p_tr = np.trace(p.data, axis1=1, axis2=2) * 1e-9
         q_tot = h.data[:, 2] * 1e-3 + v_z * p_zz
         q_tot += 0.5 * v_z * (p_tr + m_e * n.data * 1e6 * v_z**2)
@@ -5930,7 +5991,9 @@ class PsdRebinTestCase(unittest.TestCase):
         # sample, and they are labelled from one bin lower when the first one
         # would pass 11.25 deg (2015-10-30 DIS: 9.13, 20.38, ... then 0.63,
         # 11.88, ...). The rebinned samples must pair the same directions.
-        n_t, d_phi, advance = 40, 11.25, 2.8
+        n_t = 40
+        d_phi = 11.25
+        advance = 2.8
         vdf = generate_vdf(64.0, n_t, [32, 32, 16], energy01=True, species="ions")
         phi0 = (3.5 + advance * np.arange(n_t)) % d_phi
         phi = phi0[:, None] + d_phi * np.arange(32)[None, :]
@@ -6071,7 +6134,8 @@ class EstimatePhaseSpeedTestCase(unittest.TestCase):
 
         selected &= (ratio > v_guess / 3) & (ratio < 3 * v_guess)
         weights = 1 + np.log10(sel_power[selected] / sel_power[selected].max())
-        k_s, f_s = k_mat[selected], f_mat[selected]
+        k_s = k_mat[selected]
+        f_s = f_mat[selected]
         expected = 2 * np.pi * np.sum(weights * k_s * f_s) / np.sum(weights * k_s**2)
 
         self.assertAlmostEqual(vph / expected, 1.0, delta=1e-6)
@@ -6167,7 +6231,11 @@ def _feeps_omni_4sc(values, energies=None):
     time = generate_timeline(1.0, 4)
     out = []
     for i, value in enumerate(values):
-        energy = np.array([50.0, 70.0, 100.0]) if energies is None else energies[i]
+        if energies is None:
+            energy = np.array([50.0, 70.0, 100.0])
+        else:
+            energy = energies[i]
+
         out.append(
             xr.DataArray(
                 np.full((4, 3), value),
@@ -6494,7 +6562,10 @@ class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
         for k in filter(lambda x: x[:3] in ["top", "bot"], feeps_ref):
             sensor, eye = k.split("-")
             gain = g_corr.get(f"mms{mms_id}-{sensor[:3]}{int(eye)}", 1.0)
-            gain = np.nan if gain == 0 else gain
+
+            if gain == 0:
+                gain = np.nan
+
             np.testing.assert_array_equal(result[k].data, feeps_ref[k].data * gain)
             self.assertDictEqual(result[k].attrs, feeps_ref[k].attrs)
 
@@ -6538,7 +6609,11 @@ class FeepsOmniTestCase(unittest.TestCase):
 
         feeps_dict = {}
         for k, e_eye in eye_energies.items():
-            value = 3.0 if k == "top-2" else 1.0
+            if k == "top-2":
+                value = 3.0
+            else:
+                value = 1.0
+
             feeps_dict[k] = xr.DataArray(
                 np.full((len(time), len(energies)), value),
                 coords=[time, e_eye],
@@ -6796,7 +6871,8 @@ class FeepsPadTestCase(unittest.TestCase):
         expected = {m: np.full((20, 11), np.nan) for m in result}
         expected["mean"][:, :2], expected["mean"][:, 2:4] = 3.0, 4.0
         expected["sum"][:, :2], expected["sum"][:, 2:4] = 84.0, 56.0
-        quad_1, quad_2 = 2.0 / np.sqrt(14), 4.0 / np.sqrt(14)
+        quad_1 = 2.0 / np.sqrt(14)
+        quad_2 = 4.0 / np.sqrt(14)
         expected["quadrature"][:, :2] = np.sqrt(quad_1**2 + quad_2**2) / 2
         expected["quadrature"][:, 2:4] = quad_2
 
@@ -7283,7 +7359,12 @@ def _pad_case(data, pitch=None):
     # s^3/cm^6, as get_pitch_angle_dist, with energies 100 * 2^i eV of widths
     # +/- 25 % and pitch-angle bins of 15 degrees (default)
     n_t, n_e, n_pa = data.shape
-    pitch = 7.5 + 15.0 * np.arange(n_pa) if pitch is None else np.asarray(pitch)
+
+    if pitch is None:
+        pitch = 7.5 + 15.0 * np.arange(n_pa)
+    else:
+        pitch = np.asarray(pitch)
+
     energy = np.tile(100.0 * 2.0 ** np.arange(n_e), (n_t, 1))
     pad = xr.Dataset(
         {
@@ -7909,7 +7990,8 @@ class FkPowerSpectrumTestCase(unittest.TestCase):
             pot(k, d) - pot(k + 1, d)
             for k, d in [(0, 26.703e-6), (2, 30.518e-6), (4, 34.332e-6)]
         ]
-        v_3, v_5 = pot(2, 7.629e-6), pot(4, 15.259e-6)
+        v_3 = pot(2, 7.629e-6)
+        v_5 = pot(4, 15.259e-6)
         v_1 = pot(0, 0.0)
         v6 = xr.DataArray(
             np.column_stack([v_1, v_1 - d_12, v_3, v_3 - d_34, v_5, v_5 - d_56]),
@@ -8101,7 +8183,12 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         ):
             power = np.nan_to_num(result[f"{name}_f"].data)
             i_k = np.unravel_index(np.argmax(power), power.shape)[0]
-            width = d_k_mag if name == "k_mag" else d_k
+
+            if name == "k_mag":
+                width = d_k_mag
+            else:
+                width = d_k
+
             self.assertLessEqual(abs(result[name].data[i_k] - value / 1e3), width / 2)
 
     def test_fk_power_spectrum_4sc_vector(self):
@@ -8578,7 +8665,8 @@ class CopyFilesTestCase(unittest.TestCase):
     _TINT = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
 
     def setUp(self):
-        source, target = tempfile.TemporaryDirectory(), tempfile.TemporaryDirectory()
+        source = tempfile.TemporaryDirectory()
+        target = tempfile.TemporaryDirectory()
         self.addCleanup(source.cleanup)
         self.addCleanup(target.cleanup)
         self.source, self.target = source.name, target.name
@@ -9802,7 +9890,11 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
 
         result = self._get_data("pdi_fpi_brst_l2", contents)
 
-        n_records = 3 if n_first or n_second else 0
+        if n_first or n_second:
+            n_records = 3
+        else:
+            n_records = 0
+
         self.assertEqual(result.sizes["time"], n_records)
         self.assertEqual(len(result.attrs["esteptable"]), n_records)
         if n_records:
@@ -9848,9 +9940,13 @@ def _cdf_fpi_dist(
         n_records
     ) * np.timedelta64(150, "ms")
     if parity is None:
-        parity = np.arange(n_records) % 2 if mode == "brst" else np.zeros(n_records)
+        if mode == "brst":
+            parity = np.arange(n_records) % 2
+        else:
+            parity = np.zeros(n_records)
     parity = np.asarray(parity, dtype=np.uint8)
-    pre, suf = f"mms1_{species}", f"_{mode}"
+    pre = f"mms1_{species}"
+    suf = f"_{mode}"
     names = [f"{pre}_{q}{suf}" for q in ["phi", "theta", "energy", "dist"]]
 
     cdf = pycdfpp.CDF()
@@ -9934,7 +10030,12 @@ class GetDistTestCase(unittest.TestCase):
         # IndexError)
         content = _cdf_fpi_dist(4, mode, energy_nrv=True)
         result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
-        parity = np.arange(4) % 2 if mode == "brst" else np.zeros(4)
+
+        if mode == "brst":
+            parity = np.arange(4) % 2
+        else:
+            parity = np.zeros(4)
+
         self._check(result, 4, _FPI_TABLES[0], _FPI_TABLES[0], parity)
 
     def test_get_dist_brst_one_parity(self):
@@ -10468,7 +10569,11 @@ class ListFilesAwsTestCase(unittest.TestCase):
     def test_s3_resource_credentials(self, has_credentials):
         # Anonymous requests if there are no AWS credentials (public buckets).
         # No region lookup on the EC2 instance metadata service (network)
-        credentials = mock.Mock() if has_credentials else None
+        if has_credentials:
+            credentials = mock.Mock()
+        else:
+            credentials = None
+
         environ = {
             "AWS_EC2_METADATA_DISABLED": "true",
             "AWS_DEFAULT_REGION": "us-east-1",
@@ -10792,7 +10897,8 @@ class ReduceTestCase(unittest.TestCase):
         v_grid = np.linspace(-2500.0, 2500.0, 251) * 1e3
         result = mms.reduce(vdf, np.eye(3), "1d", "pol", vg=v_grid, n_mc=50)
 
-        v_x, f_x = result.vx.data * 1e3, result.data[0]
+        v_x = result.vx.data * 1e3
+        f_x = result.data[0]
         d_v = np.median(np.diff(v_x))
         n = np.sum(f_x) * d_v
         v_bulk = np.sum(v_x * f_x) * d_v / n
@@ -11203,9 +11309,11 @@ class RemoveImomsBackgroundTestCase(unittest.TestCase):
     def _measured(n_t=5):
         # Moments measured with a background at rest (n_bg = 0.5 cm^-3,
         # p_bg = 0.01 nPa) added to a known plasma (n = 0.5 cm^-3, V, P)
-        n_true, v_true = 0.5, np.array([-800.0, 50.0, 20.0])
+        n_true = 0.5
+        v_true = np.array([-800.0, 50.0, 20.0])
         p_true = np.array([[0.2, 0.01, 0.02], [0.01, 0.15, 0.03], [0.02, 0.03, 0.1]])
-        n_bg, p_bg = 0.5, 0.01
+        n_bg = 0.5
+        p_bg = 0.01
 
         n_meas = n_true + n_bg
         v_meas = n_true * v_true / n_meas
@@ -11599,7 +11707,8 @@ class Scpot2NeTestCase(unittest.TestCase):
         time = generate_timeline(1 / 4.5, 400)
         v_sc = np.linspace(3.0, 40.0, 400)
         t_e = np.full(400, 1000.0)
-        q_e, m_e = constants.elementary_charge, constants.electron_mass
+        q_e = constants.elementary_charge
+        m_e = constants.electron_mass
         current = i_ph[0] * np.exp(-v_sc / i_ph[1]) + i_ph[2] * np.exp(-v_sc / i_ph[3])
         coeff = 1e12 * q_e * 34 / (2 * np.sqrt(np.pi))
         coeff *= np.sqrt(2 * q_e * t_e / m_e) * (1 + v_sc / t_e)
@@ -11900,7 +12009,8 @@ class VdfOmniTestCase(unittest.TestCase):
         )
         vdf["theta"] = 5.625 + 11.25 * vdf.theta
         vdf["energy"] = vdf.energy + 10.0
-        e_idx, t_idx = np.arange(32.0)[:, None, None], np.arange(16.0)[None, None, :]
+        e_idx = np.arange(32.0)[:, None, None]
+        t_idx = np.arange(16.0)[None, None, :]
         vdf.data.data[:] = (e_idx + 1) * (t_idx + 1) * np.ones((32, 32, 16))
         return vdf
 
@@ -11947,7 +12057,8 @@ class VdfOmniTestCase(unittest.TestCase):
     def test_vdf_omni_angular_widths(self):
         # FEEPS-like rings of different widths (delta_theta_*): the mean is
         # weighted by the solid angles of the bands, sum(f Omega) / 4 pi
-        n_t, theta = 3, np.array([5.0, 65.0, 115.0, 175.0])
+        n_t = 3
+        theta = np.array([5.0, 65.0, 115.0, 175.0])
         edges = np.array([0.0, 35.0, 90.0, 145.0, 180.0])
         ring = np.array([1.0, 2.0, 4.0, 8.0])
         vdf = pyrf.ts_skymap(
@@ -12137,8 +12248,10 @@ class VdfConvertTestCase(unittest.TestCase):
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
         vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
         flux_p = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
-        m_e, u_m = constants.electron_mass, constants.atomic_mass
-        m_o, m_he = 15.99491461957 * u_m, 4.00260325413 * u_m
+        m_e = constants.electron_mass
+        u_m = constants.atomic_mass
+        m_o = 15.99491461957 * u_m
+        m_he = 4.00260325413 * u_m
         alpha = constants.physical_constants["alpha particle mass"][0]
         masses = {
             "hydrogen+": constants.proton_mass,
@@ -12249,7 +12362,8 @@ class VdfVelocityTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             speed, np.broadcast_to(expected[..., None, None], speed.shape)
         )
-        phi, theta = np.deg2rad(vdf.phi.data[1, 7]), np.deg2rad(vdf.theta.data[3])
+        phi = np.deg2rad(vdf.phi.data[1, 7])
+        theta = np.deg2rad(vdf.theta.data[3])
         look = np.array(
             [np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)]
         )
@@ -12271,7 +12385,12 @@ class VdfVelocityTestCase(unittest.TestCase):
         # Ions gain and electrons lose e V, as irfu-matlab PDist.v
         for species, sign in [("ions", 1.0), ("electrons", -1.0)]:
             vdf = self._vdf(species)
-            mass = constants.m_p if species == "ions" else constants.m_e
+
+            if species == "ions":
+                mass = constants.m_p
+            else:
+                mass = constants.m_e
+
             sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(4, 150.0))
             speed = mms.vdf_velocity(vdf, sc_pot=sc_pot).vx.data
             speed = np.abs(speed[:, :, 0, 8]) / np.sin(np.deg2rad(vdf.theta.data[8]))
@@ -12334,9 +12453,8 @@ class VdfSolidAngleTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data.data.sum(axis=(2, 3)), 4 * np.pi)
 
         # Angular widths of the attributes (FEEPS: 4 rings of 8 bins)
-        theta, edges = np.array([5.0, 65.0, 115.0, 175.0]), np.array(
-            [0.0, 35.0, 90.0, 145.0, 180.0]
-        )
+        theta = np.array([5.0, 65.0, 115.0, 175.0])
+        edges = np.array([0.0, 35.0, 90.0, 145.0, 180.0])
         vdf = vdf.isel(idx1=np.arange(8), idx2=np.arange(4))
         vdf = vdf.assign(phi=vdf.phi * 0.0 + 22.5 + 45.0 * np.arange(8))
         vdf = vdf.assign(theta=(["idx2"], theta))
@@ -12395,7 +12513,8 @@ class VdfD3vTestCase(unittest.TestCase):
         del vdf.attrs["delta_energy_minus"], vdf.attrs["delta_energy_plus"]
         energy = vdf.energy.data[0]
         result = mms.vdf_d3v(vdf).data.data[0, 5].sum()
-        e_1, e_2 = (energy[4] + energy[5]) / 2, (energy[5] + energy[6]) / 2
+        e_1 = (energy[4] + energy[5]) / 2
+        e_2 = (energy[5] + energy[6]) / 2
         v_1, v_2 = (_rel_speed(e) for e in [e_1, e_2])
         np.testing.assert_allclose(result, 4 * np.pi / 3 * (v_2**3 - v_1**3))
 
@@ -12733,8 +12852,10 @@ class VdfCountsTestCase(unittest.TestCase):
         # the counts, the one-count level and the error as for the
         # distributions (they raised TypeError)
         vdf, vdf_err, k, n = self._poisson_vdf()
-        flux, flux_err = vdf.data[:, :, 0, 0], vdf_err.data[:, :, 0, 0]
-        n, k = n[:, :, 0, 0], k[:, :, 0, 0]
+        flux = vdf.data[:, :, 0, 0]
+        flux_err = vdf_err.data[:, :, 0, 0]
+        n = n[:, :, 0, 0]
+        k = k[:, :, 0, 0]
 
         counts = mms.vdf_counts(flux, flux_err)
         self.assertIsInstance(counts, xr.DataArray)
@@ -12823,7 +12944,8 @@ class VdfMacroparticlesTestCase(unittest.TestCase):
         speed = np.linalg.norm(v_xyz, axis=1) * 1e3
         bins = sys.modules["pyrfu.mms._internal.vdf_bins"]._source_bins(vdf)
         i_t = np.searchsorted(vdf.time.data, result.time.data)
-        i_e, i_q = result.idx0.data, result.idx2.data
+        i_e = result.idx0.data
+        i_q = result.idx2.data
         self.assertTrue(np.all(speed >= bins["v_lower"][i_t, i_e] * (1 - 1e-12)))
         self.assertTrue(np.all(speed <= bins["v_upper"][i_t, i_e] * (1 + 1e-12)))
         theta = np.rad2deg(np.arccos(-v_xyz[:, 2] * 1e3 / speed))
@@ -13193,13 +13315,18 @@ class VdfCutsTestCase(unittest.TestCase):
     def _bimaxwellian(n_e=32, e_min=10.0, species="ions"):
         # Bi-Maxwellian in field-aligned coordinates (theta from B), n = 1
         # cm^-3, T_par = 2 keV, T_perp = 1 keV, 300 km/s along B
-        mass = constants.m_p if species == "ions" else constants.m_e
+        if species == "ions":
+            mass = constants.m_p
+        else:
+            mass = constants.m_e
+
         ratio = (3e4 / e_min) ** (1 / (n_e - 1))
         energy0 = e_min * ratio ** np.arange(n_e)
         phi = 5.625 + 11.25 * np.arange(32)
         theta = 5.625 + 11.25 * np.arange(16)
         speed = np.sqrt(2 * constants.e * energy0 / mass)[:, None, None]
-        ph, th = np.deg2rad(phi)[:, None], np.deg2rad(theta)[None, :]
+        ph = np.deg2rad(phi)[:, None]
+        th = np.deg2rad(theta)[None, :]
         v_perp2 = (speed * np.sin(th)) ** 2 * np.ones_like(ph)
         v_par = -speed * np.cos(th) * np.ones_like(ph)
         w_par = 2 * constants.e * 2000.0 / mass
@@ -14701,7 +14828,8 @@ class VdfProjectionTestCase(unittest.TestCase):
         tint = [pyrf.datetime642iso8601(vdf.time.data[t_id])]
 
         energy = vdf.attrs[f"energy{step}"]
-        lower, upper = 0.9 * energy, 1.2 * energy
+        lower = 0.9 * energy
+        upper = 1.2 * energy
         expected = np.hstack([lower[0], np.sqrt(upper[:-1] * lower[1:]), upper[-1]])
         module = importlib.import_module("pyrfu.mms.vdf_projection")
         np.testing.assert_allclose(module._init(vdf, tint)[3], expected, rtol=1e-6)
@@ -15000,7 +15128,8 @@ class SpinReduceTestCase(unittest.TestCase):
         data = np.arange(12.0).reshape(6, 2)
         data[2:4] = np.nan  # the second spin has no data
         data[4, 1] = np.nan
-        starts, stops = np.array([0, 2, 4]), np.array([2, 4, 6])
+        starts = np.array([0, 2, 4])
+        stops = np.array([2, 4, 6])
 
         np.testing.assert_array_equal(
             self.module._spin_reduce(data, starts, stops),
@@ -15167,12 +15296,14 @@ _ERR_PAIRS = [(0, 0), (1, 1), (2, 2), (0, 1), (0, 2), (1, 2)]
 
 def _err__grid(n_t, two_tables):
     energy0 = np.logspace(1, np.log10(3e4), 32)
-    energy1 = energy0 * (energy0[1] / energy0[0]) ** 0.5 if two_tables else energy0
-    step = (
-        np.arange(n_t, dtype=np.uint8) % 2
-        if two_tables
-        else np.zeros(n_t, dtype=np.uint8)
-    )
+
+    if two_tables:
+        energy1 = energy0 * (energy0[1] / energy0[0]) ** 0.5
+        step = np.arange(n_t, dtype=np.uint8) % 2
+    else:
+        energy1 = energy0
+        step = np.zeros(n_t, dtype=np.uint8)
+
     energy = np.where(step[:, None] == 1, energy1, energy0)
     phi = np.arange(32) * 11.25 + 5.625
     theta = np.arange(16) * 11.25 + 5.625
@@ -15207,9 +15338,15 @@ def _err_maxwellian(
     n_cc, t_ev, v_kms, species="ions", n_t=2, two_tables=False, beam=None
 ):
     energy, energy0, energy1, step, phi, theta = _err__grid(n_t, two_tables)
-    mass = constants.electron_mass if species == "electrons" else constants.proton_mass
+
+    if species == "electrons":
+        mass = constants.electron_mass
+    else:
+        mass = constants.proton_mass
+
     speed = np.sqrt(2 * constants.elementary_charge * energy / mass)[..., None, None]
-    ph, th = np.deg2rad(phi)[:, None], np.deg2rad(theta)[None, :]
+    ph = np.deg2rad(phi)[:, None]
+    th = np.deg2rad(theta)[None, :]
     v_x = -speed * np.sin(th) * np.cos(ph)
     v_y = -speed * np.sin(th) * np.sin(ph)
     v_z = -speed * np.cos(th) * np.ones_like(ph)
@@ -15265,7 +15402,10 @@ def _err_errs(out):
 
 def _err_derived_reference(m, mass):
     """Derived moments from the raw ones, written from psd_moments' formulas."""
-    n, flux, pi_raw, e_flux = m[0], m[1:4], m[4:10], m[10:13]
+    n = m[0]
+    flux = m[1:4]
+    pi_raw = m[4:10]
+    e_flux = m[10:13]
     pi = np.zeros((3, 3))
     for k, (i, j) in enumerate(_ERR_PAIRS):
         pi[i, j] = pi[j, i] = pi_raw[k]
@@ -15357,7 +15497,8 @@ class PsdMomentsErrTestCase(unittest.TestCase):
             fd = np.zeros((19, 13))
             for a in range(13):
                 h = 1e-6 * abs(m[a]) + 1e-30
-                dp, dm = m.copy(), m.copy()
+                dp = m.copy()
+                dm = m.copy()
                 dp[a] += h
                 dm[a] -= h
                 fd[:, a] = (
