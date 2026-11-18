@@ -76,8 +76,7 @@ Documentation
 - A new example notebook, the electron energy spectrum with its errors and
   one-count levels: FPI (burst) and FEEPS (survey) averaged over 9 s (MMS3,
   2017-07-11, spectrum 2 of Fig. 3 of Oka et al., 2022), with the counting
-  errors, the one-count levels per bin and in the average, and the floor of
-  the lossy FPI fast survey.
+  errors and the one-count levels per bin and in the average.
 - The MMS example notebooks (but the data access one) set the default data
   resource with ``mms.db_init(default="aws")`` after the imports, instead of
   ``source="aws"`` in each call (``source="sdc"`` kept for the ancillary
