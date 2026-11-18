@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-import warnings
 from typing import Literal
 
 # 3rd party imports
@@ -10,12 +9,19 @@ import numpy as np
 import xarray as xr
 
 # Local imports
+from pyrfu._core.deprecation import deprecated_kwarg
 from pyrfu.mms._internal.epd import _spin_reduce
 
 from .feeps_omni import _DEFAULT_METHODS
 from .feeps_spin_avg import _feeps_complete_spins
 
 
+@deprecated_kwarg(
+    "bin_size",
+    "2.5.1",
+    "3.0.0",
+    reason="It is ignored: the spin average is on the pitch angle bins of pad.",
+)
 def feeps_pad_spinavg(
     pad,
     spin_sectors,
@@ -35,7 +41,7 @@ def feeps_pad_spinavg(
         Ignored, the spin average is on the pitch angle bins of `pad`.
 
         .. deprecated:: 2.5.1
-            `bin_size` will be removed in a future version.
+            `bin_size` will be removed in pyrfu 3.0.0.
     method : {"mean", "sum", "quadrature"}, Optional
         Combination of the samples of a spin: the mean (intensities, count
         rates), the sum (counts) or the square root of the sum of the squares
@@ -70,13 +76,8 @@ def feeps_pad_spinavg(
 
     """
 
-    if bin_size is not None:
-        warnings.warn(
-            "bin_size is deprecated and ignored, and will be removed in a future "
-            "version: the spin average is on the pitch angle bins of pad.",
-            FutureWarning,
-            stacklevel=2,
-        )
+    # Deprecated and ignored (deprecated_kwarg warns)
+    del bin_size
 
     combine = method or _DEFAULT_METHODS.get(pad.attrs.get("units_name"), "mean")
 

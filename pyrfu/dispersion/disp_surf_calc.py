@@ -3,10 +3,12 @@
 
 # Built-in imports
 import itertools
-import warnings
 
 # 3rd party imports
 import numpy as np
+
+# Local imports
+from pyrfu._core.deprecation import warn_deprecated
 
 
 class _ExtraParam(dict):
@@ -20,10 +22,11 @@ class _ExtraParam(dict):
 
     def _new_key(self, key):
         if key in self._old_keys:
-            warnings.warn(
-                f"key {key!r} is deprecated and will be removed in 3.0, use "
+            warn_deprecated(
+                f"key {key!r}",
+                "2.5.0",
+                "3.0.0",
                 f"{self._old_keys[key]!r}",
-                FutureWarning,
                 stacklevel=3,
             )
             key = self._old_keys[key]
@@ -196,7 +199,11 @@ def disp_surf_calc(kc_x_max, kc_z_max, m_i, wp_e):
     Notes
     -----
     The keys "(dn_e/n)/ (dB/B)", "(dn_e/n)/(dBpar /B)" and " Spar/Stot" of
-    pyrfu < 2.5 are deprecated, use the keys without the extra spaces.
+    pyrfu < 2.5 still work, with a FutureWarning.
+
+    .. deprecated:: 2.5.0
+        The keys with extra spaces will be removed in pyrfu 3.0.0; use the keys
+        without them.
 
     """
 

@@ -3288,8 +3288,15 @@ class LoadBrstSegmentsTestCase(unittest.TestCase):
             requests, "get", return_value=_brst_segments_response([])
         ):
             for kwargs in [{"data_path": "mms_data"}, {"download": True}]:
-                with self.assertWarns(FutureWarning):
+                (name,) = kwargs
+                with self.assertWarnsRegex(
+                    FutureWarning,
+                    rf"^argument '{name}' of load_brst_segments is deprecated since "
+                    r"pyrfu 2\.5\.0 and will be removed in pyrfu 3\.0\.0\. It is "
+                    r"ignored",
+                ) as context:
                     mms.load_brst_segments(self.tint, **kwargs)
+                self.assertEqual(context.filename, __file__)
 
 
 @ddt
@@ -6877,8 +6884,13 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
             result.time.data, pad.time.data[[3, 11, 19, 27, 35]]
         )
 
-        with self.assertWarns(FutureWarning):
+        with self.assertWarnsRegex(
+            FutureWarning,
+            r"^argument 'bin_size' of feeps_pad_spinavg is deprecated since pyrfu "
+            r"2\.5\.1 and will be removed in pyrfu 3\.0\.0\.",
+        ) as context:
             mms.feeps_pad_spinavg(pad, spin_sectors, 16.3636)
+        self.assertEqual(context.filename, __file__)
 
         with self.assertRaises(ValueError):
             mms.feeps_pad_spinavg(pad, spin_sectors[:-1])
@@ -11627,7 +11639,11 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
     def test_vdf_frame_transformation_deprecated(self):
         v_gse = generate_ts(64.0, 42, tensor_order=1)
 
-        with self.assertWarnsRegex(FutureWarning, "pyrfu.mms.vdf_shift") as context:
+        with self.assertWarnsRegex(
+            FutureWarning,
+            r"^vdf_frame_transformation is deprecated since pyrfu 2\.5\.0 and will be "
+            r"removed in pyrfu 3\.0\.0; use pyrfu\.mms\.vdf_shift instead\.",
+        ) as context:
             mms.vdf_frame_transformation(self.vdf, v_gse)
 
         self.assertEqual(context.filename, __file__)
@@ -11649,7 +11665,11 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
     def test_vdf_reduce_deprecated(self):
         tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[0, -1]]))
 
-        with self.assertWarnsRegex(FutureWarning, "pyrfu.mms.reduce") as context:
+        with self.assertWarnsRegex(
+            FutureWarning,
+            r"^vdf_reduce is deprecated since pyrfu 2\.5\.0 and will be removed in "
+            r"pyrfu 3\.0\.0; use pyrfu\.mms\.reduce instead\.",
+        ) as context:
             mms.vdf_reduce(self.vdf, tint, "1d", [1, 0, 0], n_vpt=10)
 
         self.assertEqual(context.filename, __file__)

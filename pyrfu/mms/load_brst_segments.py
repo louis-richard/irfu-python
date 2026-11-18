@@ -4,7 +4,6 @@
 # Built-in imports
 import csv
 import io
-import warnings
 
 # Third party imports
 import numpy as np
@@ -12,6 +11,8 @@ import pycdfpp
 import requests
 
 # Local imports
+from pyrfu._core.deprecation import deprecated_kwarg
+
 from ..pyrf.datetime642iso8601 import datetime642iso8601
 from ..pyrf.time_clip import _time_interval
 
@@ -38,6 +39,18 @@ def _tai2datetime64(tai):
     return pycdfpp.to_datetime64(tt2000.view([("nseconds", "<i8")]))
 
 
+@deprecated_kwarg(
+    "data_path",
+    "2.5.0",
+    "3.0.0",
+    reason="It is ignored: the burst segments are read from the MMS SDC.",
+)
+@deprecated_kwarg(
+    "download",
+    "2.5.0",
+    "3.0.0",
+    reason="It is ignored: the burst segments are read from the MMS SDC.",
+)
 def load_brst_segments(
     tint,
     data_path: str | None = None,
@@ -58,9 +71,15 @@ def load_brst_segments(
         as ISO 8601 str, datetime64 or datetime.datetime, or a time series
         (its first and last times), as `pyrfu.pyrf.time_clip`.
     data_path : str, Optional
-        Deprecated and ignored: the segments are not cached any more.
+        Ignored: the segments are not cached any more.
+
+        .. deprecated:: 2.5.0
+            `data_path` will be removed in pyrfu 3.0.0.
     download : bool, Optional
-        Deprecated and ignored: the segments are always downloaded.
+        Ignored: the segments are always downloaded.
+
+        .. deprecated:: 2.5.0
+            `download` will be removed in pyrfu 3.0.0.
     timeout : float, Optional
         Timeout of the request in seconds. Default is 60.
 
@@ -77,13 +96,8 @@ def load_brst_segments(
 
     """
 
-    if data_path is not None or download is not None:
-        warnings.warn(
-            "data_path and download are deprecated and ignored, and will be removed "
-            "in a future version: the burst segments are read from the MMS SDC.",
-            FutureWarning,
-            stacklevel=2,
-        )
+    # Deprecated and ignored (deprecated_kwarg warns)
+    del data_path, download
 
     # In the forms of time_clip (a time series failed)
     l_bound, r_bound = _time_interval(tint)

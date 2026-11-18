@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import warnings
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -11,6 +8,8 @@ from scipy import signal
 from xarray import DataArray
 
 # Local imports
+from pyrfu._core.deprecation import deprecated_kwarg
+
 from .calc_fs import calc_fs
 
 # Elliptic filter of irfu-matlab irf_lowpass: order, passband ripple (dB) and
@@ -18,6 +17,7 @@ from .calc_fs import calc_fs
 _ORDER, _R_PASS, _R_STOP = 4, 0.1, 60
 
 
+@deprecated_kwarg("fhz", "2.5.7", "3.0.0", reason="Use f_s instead.")
 def lowpass(
     inp,
     f_cut: float,
@@ -39,7 +39,10 @@ def lowpass(
         Sampling frequency of inp in Hz. Default is the sampling frequency of
         inp (``calc_fs``).
     fhz : float, Optional
-        Former name of f_s, deprecated (FutureWarning; removed in 3.0).
+        Former name of f_s.
+
+        .. deprecated:: 2.5.7
+            `fhz` will be removed in pyrfu 3.0.0; use `f_s` instead.
 
     Returns
     -------
@@ -69,12 +72,6 @@ def lowpass(
         raise TypeError("inp must be a xarray.DataArray")
 
     if fhz is not None:
-        warnings.warn(
-            "lowpass: fhz is deprecated and will be removed in pyrfu 3.0, use f_s",
-            FutureWarning,
-            stacklevel=2,
-        )
-
         if f_s is not None:
             raise ValueError("give f_s only (fhz is its deprecated name)")
 

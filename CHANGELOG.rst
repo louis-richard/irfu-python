@@ -11,6 +11,16 @@ counts and the intensity errors of the L2 files, combined exactly through the
 omni-directional spectra, spin averages, pitch-angle distributions, skymaps
 and four-spacecraft averages, and the one-count level of spectra.
 
+Deprecations
+^^^^^^^^^^^^
+
+- The deprecation warnings of ``mms.vdf_reduce``,
+  ``mms.vdf_frame_transformation``, ``mms.load_brst_segments(data_path=,
+  download=)``, ``mms.feeps_pad_spinavg(bin_size=)``, ``pyrf.lowpass(fhz=)``
+  and the keys with extra spaces of ``dispersion.disp_surf_calc`` have one
+  form: the version that deprecated the item (2.5.0, 2.5.1 or 2.5.7), pyrfu
+  3.0.0 for its removal (some said "a future version") and the alternative.
+
 Changed behaviour
 ^^^^^^^^^^^^^^^^^
 

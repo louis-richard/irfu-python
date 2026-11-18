@@ -5872,8 +5872,13 @@ class LowPassTestCase(unittest.TestCase):
         xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0), expected)
         xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0, f_s=64.0), expected)
 
-        with self.assertWarns(FutureWarning):
+        with self.assertWarnsRegex(
+            FutureWarning,
+            r"^argument 'fhz' of lowpass is deprecated since pyrfu 2\.5\.7 and will "
+            r"be removed in pyrfu 3\.0\.0\. Use f_s instead\.$",
+        ) as context:
             xr.testing.assert_allclose(pyrf.lowpass(inp, 1.0, fhz=64.0), expected)
+        self.assertEqual(context.filename, __file__)
 
         with self.assertRaisesRegex(ValueError, "f_s only"):
             with warnings.catch_warnings():

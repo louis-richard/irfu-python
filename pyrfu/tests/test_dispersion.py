@@ -3,6 +3,7 @@
 
 # Built-in imports
 import random
+import re
 import unittest
 
 # 3rd party imports
@@ -103,12 +104,21 @@ class DispSurfCalcTestCase(unittest.TestCase):
             (" Spar/Stot", "Spar/Stot"),
         ]:
             self.assertNotIn(old_key, list(extra_param))
-            with self.assertWarns(FutureWarning):
+            message = (
+                rf"^key {re.escape(repr(old_key))} is deprecated since pyrfu 2\.5\.0 "
+                rf"and will be removed in pyrfu 3\.0\.0; use "
+                rf"{re.escape(repr(new_key))} instead\.$"
+            )
+            with self.assertWarnsRegex(FutureWarning, message) as context:
                 self.assertIs(extra_param[old_key], extra_param[new_key])
-            with self.assertWarns(FutureWarning):
+            self.assertEqual(context.filename, __file__)
+            with self.assertWarnsRegex(FutureWarning, message) as context:
                 self.assertIs(extra_param.get(old_key), extra_param[new_key])
-            with self.assertWarns(FutureWarning):
-                self.assertIn(old_key, extra_param)
+            self.assertEqual(context.filename, __file__)
+            # "in" here, not in assertIn (the warning points at its caller)
+            with self.assertWarnsRegex(FutureWarning, message) as context:
+                self.assertTrue(old_key in extra_param)
+            self.assertEqual(context.filename, __file__)
 
 
 @ddt
