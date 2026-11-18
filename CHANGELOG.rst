@@ -1,15 +1,19 @@
 Changelog
 =========
 
-2.6.0 (unreleased)
+2.6.0 (2026-11-18)
 ------------------
 
-This release adds options that keep the previous behaviour by default
+This release deprecates the items to be removed in pyrfu 3.0.0, with a
+``FutureWarning`` of one form until then, and makes ``geopack`` an optional
+dependency. It adds options that keep the previous behaviour by default
 (extrapolation in ``pyrf.resample``, a seed for the Monte-Carlo integrations,
 time decoding in ``pyrf.read_cdf``), and the counting statistics of FEEPS: the
 counts and the intensity errors of the L2 files, combined exactly through the
 omni-directional spectra, spin averages, pitch-angle distributions, skymaps
-and four-spacecraft averages, and the one-count level of spectra.
+and four-spacecraft averages, and the one-count level of spectra. It reads
+the compression indicator of the FPI distributions and documents the floor of
+the counts of the lossy fast survey distributions.
 
 Deprecations
 ^^^^^^^^^^^^
@@ -143,6 +147,10 @@ Development
   guide.
 - The NaN-aware mean, sum and quadrature of the EPD routines are one helper,
   ``_nan_reduce`` (``mms/_internal/epd.py``).
+- The tests no longer read the user's MMS configuration: each test has its
+  own configuration file, with the default settings (resource "local"), so
+  that no test reaches the network when the user's default resource is
+  "aws" or "sdc".
 
 2.5.16 (2026-11-16)
 -------------------
