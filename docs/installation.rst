@@ -47,6 +47,19 @@ Once you have a copy of the source, you can install it with:
 .. _Github repo: https://github.com/louis-richard/irfu-python
 
 
+Optional dependencies
+---------------------
+
+The magnetic field lines of ``plot.plot_magnetosphere`` (deprecated) need
+`geopack`_, an optional dependency:
+
+.. code-block:: console
+
+    $ python -m pip install "pyrfu[geopack]"
+
+.. _geopack: https://pypi.org/project/geopack/
+
+
 Known issues
 ------------
 

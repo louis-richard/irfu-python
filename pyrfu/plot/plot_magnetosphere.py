@@ -9,6 +9,8 @@ import numpy as np
 from matplotlib.patches import Wedge
 
 # Local imports
+from pyrfu._core.deprecation import deprecated
+
 from ..pyrf import datetime642unix, iso86012datetime64
 
 # The function (pyrfu.pyrf.magnetosphere is also the name of its module)
@@ -32,8 +34,15 @@ def _add_earth(ax=None, **kwargs):
 
 def _add_field_lines(ax, tint):
     # geopack prints and requests the latest IGRF coefficients online when
-    # imported, so it is only imported when the field lines are needed
-    from geopack import geopack  # pylint: disable=import-outside-toplevel
+    # imported, so it is only imported when the field lines are needed; it is
+    # an optional dependency (pyrfu[geopack])
+    try:
+        from geopack import geopack  # pylint: disable=import-outside-toplevel
+    except ImportError as error:
+        raise ImportError(
+            "plot_magnetosphere with field_lines=True needs geopack, an optional "
+            'dependency of pyrfu: python -m pip install "pyrfu[geopack]"'
+        ) from error
 
     # Get dipole axis at begin of the time interval
     ut = datetime642unix(iso86012datetime64(np.array(tint)))[0]
@@ -63,6 +72,7 @@ def _add_field_lines(ax, tint):
             ax.plot(xx, zz, color="k", linewidth=0.2)
 
 
+@deprecated("2.6.0", "3.0.0", "pyrfu.pyrf.magnetosphere and matplotlib")
 def plot_magnetosphere(
     ax,
     tint,
@@ -70,6 +80,11 @@ def plot_magnetosphere(
     field_lines: bool = True,
 ):
     r"""Plot magnetopause, bow shock and earth.
+
+    .. deprecated:: 2.6.0
+        `plot_magnetosphere` will be removed in pyrfu 3.0.0; plot the
+        magnetopause and the bow shock of :func:`pyrfu.pyrf.magnetosphere`
+        with matplotlib instead.
 
     Parameters
     ----------
@@ -81,12 +96,18 @@ def plot_magnetosphere(
         Colors of the magnetopause and the bow shock. Default is
         ["tab:blue", "tab:green"].
     field_lines : bool, Optional
-        Plot the T89 magnetic field lines (needs geopack). Default is True.
+        Plot the T89 magnetic field lines. Default is True. They need geopack,
+        an optional dependency: ``python -m pip install "pyrfu[geopack]"``.
 
     Returns
     -------
     ax : matplotlib.pyplot.subplotsaxes
         Axis.
+
+    Raises
+    ------
+    ImportError
+        If `field_lines` is True and geopack is not installed.
 
     """
 

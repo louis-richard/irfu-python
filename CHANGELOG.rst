@@ -14,6 +14,8 @@ and four-spacecraft averages, and the one-count level of spectra.
 Deprecations
 ^^^^^^^^^^^^
 
+- ``plot.plot_magnetosphere``: plot the magnetopause and the bow shock of
+  ``pyrf.magnetosphere`` with matplotlib instead.
 - The keys of the HPCA velocities in GSM, ``v{s}_gsm_hpca_{srvy,brst}_l2``
   (``mms.get_data``, ``mms.tokenize``): those of the files lack the rotation
   by the tilt of the spin axis (2 to 4 degrees); rotate the DBCS velocities
@@ -28,6 +30,14 @@ Deprecations
   and the keys with extra spaces of ``dispersion.disp_surf_calc`` have one
   form: the version that deprecated the item (2.5.0, 2.5.1 or 2.5.7), pyrfu
   3.0.0 for its removal (some said "a future version") and the alternative.
+
+Requirements
+^^^^^^^^^^^^
+
+- ``geopack`` is no longer a dependency but an optional one,
+  ``pyrfu[geopack]``: only the magnetic field lines of
+  ``plot.plot_magnetosphere`` need it (``ImportError`` naming the extra
+  otherwise).
 
 Changed behaviour
 ^^^^^^^^^^^^^^^^^

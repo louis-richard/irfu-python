@@ -8,6 +8,7 @@ import random
 import subprocess
 import sys
 import unittest
+import warnings
 from unittest import mock
 
 import matplotlib as mpl
@@ -927,6 +928,34 @@ class PlotMagnetosphereTestCase(unittest.TestCase):
         for patch in patches:
             patch.start()
             self.addCleanup(patch.stop)
+
+        # Deprecated since 2.6.0 (test_plot_magnetosphere_deprecated)
+        self.enterContext(warnings.catch_warnings())
+        warnings.simplefilter("ignore", FutureWarning)
+
+    def test_plot_magnetosphere_deprecated(self):
+        _, ax = plt.subplots(1)
+
+        with self.assertWarnsRegex(
+            FutureWarning,
+            r"^plot_magnetosphere is deprecated since pyrfu 2\.6\.0 and will be "
+            r"removed in pyrfu 3\.0\.0; use pyrfu\.pyrf\.magnetosphere and "
+            r"matplotlib instead\.$",
+        ) as context:
+            plot.plot_magnetosphere(ax, self.tint, field_lines=False)
+
+        self.assertEqual(context.filename, __file__)
+
+    def test_plot_magnetosphere_without_geopack(self):
+        # geopack is optional (pyrfu[geopack]): ImportError naming the extra
+        # for the field lines only
+        _, ax = plt.subplots(1)
+
+        with mock.patch.dict(sys.modules, {"geopack": None}):
+            with self.assertRaisesRegex(ImportError, r'"pyrfu\[geopack\]"'):
+                plot.plot_magnetosphere(ax, self.tint)
+
+            plot.plot_magnetosphere(ax, self.tint, field_lines=False)
 
     def test_import_pyrfu_skips_geopack(self):
         # geopack prints and requests the IGRF coefficients online when imported
