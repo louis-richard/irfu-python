@@ -9801,11 +9801,13 @@ def _cdf_fpi_dist(
     parity=None,
     energy_nrv=False,
     energy_tables=False,
+    compressionloss=None,
 ):
     # In-memory FPI distribution of either mode (non-record-varying phi and
     # theta): energies of the stepping table parity of each record (all 0 in
     # fast) or a single non-record-varying table, and optionally the energy0
-    # and energy1 variables (twice the energies)
+    # and energy1 variables (twice the energies) and the compression
+    # indicator of each record
     time = np.datetime64("2019-09-14T07:54:10", "ns") + np.arange(
         n_records
     ) * np.timedelta64(150, "ms")
@@ -9832,6 +9834,11 @@ def _cdf_fpi_dist(
             )
     if mode == "brst":
         cdf.add_variable(f"{pre}_steptable_parity{suf}", values=parity)
+    if compressionloss is not None:
+        cdf.add_variable(
+            f"{pre}_compressionloss{suf}",
+            values=np.asarray(compressionloss, dtype=np.uint8),
+        )
     cdf.add_variable(
         names[3],
         values=np.arange(n_records * 60, dtype=float).reshape(n_records, 4, 3, 5),
@@ -9936,6 +9943,21 @@ class GetDistTestCase(unittest.TestCase):
             with self.subTest(form=name):
                 result = mms.get_dist(_cdf_fpi_dist(4), "mms1_dis_dist_brst", form)
                 xr.testing.assert_identical(result, expected)
+
+    @data("brst", "fast")
+    def test_get_dist_compressionloss(self, mode):
+        # The compression indicator of each record (it was not read), clipped
+        # with the times; none without it in the file
+        content = _cdf_fpi_dist(4, mode, compressionloss=[0, 1, 1, 0])
+        result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
+        np.testing.assert_array_equal(result.attrs["compressionloss"], [0, 1, 1, 0])
+
+        tint = ["2019-09-14T07:54:10.100", "2019-09-14T07:54:10.400"]
+        result = mms.get_dist(content, f"mms1_dis_dist_{mode}", tint)
+        np.testing.assert_array_equal(result.attrs["compressionloss"], [1, 1])
+
+        result = mms.get_dist(_cdf_fpi_dist(4, mode), f"mms1_dis_dist_{mode}")
+        self.assertNotIn("compressionloss", result.attrs)
 
     @data("2019-09-14T07:54:10", [0, 1])
     def test_get_dist_tint_type_error(self, tint):

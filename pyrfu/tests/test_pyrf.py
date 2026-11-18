@@ -256,6 +256,22 @@ class AverageVDFTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["delta_energy_minus"].ndim, 2)
         self.assertEqual(len(result.attrs["delta_energy_minus"]), len(avg_inds))
 
+    def test_average_vdf_compressionloss(self):
+        # An average is lossy if one of its distributions is (the indicator
+        # of all the times was kept)
+        vdf = generate_vdf(64.0, 9, [32, 32, 16])
+        vdf.attrs["compressionloss"] = np.array([0, 0, 0, 0, 1, 0, 0, 0, 0])
+
+        result = pyrf.average_vdf(vdf, 3)
+        np.testing.assert_array_equal(result.attrs["compressionloss"], [0, 1, 0])
+
+        result = pyrf.average_vdf(vdf, None)
+        np.testing.assert_array_equal(result.attrs["compressionloss"], [1])
+
+        # time_clip keeps the indicator of its times (both ends included)
+        result = pyrf.time_clip(vdf, [vdf.time.data[2], vdf.time.data[5]])
+        np.testing.assert_array_equal(result.attrs["compressionloss"], [0, 0, 1, 0])
+
     def test_average_vdf_energy_widths(self):
         # Without energy widths (get_dist leaves them out) or with None: the
         # average without them (KeyError, TypeError); widths per channel

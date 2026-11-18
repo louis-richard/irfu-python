@@ -51,6 +51,12 @@ New features
   level of an omni-directional FEEPS spectrum is
   ``mms.vdf_one_count(flux_omni, counts_omni)``, and that of each bin of a
   FEEPS skymap ``mms.vdf_one_count(skymap, counts_skymap)``.
+- ``mms.get_dist`` (and ``mms.get_data`` for the FPI distributions) reads
+  the compression indicator of each distribution, ``compressionloss`` (0
+  lossless, 1 lossy), as a per-time attribute, clipped, appended and
+  resampled with the times (``pyrf.resample`` interpolates it, to a fraction
+  between 0 and 1); ``pyrf.average_vdf`` marks an average lossy if one of its
+  distributions is.
 - ``pyrf.resample(..., extrapolate=True)``: with ``extrapolate=False``, the
   times outside the time range of the input are NaN instead of extrapolated.
 - ``pyrf.int_sph_dist(..., seed=None)`` and ``mms.reduce(..., seed=None)``:
@@ -63,6 +69,13 @@ New features
 Documentation
 ^^^^^^^^^^^^^
 
+- ``mms.get_dist``: the FPI fast survey distributions are always lossy, and
+  their counts do not go below a floor of about 2 per bin (Barrie et al.,
+  2017; da Silva et al., 2020): on 2017-07-11 (MMS3 electrons, plasma sheet)
+  the fast survey spectrum is up to 2.8 times the burst one above 20 keV,
+  where the true counts are below 2 per bin and 4.5 s. The counts, errors and
+  one-count levels of the low-count bins are those of the burst
+  distributions.
 - ``mms.feeps_flat_field_corrections``: the gains multiply every unit, the
   counts and the intensity errors included, as IDL SPEDAS (unchanged): the
   intensity per count and the relative errors are unchanged.

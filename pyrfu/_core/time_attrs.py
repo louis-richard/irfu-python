@@ -15,9 +15,11 @@ import numpy as np
 # distributions) with one value (or row) per time, and their number of
 # dimensions when they do: the step table and the time widths (time,), the
 # energy widths (time, energy) for FPI and FEEPS (per channel, (energy,), for
-# EIS), the azimuthal widths (time, phi) and the FEEPS coverage (time, energy)
+# EIS), the azimuthal widths (time, phi), the FEEPS coverage (time, energy) and
+# the FPI compression indicator (time,)
 _TIME_ATTRS = {
     "esteptable": 1,
+    "compressionloss": 1,
     "delta_time_minus": 1,
     "delta_time_plus": 1,
     "delta_energy_minus": 2,
