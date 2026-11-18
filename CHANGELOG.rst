@@ -101,6 +101,12 @@ Documentation
 Development
 ^^^^^^^^^^^
 
+- ``pyrfu._core.deprecation``: ``deprecated``, ``deprecated_kwarg``,
+  ``deprecated_alias`` and ``warn_deprecated`` give all the deprecations of
+  pyrfu the same form (a ``FutureWarning`` naming the version that
+  deprecates the item, the version that removes it and the alternative,
+  pointing at the caller), and the deprecation policy is in the contributing
+  guide.
 - The NaN-aware mean, sum and quadrature of the EPD routines are one helper,
   ``_nan_reduce`` (``mms/_internal/epd.py``).
 

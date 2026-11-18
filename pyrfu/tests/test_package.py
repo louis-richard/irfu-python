@@ -15,10 +15,12 @@ import tempfile
 import textwrap
 import typing
 import unittest
+import warnings
 from unittest import mock
 
 # Local imports
 import pyrfu
+from pyrfu._core import deprecation as _deprecation
 from pyrfu._core import user_config as _user_config
 
 
@@ -37,6 +39,144 @@ class PackageLoggerTestCase(unittest.TestCase):
 
         self.assertListEqual(logger.handlers, handlers)
         self.assertListEqual(logging.getLogger().handlers, root_handlers)
+
+
+class DeprecationTestCase(unittest.TestCase):
+    """Tests of the deprecation helpers of pyrfu._core.deprecation."""
+
+    def assert_no_warning(self, func, *args, **kwargs):
+        """Call func without any warning, and return its result."""
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always")
+            result = func(*args, **kwargs)
+        self.assertListEqual(record, [])
+        return result
+
+    def test_warn_deprecated(self):
+        """FutureWarning with the versions, the alternative and the reason, pointing at
+        the caller of the deprecated function."""
+
+        def old():
+            _deprecation.warn_deprecated(
+                "old", "2.6.0", "3.0.0", "new", "It is wrong for x."
+            )
+
+        with self.assertWarns(FutureWarning) as ctx:
+            old()
+
+        self.assertEqual(
+            str(ctx.warning),
+            "old is deprecated since pyrfu 2.6.0 and will be removed in pyrfu "
+            "3.0.0; use new instead. It is wrong for x.",
+        )
+        self.assertEqual(ctx.filename, __file__)
+
+        with self.assertWarnsRegex(FutureWarning, r"pyrfu 3\.0\.0\.$"):
+            _deprecation.warn_deprecated("old", "2.6.0", "3.0.0")
+
+    def test_warn_deprecated_top(self):
+        """A stack level above the top of the stack: the outermost frame."""
+        with self.assertWarns(FutureWarning) as ctx:
+            _deprecation.warn_deprecated("old", "2.6.0", "3.0.0", stacklevel=10_000)
+
+        self.assertNotEqual(ctx.filename, __file__)
+
+    def test_deprecated(self):
+        """A deprecated function warns at each call and keeps its name and
+        docstring."""
+
+        @_deprecation.deprecated("2.6.0", "3.0.0", "pyrfu.mms.reduce")
+        def vdf_old(x, y=1):
+            """Docstring."""
+            return x + y
+
+        with self.assertWarnsRegex(FutureWarning, "^vdf_old is deprecated") as ctx:
+            self.assertEqual(vdf_old(1, y=2), 3)
+
+        self.assertIn("use pyrfu.mms.reduce instead", str(ctx.warning))
+        self.assertEqual(ctx.filename, __file__)
+        self.assertEqual(vdf_old.__name__, "vdf_old")
+        self.assertEqual(vdf_old.__doc__, "Docstring.")
+
+    def test_deprecated_kwarg_renamed(self):
+        """The value of the old name is passed as the new one; both: TypeError."""
+
+        @_deprecation.deprecated_kwarg("fhz", "2.6.0", "3.0.0", new="f_s")
+        def lowpass(x, f_s=None):
+            return x, f_s
+
+        self.assertTupleEqual(self.assert_no_warning(lowpass, 1, f_s=2), (1, 2))
+        self.assertTupleEqual(self.assert_no_warning(lowpass, 1, 2), (1, 2))
+
+        with self.assertWarnsRegex(FutureWarning, "argument 'fhz' of lowpass") as ctx:
+            self.assertTupleEqual(lowpass(1, fhz=2), (1, 2))
+
+        self.assertIn("use 'f_s' instead", str(ctx.warning))
+        self.assertEqual(ctx.filename, __file__)
+
+        with self.assertWarns(FutureWarning):
+            with self.assertRaisesRegex(TypeError, "give 'f_s' only"):
+                lowpass(1, fhz=2, f_s=3)
+
+    def test_deprecated_kwarg_kept(self):
+        """A deprecated parameter, by keyword or position, passed unchanged."""
+
+        @_deprecation.deprecated_kwarg("bin_size", "2.6.0", "3.0.0")
+        def spin_avg(pad, sectors, bin_size=None):
+            return pad, sectors, bin_size
+
+        self.assertTupleEqual(self.assert_no_warning(spin_avg, 1, 2), (1, 2, None))
+
+        for args, kwargs in [((1, 2, 3), {}), ((1, 2), {"bin_size": 3})]:
+            with self.assertWarnsRegex(FutureWarning, "'bin_size' of spin_avg") as ctx:
+                self.assertTupleEqual(spin_avg(*args, **kwargs), (1, 2, 3))
+            self.assertEqual(ctx.filename, __file__)
+
+    def test_deprecated_kwarg_stacked(self):
+        """Two deprecated arguments: each warning points at the caller (the inner one
+        pointed at the outer wrapper)."""
+
+        @_deprecation.deprecated_kwarg("data_path", "2.5.0", "3.0.0")
+        @_deprecation.deprecated_kwarg("download", "2.5.0", "3.0.0")
+        def load(tint, data_path=None, download=None):
+            return tint, data_path, download
+
+        for name in ["data_path", "download"]:
+            with self.assertWarnsRegex(FutureWarning, f"'{name}' of load") as ctx:
+                load(1, **{name: 2})
+            self.assertEqual(ctx.filename, __file__)
+
+    def test_deprecated_kwarg_names(self):
+        """Arguments that are not parameters of the function."""
+
+        def func(x, f_s=None):
+            return x, f_s
+
+        with self.assertRaisesRegex(ValueError, "no argument 'fhz'"):
+            _deprecation.deprecated_kwarg("fhz", "2.6.0", "3.0.0")(func)
+
+        with self.assertRaisesRegex(ValueError, "no argument 'f_c'"):
+            _deprecation.deprecated_kwarg("fhz", "2.6.0", "3.0.0", new="f_c")(func)
+
+    def test_deprecated_alias(self):
+        """A function under its former name warns and calls the function."""
+
+        def reduce(x):
+            """Reduce."""
+            return 2 * x
+
+        vdf_reduce = _deprecation.deprecated_alias(
+            reduce, "vdf_reduce", "2.6.0", "3.0.0"
+        )
+
+        with self.assertWarnsRegex(FutureWarning, "^vdf_reduce is deprecated") as ctx:
+            self.assertEqual(vdf_reduce(2), 4)
+
+        self.assertIn("use reduce instead", str(ctx.warning))
+        self.assertEqual(ctx.filename, __file__)
+        self.assertEqual(vdf_reduce.__name__, "vdf_reduce")
+        self.assertEqual(vdf_reduce.__doc__, "Reduce.")
+        self.assertEqual(reduce.__name__, "reduce")
 
 
 class UserConfigTestCase(unittest.TestCase):
