@@ -9639,8 +9639,12 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
                     file.write(content)
                 paths.append(path)
 
+            # The local files (the default resource of the user's
+            # configuration was used, e.g. AWS)
             with mock.patch.object(module, "list_files", return_value=paths):
-                result = mms.get_data("defe_fpi_brst_l2", tint, 1, False, root)
+                result = mms.get_data(
+                    "defe_fpi_brst_l2", tint, 1, False, root, source="local"
+                )
 
         self.assertIsInstance(result, xr.Dataset)
         self.assertEqual(result.energy.shape, (8, 32))
