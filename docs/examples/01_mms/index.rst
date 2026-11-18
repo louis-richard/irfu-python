@@ -10,6 +10,7 @@ MMS examples gallery
     ./example_mms_edr_signatures
     ./example_mms_eis
     ./example_mms_electron_psd
+    ./example_mms_electron_spectrum_errors
     ./example_mms_feeps
     ./example_mms_feeps_electrons_4sc
     ./example_mms_hpca

@@ -73,6 +73,15 @@ New features
 Documentation
 ^^^^^^^^^^^^^
 
+- A new example notebook, the electron energy spectrum with its errors and
+  one-count levels: FPI (burst) and FEEPS (survey) averaged over 9 s (MMS3,
+  2017-07-11, spectrum 2 of Fig. 3 of Oka et al., 2022), with the counting
+  errors, the one-count levels per bin and in the average, and the floor of
+  the lossy FPI fast survey.
+- The MMS example notebooks (but the data access one) set the default data
+  resource with ``mms.db_init(default="aws")`` after the imports, instead of
+  ``source="aws"`` in each call (``source="sdc"`` kept for the ancillary
+  files), without ``verbose=False``; all the example notebooks re-executed.
 - ``mms.get_dist``: the FPI fast survey distributions are always lossy, and
   their counts do not go below a floor of about 2 per bin (Barrie et al.,
   2017; da Silva et al., 2020): on 2017-07-11 (MMS3 electrons, plasma sheet)
