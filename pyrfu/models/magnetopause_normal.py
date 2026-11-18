@@ -96,10 +96,8 @@ def magnetopause_normal(
 
     model = model.lower()
 
-    # A positive pressure (the standoff distance scales as p_sw^(-1/6.6):
-    # ZeroDivisionError at 0) and, for the bow shock, a super-Alfvenic flow
-    # (the standoff of Farris and Russell diverges at M_A = 1 and is negative
-    # below)
+    # p_sw > 0 (r0 scales as p_sw^(-1/6.6)) and, for the bow shock, M_A > 1
+    # (the standoff of Farris and Russell diverges at M_A = 1)
     if not np.all(np.asarray(p_sw, dtype=np.float64) > 0):
         raise ValueError(f"p_sw must be positive (nPa), not {p_sw}")
 

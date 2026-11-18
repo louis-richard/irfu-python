@@ -8,13 +8,10 @@ import warnings
 from collections.abc import Callable
 from typing import ParamSpec, TypeVar
 
-# Deprecations of pyrfu (policy in CONTRIBUTING.rst): a deprecated function,
-# argument or name keeps working, with a FutureWarning (shown to the users of
-# the package, unlike DeprecationWarning) pointing at the caller, from the
-# version that deprecates it ("since") to the version that removes it
-# ("removed_in", a major version). The docstring of the deprecated item has a
-# ".. deprecated:: since" directive, written by hand (the decorators do not
-# change docstrings).
+# Deprecations of pyrfu (policy in CONTRIBUTING.rst): a deprecated item keeps
+# working from "since" to "removed_in" (a major version), with a FutureWarning
+# (shown to users, unlike DeprecationWarning) pointing at the caller. The
+# ".. deprecated:: since" directive of its docstring is written by hand.
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -53,7 +50,7 @@ def _level(stacklevel: int) -> int:
     level = 2  # warnings.warn in warn_deprecated, the caller of warn_deprecated
     frame = inspect.currentframe()
 
-    # this function, then warn_deprecated
+    # Skip this function and warn_deprecated
     for _ in range(2):
         frame = None if frame is None else frame.f_back
 

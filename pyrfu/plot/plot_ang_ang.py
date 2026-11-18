@@ -4,9 +4,8 @@
 # Built-in imports
 import warnings
 
-import matplotlib.pyplot as plt
-
 # 3rd party imports
+import matplotlib.pyplot as plt
 import numpy as np
 import xarray as xr
 
@@ -25,8 +24,7 @@ def _time_avg(vdf, tint):
         warnings.warn("Averages the entire time series", UserWarning)
 
     if len(tint) == 1:
-        # The closest time (bisect gave the next one, and IndexError after the
-        # last sample)
+        # Closest time
         time = _ns(vdf.time.data)
         t_0 = _ns(np.datetime64(tint[0]))
         idx = int(np.argmin(np.abs(time - t_0)))
@@ -65,8 +63,7 @@ def _energy_avg(vdf, en_range):
         en_range = np.array([e_min, e_max])
         warnings.warn("Averages the entire energy range", UserWarning)
     else:
-        # Clamp to the energy range of the instrument (without changing the
-        # caller's list)
+        # Clamp to the energy range of the instrument, in a new array
         en_range = np.array([max(e_min, en_range[0]), min(e_max, en_range[1])])
 
     idx = np.where(np.logical_and(energy >= en_range[0], energy <= en_range[1]))[0]

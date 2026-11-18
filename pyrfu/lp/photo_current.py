@@ -81,9 +81,7 @@ def photo_current(
     if not isinstance(flag, (str, float, int)):
         raise TypeError("flag must be a surface material or a photoemission")
 
-    # Without arguments, the photoemission of the surface materials (an array
-    # u with a zero area raised "truth value of an array is ambiguous", and
-    # zeros for all three printed the table)
+    # Without arguments, log the photoemission of the surface materials
     args = (iluminated_area, u, distance_sun)
 
     if all(arg is None for arg in args):

@@ -4,19 +4,15 @@
 # 3rd party imports
 import numpy as np
 
-# The rule shared by time_clip, resample and ts_append to tell the global
-# attributes with one value (or row) per time from the others. The tables
-# describe the particle distributions of pyrfu (pyrf.ts_skymap and the
-# routines built on it), whose attribute names follow the MMS files; any
-# other attribute is taken as per-time when its first dimension is the
-# length of time.
+# Per-time global attributes, shared by time_clip, resample and ts_append.
+# The tables follow the MMS attribute names of the distributions
+# (pyrf.ts_skymap); any other attribute is per-time when its first dimension
+# is the length of time.
 
-# Attributes of the distributions (skymaps, pitch-angle and gyrophase
-# distributions) with one value (or row) per time, and their number of
-# dimensions when they do: the step table and the time widths (time,), the
-# energy widths (time, energy) for FPI and FEEPS (per channel, (energy,), for
-# EIS), the azimuthal widths (time, phi), the FEEPS coverage (time, energy) and
-# the FPI compression indicator (time,)
+# Per-time attributes of the distributions and their number of dimensions:
+# step table, time widths and compression indicator (time,), energy widths and
+# FEEPS coverage (time, energy), azimuthal widths (time, phi); the EIS energy
+# widths are per channel, (energy,)
 _TIME_ATTRS = {
     "esteptable": 1,
     "compressionloss": 1,
@@ -29,9 +25,8 @@ _TIME_ATTRS = {
     "coverage": 2,
 }
 
-# Attributes of the distributions per channel or angular bin, never clipped
-# (they were when their length was that of time, e.g. the energy tables of 32
-# channels with 32 times)
+# Per-bin attributes of the distributions, never clipped even when their
+# length is that of time (e.g. 32 energy channels and 32 times)
 _BIN_ATTRS = (
     "energy0",
     "energy1",

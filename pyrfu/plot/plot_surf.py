@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 from matplotlib.cm import ScalarMappable
 
 # Local imports

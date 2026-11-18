@@ -115,8 +115,7 @@ mpl.colors.get_named_colors_mapping().update(EXTRA_COLORS)
 
 
 def _register_cmap(cmap):
-    # Once: reloading pyrfu.plot (e.g., autoreload in notebooks) raised
-    # ValueError, the name being already registered
+    # Once only: pyrfu.plot can be reloaded (e.g., autoreload in notebooks)
     if cmap.name not in mpl.colormaps:
         mpl.colormaps.register(cmap)
 
@@ -331,8 +330,7 @@ def use_pyrfu_style(
                 r"\usepackage{bm}",
             ]
         )
-    # Both ways: the pyrfu sheet has frameless legends (fancy_legend=True did
-    # nothing with it)
+    # Both ways, as the pyrfu sheet has frameless legends
     if not fancy_legend:
         mpl.rcParams["legend.frameon"] = False
         mpl.rcParams["legend.fancybox"] = False

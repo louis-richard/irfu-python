@@ -50,8 +50,7 @@ class LangmuirProbe:
         Raises
         ------
         ValueError
-            If r_wire has more than 2 elements (an assertion compared the
-            radii with 2 instead of their number).
+            If r_wire has more than 2 elements.
 
         """
 
@@ -118,7 +117,7 @@ class LangmuirProbe:
             "sunlit": a_sphere_sunlit + a_wire_sunlit,
         }
 
-        # NaN without probe (it raised ZeroDivisionError)
+        # NaN without probe
         with np.errstate(divide="ignore", invalid="ignore"):
             total, sunlit = np.float64(self.area["total"]), self.area["sunlit"]
             self.area["total_sunlit"] = total / sunlit
@@ -154,7 +153,7 @@ class LangmuirProbe:
             if np.all(l_wire > 10 * self.wire["r"]):
                 c_wire = estimate("capacitance_wire", r_wire, l_wire)
             elif np.all(l_wire > self.wire["r"]):
-                # (pyrf.estimate takes the half length)
+                # pyrf.estimate takes the half length
                 c_wire = estimate("capacitance_cylinder", r_wire, l_wire / 2)
             else:
                 raise ValueError(

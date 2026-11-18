@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 from scipy import constants, special
@@ -95,7 +93,7 @@ def thermal_current(
 
     u = np.atleast_1d(u)
 
-    # If zero density return zero current (it returned None)
+    # If zero density return zero current
     if n == 0 or t == 0:
         return np.zeros(u.shape)
 

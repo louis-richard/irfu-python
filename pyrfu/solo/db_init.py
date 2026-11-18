@@ -34,6 +34,5 @@ def db_init(local_data_dir):
 
     """
 
-    # In the configuration of the user directory, at once (a write that failed
-    # left a partial file)
+    # Write to the user configuration at once (no partial file on failure)
     set_local_data_dir(config_path, local_data_dir)

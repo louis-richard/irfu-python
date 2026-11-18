@@ -52,6 +52,7 @@ def colorbar(
         If `where` is not "right", "left", "top" or "bottom".
 
     """
+
     if where not in _RECTS:
         raise ValueError(f"where must be right, left, top or bottom, not {where!r}")
 

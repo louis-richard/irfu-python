@@ -113,8 +113,7 @@ def _check_units(inp, expected, name):
 
 def _check_same_units(inps, name):
     r"""ValueError unless the inputs (time series, or distributions with the
-    units of their data) have the same UNITS, or none (the units of the first
-    one were taken)."""
+    units of their data) have the same UNITS, or none."""
     units = sorted({str(_units(inp)) for inp in inps})
 
     if len(units) > 1:

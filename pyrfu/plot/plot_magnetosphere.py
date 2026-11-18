@@ -13,7 +13,7 @@ from pyrfu._core.deprecation import deprecated
 
 from ..pyrf import datetime642unix, iso86012datetime64
 
-# The function (pyrfu.pyrf.magnetosphere is also the name of its module)
+# The function, not the module of the same name
 from ..pyrf.magnetosphere import magnetosphere
 
 logger = logging.getLogger(__name__)
@@ -33,9 +33,7 @@ def _add_earth(ax=None, **kwargs):
 
 
 def _add_field_lines(ax, tint):
-    # geopack prints and requests the latest IGRF coefficients online when
-    # imported, so it is only imported when the field lines are needed; it is
-    # an optional dependency (pyrfu[geopack])
+    # Optional (pyrfu[geopack]), imported here as it fetches IGRF online
     try:
         from geopack import geopack  # pylint: disable=import-outside-toplevel
     except ImportError as error:
@@ -53,8 +51,7 @@ def _add_field_lines(ax, tint):
         np.linspace(-5, 5, 10),
     )
 
-    # The field lines traced antiparallel, then parallel, to B from each point
-    # of the grid in the y = 0 plane
+    # Field lines traced both ways along B from the grid in the y = 0 plane
     for direction in [-1, 1]:
         for x_gsm, z_gsm in zip(xx_gsm.ravel(), zz_gsm.ravel()):
             _, _, _, xx, _, zz = geopack.trace(
@@ -114,8 +111,7 @@ def plot_magnetosphere(
     if colors is None:
         colors = ["tab:blue", "tab:green"]
 
-    # Magnetopause and bow shock, each with its mirror image (y -> -y) as one
-    # closed line
+    # Magnetopause and bow shock, closed by their mirror image (y -> -y)
     for model, color, label in [
         ("mp_shue1998", colors[0], "Magnetopause"),
         ("bs", colors[1], "Bow Shock"),

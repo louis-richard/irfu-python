@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-import matplotlib.pyplot as plt
-
 # 3rd party imports
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.colorbar import Colorbar
@@ -48,6 +46,7 @@ def plot_heatmap(
         Colorbar.
 
     """
+
     if ax is None:
         _, ax = plt.subplots(1)
 

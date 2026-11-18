@@ -11,9 +11,9 @@ from matplotlib.dates import num2date
 from matplotlib.transforms import ScaledTranslation, blended_transform_factory
 from xarray import DataArray
 
+# Local imports
 from pyrfu._core.time import _seconds
 
-# Local imports
 from ..constants import R_E
 
 
@@ -70,12 +70,10 @@ def add_position(
     t_list = [t_.replace(tzinfo=None) for t_ in num2date(ax.get_xticks())]
     t_ticks = np.array(t_list).astype("<M8[ns]")
 
-    # Positions in time order (np.interp takes increasing times: unsorted
-    # ones labelled the ticks with wrong positions)
+    # Sort by time (np.interp needs increasing times)
     r_xyz = r_xyz.isel(time=np.argsort(r_xyz.time.data, kind="stable"))
 
-    # Position interpolated at the ticks (seconds since the first sample), NaN
-    # outside the time series
+    # Interpolate the position at the ticks, NaN outside the time series
     t_data = r_xyz.time.data.astype("<M8[ns]")
     s_data = _seconds(t_data, t_data[0])
     s_ticks = _seconds(t_ticks, t_data[0])
@@ -104,8 +102,7 @@ def add_position(
     axr.set_xticklabels(ticks_labels, fontsize=fontsize)
     axr.set_xlim(x_lim)
 
-    # Names of the label rows, 4 points left of the axis, at the height of the
-    # tick labels
+    # Row names, 4 points left of the axis, level with the tick labels
     tick = axr.xaxis.get_major_ticks()[0]
     # Tick.get_pad returns the pad in points; the stub says None
     pad = (
