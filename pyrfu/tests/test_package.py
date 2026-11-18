@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import ast
-
 # Built-in imports
+import ast
 import importlib
 import inspect
 import logging
@@ -133,8 +132,7 @@ class DeprecationTestCase(unittest.TestCase):
             self.assertEqual(ctx.filename, __file__)
 
     def test_deprecated_kwarg_stacked(self):
-        """Two deprecated arguments: each warning points at the caller (the inner one
-        pointed at the outer wrapper)."""
+        """Two deprecated arguments: each warning points at the caller."""
 
         @_deprecation.deprecated_kwarg("data_path", "2.5.0", "3.0.0")
         @_deprecation.deprecated_kwarg("download", "2.5.0", "3.0.0")
@@ -232,9 +230,9 @@ class ImportSideEffectsTestCase(unittest.TestCase):
     """What import pyrfu does."""
 
     def test_import_writes_no_file_and_loads_no_boto3(self):
-        """import pyrfu created the MMS configuration file in the user
-        directory and loaded boto3 (about 0.45 s): the file is created on the
-        first use of pyrfu.mms.MMS_CFG_PATH, boto3 when S3 is listed."""
+        """import pyrfu creates no file in the user directory and does not
+        load boto3 (about 0.45 s): the MMS configuration file is created on
+        the first use of pyrfu.mms.MMS_CFG_PATH, boto3 when S3 is listed."""
         code = textwrap.dedent("""
             import os, sys, tempfile
             from unittest import mock
@@ -263,7 +261,7 @@ class ImportSideEffectsTestCase(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_mms_cfg_path_on_first_use(self):
-        """MMS_CFG_PATH is not a module constant any more: the module
+        """MMS_CFG_PATH is not a module constant: the module
         __getattr__ of pyrfu.mms and pyrfu.mms.db_init computes it."""
         db_init = importlib.import_module("pyrfu.mms.db_init")
 

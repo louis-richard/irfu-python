@@ -80,8 +80,8 @@ class DbInitTestCase(unittest.TestCase):
         self.config_dir = _use_temp_config(self)
 
     def test_db_init_user_config(self):
-        # Saved in the user configuration directory: the configuration file of
-        # the package (tracked, shipped in the wheel) used to be rewritten
+        # Saved in the user configuration directory, not in the configuration
+        # file of the package (tracked, shipped in the wheel)
         package_path = os.path.join(os.path.dirname(solo.__file__), "config.json")
         with open(package_path, "rb") as file:
             package_config = file.read()
@@ -98,8 +98,7 @@ class DbInitTestCase(unittest.TestCase):
             self.assertEqual(file.read(), package_config)
 
     def test_db_init_inpput(self):
-        # FileNotFoundError (AssertionError; with python -O the path was
-        # written to the configuration)
+        # FileNotFoundError (also with python -O), nothing written
         with self.assertRaises(FileNotFoundError):
             solo.db_init("/Volumes/solo/remote/data")
 
@@ -146,9 +145,9 @@ class ReadLFRDensityTestCase(unittest.TestCase):
             solo.read_lfr_density(tint)
 
     def test_read_lfr_density_list_files(self):
-        # The latest version of each date (all versions were listed), across
-        # -cdag and public names (the public one on a tie), only this product,
-        # in data_path and its subdirectories, sorted by date
+        # The latest version of each date, across -cdag and public names (the
+        # public one on a tie), only this product, in data_path and its
+        # subdirectories, sorted by date
         data_dir = _make_files(
             self,
             [
@@ -314,9 +313,8 @@ class ReadTNRTestCase(unittest.TestCase):
 
     @data(4, 7)
     def test_read_tnr_data(self, sensor):
-        # Every sweep (the first and the last were dropped), at the time of its
-        # first record, below 100 kHz, without subtraction (was minus the
-        # integral over frequency divided by the number of sweeps)
+        # Every sweep, at the time of its first record, below 100 kHz, without
+        # subtraction
         variables, time = self._tnr_l2(sensor, 5)
         out = self._read_tnr([variables], sensor)
 
@@ -330,7 +328,7 @@ class ReadTNRTestCase(unittest.TestCase):
 
     def test_read_tnr_missing_band_and_empty_sweep(self):
         # Sweep 2 misses band 1 (NaN there), sweep 3 has no power (skipped):
-        # sweep 4 keeps its own time (time and spectra were out of step)
+        # sweep 4 keeps its own time
         sweep = [1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]
         band = [0, 1, 2, 3, 0, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3]
         power = [1, 1, 1, 1, 2, 2, 2, 0, 0, 0, 0, 4, 4, 4, 4]
@@ -343,9 +341,9 @@ class ReadTNRTestCase(unittest.TestCase):
         self.assertFalse(np.isnan(out.data[[0, 2]]).any())
 
     def test_read_tnr_repeated_band(self):
-        # Band 1 recorded twice in sweep 2: the later record is kept, as the
-        # loop over the records did; the spectra in time order, each at the
-        # time of the first record of its sweep
+        # Band 1 recorded twice in sweep 2: the later record is kept; the
+        # spectra in time order, each at the time of the first record of its
+        # sweep
         sweep = [2, 2, 2, 2, 2, 1, 1, 1, 1]
         band = [0, 1, 2, 3, 1, 0, 1, 2, 3]
         power = [2, 5, 2, 2, 7, 1, 1, 1, 1]
@@ -359,8 +357,8 @@ class ReadTNRTestCase(unittest.TestCase):
 
     def test_read_tnr_interleaved_sweeps(self):
         # A record of sweep 2 after the first one of sweep 3: SWEEP_NUM
-        # decreases by 1, which wrapped in uint32 and counted as a reset,
-        # splitting sweep 2 in two spectra
+        # decreases by 1, not a reset (no wrap in uint32), sweep 2 is one
+        # spectrum
         sweep = [1, 1, 1, 1, 2, 2, 2, 3, 2, 3, 3, 3]
         band = [0, 1, 2, 3, 0, 1, 2, 0, 3, 1, 2, 3]
         variables, time = self._tnr_records(sweep, band, sweep)
@@ -372,7 +370,7 @@ class ReadTNRTestCase(unittest.TestCase):
 
     def test_read_tnr_sweep_reset(self):
         # SWEEP_NUM jumps from 202 to 5 (a reset): the sweeps after it are
-        # renumbered, including the last record (the slice missed it)
+        # renumbered, including the last record
         sweep = np.repeat([200, 201, 202, 5, 6], 4)
         band = np.tile(np.arange(4), 5)
         variables, time = self._tnr_records(sweep, band, np.repeat(np.arange(1, 6), 4))
@@ -383,8 +381,8 @@ class ReadTNRTestCase(unittest.TestCase):
         self.assertFalse(np.isnan(out.data).any())
 
     def test_read_tnr_no_sensor(self):
-        # A file without the sensor is skipped (raised ValueError); ValueError
-        # only if no file has the sensor
+        # A file without the sensor is skipped; ValueError only if no file has
+        # the sensor
         variables_4, _ = self._tnr_l2(4, 3)
         variables_7, _ = self._tnr_l2(7, 3)
         out = self._read_tnr([variables_7, variables_4], sensor=4, n_files=2)
@@ -395,7 +393,7 @@ class ReadTNRTestCase(unittest.TestCase):
 
     def test_read_tnr_sensor_channels(self):
         # The sensor on the second channel (auto2), or on both in turn; a
-        # numpy integer sensor (AssertionError)
+        # numpy integer sensor
         variables, time = self._tnr_l2(4, 3)
         variables["auto1"], variables["auto2"] = (
             variables["auto2"] * 0.0,

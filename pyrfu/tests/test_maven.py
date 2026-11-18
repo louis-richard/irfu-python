@@ -31,8 +31,8 @@ class DbInitTestCase(unittest.TestCase):
         self.addCleanup(patch.stop)
 
     def test_db_init_user_config(self):
-        # Saved in the user configuration directory: the configuration file of
-        # the package (tracked, shipped in the wheel) used to be rewritten
+        # Saved in the user configuration directory, not in the configuration
+        # file of the package (tracked, shipped in the wheel)
         package_path = os.path.join(os.path.dirname(maven.__file__), "config.json")
         with open(package_path, "rb") as file:
             package_config = file.read()
@@ -48,8 +48,7 @@ class DbInitTestCase(unittest.TestCase):
             self.assertEqual(file.read(), package_config)
 
     def test_db_init_missing_path(self):
-        # FileNotFoundError (AssertionError; with python -O the path was
-        # written to the configuration)
+        # FileNotFoundError (also with python -O), nothing written
         with self.assertRaises(FileNotFoundError):
             maven.db_init("/Volumes/maven/remote/data")
 
@@ -109,7 +108,7 @@ class DownloadDataTestCase(unittest.TestCase):
             return sorted(name for _, _, names in os.walk(data_path) for name in names)
 
     def test_download_data_plan(self):
-        # MAG with a plan: its .sts files, as before
+        # MAG with a plan: its .sts files
         result = self._download({"inst": "mag", "level": "l2", "plan": "pl"})
         self.assertListEqual(result, [self.FILES[0]])
 
@@ -117,8 +116,8 @@ class DownloadDataTestCase(unittest.TestCase):
         self.assertListEqual(self._download(var), [self.FILES[2]])
 
     def test_download_data_without_plan(self):
-        # Without plan (as documented: KeyError) all the files found, or those
-        # of file_extension (the other instruments downloaded nothing)
+        # Without plan (as documented) all the files found, or those of
+        # file_extension
         result = self._download({"inst": "swe", "level": "l2"})
         self.assertListEqual(result, sorted(self.FILES))
 
@@ -129,7 +128,7 @@ class DownloadDataTestCase(unittest.TestCase):
             self._download({"inst": "mag", "level": "l2", "plan": "bazinga"})
 
     def test_download_data_session_closed(self):
-        # The session closed when a download fails (it was left open)
+        # The session closed when a download fails
         session = self._session(
             self.FILES[3:], error=requests.HTTPError("503 Service Unavailable")
         )
@@ -139,8 +138,8 @@ class DownloadDataTestCase(unittest.TestCase):
         session.__exit__.assert_called_once()
 
     def test_download_data_content(self):
-        # The content downloaded, in year/month directories, nothing else (a
-        # temporary copy of each file was left); timeouts on the requests
+        # The content downloaded, in year/month directories, nothing else;
+        # timeouts on the requests
         session = self._session(self.FILES[3:])
         module = importlib.import_module("pyrfu.maven.download_data")
         with tempfile.TemporaryDirectory() as data_path:
@@ -200,7 +199,7 @@ class DownloadDataTestCase(unittest.TestCase):
             self.assertEqual(out_path, os.path.join(root, "swe", "l2", "2015", "01"))
             self.assertEqual(out_file, os.path.join(out_path, self.FILES[3]))
 
-        # A data path that doesn't exist (AssertionError)
+        # A data path that doesn't exist
         with self.assertRaises(FileNotFoundError):
             module._make_path(file, var, "url/", "/Volumes/maven/remote/data")
 

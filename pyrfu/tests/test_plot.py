@@ -45,8 +45,8 @@ def _close_new_figures(test_case):
     test_case.addCleanup(close)
 
 
-# Axes named in @data, created when the test runs: the decorators run at
-# import, where plt.subplots opened 20 figures
+# Axes named in @data, created when the test runs (the decorators run at
+# import)
 _AXES = {
     "axis": lambda: plt.subplots(1)[1],
     "axes": lambda: plt.subplots(3)[1],
@@ -136,7 +136,7 @@ class PlotClinesTestCase(unittest.TestCase):
 
     @data("jet", plt.get_cmap("viridis"))
     def test_plot_clines_output(self, cmap):
-        # get_cmap(name=cmap) raised a TypeError on every call
+        # A colormap name or object as cmap
         energy = np.array([10.0, 30.0, 100.0, 1000.0, 3000.0])
         inp = xr.DataArray(
             np.random.rand(100, len(energy)),
@@ -194,8 +194,8 @@ class PlotClinesTestCase(unittest.TestCase):
         self.assertEqual(len(f_current.axes), 0)
 
     def test_plot_clines_energy_not_positive(self):
-        # A 0 or NaN energy raised Invalid vmin or vmax: those lines are left
-        # out, the colour scale from the positive energies
+        # A 0 or NaN energy: those lines are left out, the colour scale from
+        # the positive energies
         energy = np.array([0.0, 10.0, np.nan, 100.0, 1000.0])
         inp = xr.DataArray(
             np.random.rand(10, len(energy)),
@@ -256,8 +256,8 @@ class AddPositionTestCase(unittest.TestCase):
         self.assertListEqual(texts, ["X [km]\nY [km]\nZ [km]\nR [km]"])
 
     def test_add_position_unsorted(self):
-        # Positions not in time order (np.interp on unsorted times: wrong
-        # labels): the labels of the sorted positions
+        # Positions not in time order (np.interp needs sorted times): the
+        # labels of the sorted positions
         time = np.datetime64("2019-09-14T07:54:00", "ns")
         time = time + np.arange(10) * np.timedelta64(60, "s")
         x_pos = np.arange(10) * 60.0
@@ -356,7 +356,7 @@ class PlTxTestCase(unittest.TestCase):
         self.assertIsInstance(result, Axes)
 
     def test_pl_tx_grid(self):
-        # The grid of plot_line (0.5 drew darker panels)
+        # The grid of plot_line
         value = [generate_ts(64.0, 100, tensor_order=0) for _ in range(4)]
         axis = plot.pl_tx(_axis("axis"), value, 0)
 
@@ -421,7 +421,7 @@ class SetColorCycleTestCase(unittest.TestCase):
             )
 
     def test_set_color_cycle_unknown(self):
-        # An unknown name was taken as "series"
+        # An unknown name raises ValueError
         for value in ["typo", "pyrfu "]:
             with mpl.rc_context(), self.assertRaisesRegex(ValueError, "palette"):
                 plot.set_color_cycle(value)
@@ -475,7 +475,7 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
             self.assertTrue(mpl.rcParams["xtick.minor.visible"])
 
     def test_use_pyrfu_style_fancy_legend(self):
-        # fancy_legend=True had no effect with the pyrfu sheet (frameless)
+        # fancy_legend=True gives a frame with the pyrfu sheet (frameless)
         with mpl.rc_context():
             plot.use_pyrfu_style(fancy_legend=True)
             self.assertTrue(mpl.rcParams["legend.frameon"])
@@ -496,10 +496,10 @@ class UsePyrfuStyleTestCase(unittest.TestCase):
         self.assertEqual(mpl.colormaps["parula"], parula)
 
     def test_reload_pyrfu_plot(self):
-        # Reloading pyrfu.plot (e.g., autoreload in notebooks) raised
-        # ValueError: the colormaps were already registered. No warning about
-        # them either (only the reload is watched: importing matplotlib can
-        # warn, e.g. pyparsing deprecations with old matplotlib versions)
+        # Reloading pyrfu.plot (e.g., autoreload in notebooks) with the
+        # colormaps already registered, without warning about them (only the
+        # reload is watched: importing matplotlib can warn, e.g. pyparsing
+        # deprecations with old matplotlib versions)
         code = (
             "import importlib, warnings\n"
             "import pyrfu.plot as p\n"
@@ -571,8 +571,7 @@ class PlotAngAngTestCase(unittest.TestCase):
             self.assertEqual(ax.get_title(), "5 keV $\\leq E \\leq$ 10 keV")
 
     def test_plot_ang_ang_closest_time(self):
-        # One time: the closest sample (it was the next one, and IndexError
-        # after the last sample)
+        # One time: the closest sample, also after the last sample
         vdf = self.vdf.copy(deep=True)
         vdf.data.data[:] = (np.arange(10.0) + 1.0)[:, None, None, None]
         d_t = vdf.time.data[1] - vdf.time.data[0]
@@ -607,7 +606,7 @@ class PlotAngAngTestCase(unittest.TestCase):
             plot.plot_ang_ang(self.vdf, self.tint, [100.0, 200.0])
 
     def test_plot_ang_ang_phi_1d(self):
-        # phi as (phi,) (ValueError): the same map
+        # phi as (phi,): the same map
         vdf = self.vdf.copy()
         vdf["phi"] = ("idx1", self.vdf.phi.data[0])
 
@@ -1013,7 +1012,7 @@ class PlotHeatmapTestCase(unittest.TestCase):
         _close_new_figures(self)
 
     def test_plot_heatmap_lists(self):
-        # Lists pass the type check, and failed on .shape
+        # Lists as data
         im, cbar = plot.plot_heatmap(
             _axis("axis"), [[1.0, 2.0], [3.0, 4.0]], ["a", "b"], ["c", "d"]
         )
@@ -1093,7 +1092,7 @@ class AnnotateHeatmapTestCase(unittest.TestCase):
             plot.annotate_heatmap(im, "bazinga")
 
     def test_annotate_heatmap_list(self):
-        # A list passes the type check, and failed on .max()
+        # A list as data
         im, _ = plot.plot_heatmap(
             _axis("axis"), np.array([[1.0, 2.0], [3.0, 4.0]]), ["a", "b"], ["c", "d"]
         )
@@ -1181,7 +1180,7 @@ class MmsPlConfigTestCase(unittest.TestCase):
         self.assertGreater(axs[0].get_xlim()[0], 30 + np.max(self.r_mean) / R_E)
 
     def test_mms_pl_config_nan(self):
-        # A NaN sample left the 3d panel empty: the positions averaged without it
+        # A NaN sample: the positions averaged without it
         self.r_mms[0].data[0] = np.nan
         _, axs = plot.mms_pl_config(self.r_mms)
 
@@ -1218,9 +1217,8 @@ class ColorbarTestCase(unittest.TestCase):
         np.testing.assert_allclose(cax.get_ylim(), [0.0, 11.0])
 
     def test_colorbar_sides(self):
-        # On each side (it was on the right only): pad away, ticks and label
-        # outside, the axis of the figure of the plot (the colorbar of the plot
-        # routines)
+        # On each side: pad away, ticks and label outside, the axis of the
+        # figure of the plot (the colorbar of the plot routines)
         _, other = plt.subplots(1)
         f, ax = plt.subplots(1)
         plt.figure(other.get_figure().number)  # another current figure
@@ -1346,7 +1344,7 @@ class MakeLabelsTestCase(unittest.TestCase):
             plot.make_labels(axs, [0.1, 0.9], pad=24)
 
     def test_make_labels_2d(self):
-        # A 2-D array of axes, labelled row by row (raised AttributeError)
+        # A 2-D array of axes, labelled row by row
         _, axs = plt.subplots(2, 2)
         result = plot.make_labels(axs, [0.1, 0.9])
 
@@ -1574,7 +1572,7 @@ class PlotSpectrTestCase(unittest.TestCase):
             self.assertEqual((norm.vmin, norm.vmax), (2.0, 100.0))
 
     def test_plot_spectr_clim_sequence(self):
-        # A tuple or an array as clim (was ignored: only lists were used)
+        # A tuple or an array as clim
         for clim in [(2.0, 100.0), np.array([2.0, 100.0])]:
             _, ax = plt.subplots(1)
             plot.plot_spectr(ax, self.inp, cscale="log", clim=clim)
@@ -1631,7 +1629,7 @@ class PlotSpectrTestCase(unittest.TestCase):
             plot.plot_spectr(ax, self.inp, colorbar="left")
 
     def test_plot_spectr_pad_zero(self):
-        # pad=0 puts the colour bar against the axis (it was taken as 0.01)
+        # pad=0 puts the colour bar against the axis
         _, ax = plt.subplots(1)
         _, cax = plot.plot_spectr(ax, self.inp, colorbar="right", pad=0)
         self.assertAlmostEqual(cax.get_position().x0, ax.get_position().x1)
@@ -1641,8 +1639,8 @@ class PlotSpectrTestCase(unittest.TestCase):
         self.assertAlmostEqual(cax.get_position().y0, ax.get_position().y1)
 
     def test_plot_spectr_kwargs(self):
-        # The other keyword arguments go to pcolormesh (they were ignored),
-        # also replacing rasterized and shading
+        # The other keyword arguments go to pcolormesh, also replacing
+        # rasterized and shading
         _, ax = plt.subplots(1)
         plot.plot_spectr(ax, self.inp, alpha=0.5, edgecolors="k")
 
@@ -1706,8 +1704,7 @@ class PlotSpectrTestCase(unittest.TestCase):
 
     def test_plot_spectr_dataset_own_table(self):
         # Alternating tables: each time drawn with the cell edges of its own
-        # table (pcolormesh shared the corners of neighbouring times, so both
-        # tables were drawn at their mean)
+        # table, not with corners shared with the neighbouring times
         energy = np.tile(self.energy, (50, 1))
         energy[1::2] *= 1.2
         _, ax = plt.subplots(1)
@@ -1724,7 +1721,7 @@ class PlotSpectrTestCase(unittest.TestCase):
             axis=1,
         )
         for i in [0, 1, 24, 49]:
-            # left and right edges of time i: its own table
+            # Left and right edges of time i: its own table
             np.testing.assert_allclose(coords[:, 2 * i, 1], y_edges[i])
             np.testing.assert_allclose(coords[:, 2 * i + 1, 1], y_edges[i])
 
@@ -1737,7 +1734,7 @@ class PlotSpectrTestCase(unittest.TestCase):
         )
 
         # One time or one channel (no spacing for the edges): pcolormesh with
-        # the shading "auto", as before
+        # the shading "auto"
         table = np.outer(1.0 + 0.01 * np.arange(50), self.energy)
         for times, channels in [(slice(0, 1), slice(None)), (slice(None), slice(0, 1))]:
             _, ax = plt.subplots(1)
@@ -1762,8 +1759,7 @@ class PlotSpectrTestCase(unittest.TestCase):
             plot.plot_spectr(ax, self.data)
 
     def test_plot_spectr_dataset_scalar_coordinate(self):
-        # A coordinate not along idx (e.g., left by sel) was taken as the
-        # y-axis: IndexError
+        # A coordinate not along idx (e.g., left by sel) is not the y-axis
         energy = np.tile(self.energy, (50, 1))
         datasets = [
             xr.Dataset(
@@ -1795,8 +1791,7 @@ class PlotSpectrTestCase(unittest.TestCase):
             np.testing.assert_allclose(ax.get_ylim(), [10.0, 1e4])
 
     def test_plot_spectr_nan_energy(self):
-        # NaN energies raised ValueError in pcolormesh: those channels are left
-        # out
+        # NaN energies: those channels are left out
         energy = self.energy.copy()
         energy[[0, 5]] = np.nan
         _, ax = plt.subplots(1)
@@ -1904,7 +1899,7 @@ class PlotSurfTestCase(unittest.TestCase):
 
     def test_plot_surf_gap(self):
         # The same gap (0.01 of the figure) between the axis and the colour
-        # bar on the four sides (the bottom and left ones touched the axis)
+        # bar on the four sides
         gaps = {
             "bottom": lambda p, c: p.y0 - c.y1,
             "top": lambda p, c: c.y0 - p.y1,

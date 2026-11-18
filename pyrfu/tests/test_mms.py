@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import contextlib
-
 # Built-in imports
+import contextlib
 import datetime
 import importlib
 import inspect
@@ -67,6 +66,7 @@ TEST_TINT = ["2019-01-01T00:00:00.000000000", "2019-01-01T00:10:00.000000000"]
 def _tint_forms(tint):
     r"""The time interval `tint` (two ISO 8601 str) in the forms of
     pyrf.time_clip, which the readers accept."""
+
     t64 = np.array(tint, dtype="datetime64[ns]")
     return {
         "tuple": tuple(tint),
@@ -365,8 +365,8 @@ class CalcEpsilonTestCase(unittest.TestCase):
     @unpack
     def test_calc_epsilon_values(self, widths, alternating):
         # epsilon = int |f - f_model| d3v / (2 n): 0 for identical distributions
-        # and 1/2 for a zero model. A single energy table without energy widths
-        # (IndexError) and widths set to None (TypeError) used to crash.
+        # and 1/2 for a zero model, also with a single energy table, without
+        # energy widths or with widths set to None
         vdf, n_s = self._maxwellian(widths, alternating)
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(4))
 
@@ -380,7 +380,7 @@ class CalcEpsilonTestCase(unittest.TestCase):
         np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
 
     def test_calc_epsilon_charge(self):
-        # Ions of charge q gain q V, as in psd_moments (they gained V)
+        # Ions of charge q gain q V, as in psd_moments
         vdf, n_s = self._maxwellian("attrs", False)
         vdf.attrs["species"] = "helium++"
         model = vdf.copy(deep=True)
@@ -434,7 +434,7 @@ class CalcEpsilonTestCase(unittest.TestCase):
         # The energies of vdf are corrected for sc_pot (E + q V), then checked
         # against those of the model: a model of make_model_kappa with the
         # same potential passes; one on the measured energies, or made with
-        # another potential, raises (they were paired by position)
+        # another potential, raises
         vdf, n_s = self._maxwellian()
         time = vdf.time.data
         v_xyz = pyrf.ts_vec_xyz(time, np.tile([200.0, 0.0, 0.0], (4, 1)))
@@ -453,8 +453,7 @@ class CalcEpsilonTestCase(unittest.TestCase):
                 mms.calculate_epsilon(vdf, wrong, n_s, sc_pot)
 
     def test_calc_epsilon_model_bins(self):
-        # Times and angles of the model are those of the data (they were paired
-        # by position)
+        # Times and angles of the model must be those of the data
         vdf, n_s = self._maxwellian()
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(len(vdf.time)))
         later = vdf.assign_coords(time=vdf.time.data + np.timedelta64(1, "s"))
@@ -466,7 +465,7 @@ class CalcEpsilonTestCase(unittest.TestCase):
                 mms.calculate_epsilon(vdf, model, n_s, sc_pot)
 
     def test_calc_epsilon_phi_1d(self):
-        # phi as (phi,) (IndexError): as with phi as (time, phi)
+        # phi as (phi,): as with phi as (time, phi)
         vdf, n_s = self._maxwellian()
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(4))
         model = vdf.copy(deep=True)
@@ -478,8 +477,8 @@ class CalcEpsilonTestCase(unittest.TestCase):
         np.testing.assert_allclose(eps.data, expected.data, rtol=1e-12)
 
     def test_calc_epsilon_straddling_sc_pot(self):
-        # Channels whose lower edge is below the spacecraft potential used to be
-        # dropped (sqrt of a negative energy is NaN); compare with a direct sum
+        # Channels whose lower edge is below the spacecraft potential are kept
+        # (no sqrt of a negative energy); compare with a direct sum
         vdf, n_s = self._maxwellian()
         v_sc = -25.0  # ions: the corrected energy is E + V = E - 25 eV
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(4, v_sc))
@@ -610,8 +609,7 @@ class ConfigCacheTestCase(unittest.TestCase):
     def test_read_config_every_reader(self):
         # Every reader reads the configuration of db_init (db_get_ts and
         # list_files_aws read the file of their own MMS_CFG_PATH), completed
-        # with the default settings (a missing "default" was None for db_get_ts,
-        # then NotImplementedError("Resource None"); KeyError in copy_files)
+        # with the default settings
         db_get_ts = importlib.import_module("pyrfu.mms.db_get_ts")
         aws = importlib.import_module("pyrfu.mms.list_files_aws")
         with tempfile.TemporaryDirectory() as root:
@@ -678,7 +676,7 @@ class LoginLaspCredentialsTestCase(unittest.TestCase):
         return session_cls.return_value, get_credential, lasp_url
 
     def test_login_lasp_public(self):
-        # The SITL password was sent with every public request
+        # The SITL password is not sent with public requests
         credential = keyring.credentials.SimpleCredential("u", "secret")
         session, get_credential, lasp_url = self._login("public", credential)
         get_credential.assert_not_called()
@@ -816,8 +814,7 @@ class DbInitCredentialsTestCase(unittest.TestCase):
             return json.load(file)
 
     def test_db_init_keeps_other_settings(self):
-        # Only the given settings change; the others used to be reset (rights
-        # to public, username to "username", local to ".", aws to "")
+        # Only the given settings change
         system = _MemoryKeyring(5)
         system.set_password("mms-sdc", "louis", "secret")
         with tempfile.TemporaryDirectory() as root:
@@ -843,8 +840,7 @@ class DbInitCredentialsTestCase(unittest.TestCase):
         )
 
     def test_db_init_keyring_untouched_without_password(self):
-        # No placeholder is stored (used to store "username"/"password"), and
-        # an existing credential is kept
+        # No placeholder is stored, and an existing credential is kept
         system = _MemoryKeyring(5)
         system.set_password("mms-sdc", "louis", "secret")
         with tempfile.TemporaryDirectory() as root:
@@ -943,8 +939,7 @@ class MmsConfigPathTestCase(unittest.TestCase):
             self.assertEqual(self.module._user_config_path(), self.package)
 
     def test_db_init_write_at_once(self):
-        # A write that fails leaves the previous configuration (json.dump
-        # failed half way through the file, read then as the default settings)
+        # Write at once: a failed write leaves the previous configuration
         with tempfile.TemporaryDirectory() as root:
             path = os.path.join(root, "c.json")
             with open(path, "w", encoding="utf-8") as file:
@@ -1180,7 +1175,7 @@ class DbGetVariableTestCase(unittest.TestCase):
         session.close.assert_not_called()  # shared, cached session
 
     def test_get_variable_ndim(self):
-        # N-D variables (only 1-D variables were supported): dims x, y, ...
+        # N-D variables: dims x, y, ...
         module = importlib.import_module("pyrfu.mms.get_variable")
         variable = mock.Mock(values=np.arange(12).reshape(1, 12), attributes={})
 
@@ -1191,8 +1186,8 @@ class DbGetVariableTestCase(unittest.TestCase):
         np.testing.assert_array_equal(out.data, variable.values)
 
     def test_get_variable_attributes(self):
-        # Attributes of one entry as their value (a list for several values:
-        # it was a list of one list, e.g. VALIDMIN of the FGM vectors),
+        # Attributes of one entry as their value (a list for several values,
+        # e.g. VALIDMIN of the FGM vectors),
         # datetime64 for times, the entries of the global attributes of several
         times = np.array(["2019-09-14T07:54:00", "2019-09-14T08:11:00"], "<M8[ns]")
         cdf = pycdfpp.CDF()
@@ -1221,7 +1216,7 @@ class DbGetVariableTestCase(unittest.TestCase):
         np.testing.assert_array_equal(out.attrs["T_RANGE"], times)
         self.assertTupleEqual(out.dims, ("x", "y"))
 
-        # (the loaded file kept: pycdfpp 0.9 frees the attributes with it)
+        # The loaded file is kept: pycdfpp 0.9 frees the attributes with it
         module = importlib.import_module("pyrfu.mms.get_variable")
         file = pycdfpp.load(content)
         glob_attrs = module._pycdfpp_attributes_to_dict(file.attributes)
@@ -1300,8 +1295,8 @@ class DbInitTestCase(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must be positive"):
                 mms.db_init(**kwargs)
 
-        # Types: a string or a bool size was taken (cache="False" left the
-        # cache on, cache_size=True gave 1 byte, cache_dir=5 broke every read)
+        # Types: TypeError for a str or bool number, a non-bool cache or a
+        # non-str directory
         for kwargs in [
             {"cache": "False"},
             {"cache": 1},
@@ -1312,8 +1307,8 @@ class DbInitTestCase(unittest.TestCase):
             with self.assertRaises(TypeError):
                 mms.db_init(**kwargs)
 
-        # The directory as an absolute path, ~ expanded (a relative one was a
-        # different cache in each working directory); the local path too
+        # The directory as an absolute path, ~ expanded (a relative one would
+        # be a different cache in each working directory); the local path too
         # (~ is USERPROFILE on Windows; the working directory as the OS gives
         # it, which abspath uses: /private/var on macOS, short names on Windows)
         home = os.path.join(self.tmp_dir.name, "home")
@@ -1449,7 +1444,7 @@ class UnitConversionsTestCase(unittest.TestCase):
     def test_unit_conversions_values(self):
         # 1 s^3/km^6 of protons at E: DEF = E^2 / (1e6 k) and DPF = 1e3 E /
         # (1e6 k), k = 1e16 m_p^2 / (2 e^2) = 0.54494 with the proton mass, as
-        # FPI (0.53707, the atomic mass unit, made the fluxes 1.46 % larger)
+        # FPI (0.53707 with the atomic mass unit)
         k = 1e16 * constants.m_p**2 / (2 * constants.e**2)
         self.assertAlmostEqual(k, 0.54494, places=5)
         vdf = self.vdf.copy()
@@ -1467,7 +1462,7 @@ class UnitConversionsTestCase(unittest.TestCase):
 
     def test_unit_conversions_species(self):
         # DEF scales as 1 / m^2, for any spelling of the species; He2+ for the
-        # alphas (they were 4 proton masses)
+        # alphas
         def_p = mms.psd2def(self.vdf).data.data
         m_e = constants.electron_mass / constants.proton_mass
         m_a = 3.97259968
@@ -1521,8 +1516,8 @@ class DftTimeShiftTestCase(unittest.TestCase):
     @unpack
     def test_dft_time_shift_values(self, n_pts, tau):
         # The output at t + tau is the input at t + tau, for fractions of a
-        # sample, as irfu-matlab (2e-15 against mms.dft_timeshift). It was
-        # shifted by whole samples, the wrong way, and complex
+        # sample, as irfu-matlab (2e-15 against mms.dft_timeshift); a real
+        # signal stays real
         inp, sig = self._signal(n_pts)
         result = mms.dft_time_shift(inp, tau, f_s=8192.0)
         expected = sig(np.arange(n_pts) + tau * 8192.0)
@@ -1649,7 +1644,7 @@ class Dpf2PsdTestCase(unittest.TestCase):
         ratio = ratio_of(spectr)
         self.assertAlmostEqual(float(ratio[0, -1]), 1.0488, delta=1e-4)
 
-        # The argument was removed
+        # No relativistic argument (the attribute sets the convention)
         with self.assertRaises(TypeError):
             mms.dpf2psd(spectr, relativistic=True)
 
@@ -1759,12 +1754,11 @@ class DslTransformationValuesTestCase(unittest.TestCase):
         backward = func(forward, spin_axis / np.linalg.norm(spin_axis), -1)
         np.testing.assert_allclose(backward.data, b_xyz.data)
 
-        # The GSE/GSM -> DSL output used to be labelled GSE/GSM
+        # Output labelled with its frame (GSE/GSM forward, DSL backward)
         self.assertEqual(forward.attrs["COORDINATE_SYSTEM"], frame)
         self.assertEqual(backward.attrs["COORDINATE_SYSTEM"], "DSL")
 
-        # A spin axis that isn't a unit vector gives the same rotation (it used
-        # to scale and distort the field)
+        # A spin axis that isn't a unit vector gives the same rotation
         np.testing.assert_allclose(func(b_xyz, 3.0 * spin_axis).data, forward.data)
         np.testing.assert_allclose(
             np.linalg.norm(forward.data, axis=1), np.linalg.norm(b_xyz.data, axis=1)
@@ -1842,7 +1836,7 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
 
     def test_eis_combine_proton_pad_channels(self):
         # The PADs of the combined spectra, labelled with their energies (on
-        # the 2021 tables, the columns were stitched and mislabelled)
+        # the 2021 tables)
         e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
         e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
         phx = self._allt(e_phx, 100)
@@ -1857,8 +1851,7 @@ class EisCombineProtonPadTestCase(unittest.TestCase):
             result.data[..., 7:], mms.eis_pad(ext, [0, 0, 1]).data[..., 1:]
         )
 
-        # Spin average of the complete spins (the last one was dropped, the
-        # spins of PHxTOF used on the times of ExTOF)
+        # Spin average of all the complete spins
         despun = mms.eis_combine_proton_pad(phx, ext, [0, 0, 1], despin=True)
         np.testing.assert_array_equal(despun.time.data, phx.time.data[[0, 4, 8]])
         xr.testing.assert_identical(despun, mms.eis_pad_spinavg(result, ext.spin))
@@ -1919,8 +1912,7 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
 
     def test_eis_combine_proton_spec_channels(self):
         # Channels of IDL 6.1 on the 2021 tables: all the PHxTOF channels and
-        # the ExTOF ones but the lowest (it was kept and the top PHxTOF one
-        # left out), with their widths (they were stored as edges)
+        # the ExTOF ones but the lowest, with their widths
         e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
         e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
         phx = self._allt(e_phx, [0, 1, 2], 100)
@@ -1956,8 +1948,7 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         )
 
     def test_eis_combine_proton_spec_array_attrs(self):
-        # Array attributes compared as arrays (ValueError): kept when equal,
-        # both when not
+        # Array attributes compared as arrays: kept when equal, both when not
         e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
         e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
         phx = self._allt(e_phx, [0, 1], 100)
@@ -1969,7 +1960,7 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
             allt.time.attrs["FILLVAL"] = np.array("NaT", dtype="datetime64[ns]")
         result = mms.eis_combine_proton_spec(phx, ext)
 
-        # NaN and NaT fill values are equal (both were kept, as a list)
+        # NaN and NaT fill values are equal
         self.assertTrue(np.isnan(result.attrs["FILLVAL"]))
         self.assertTrue(np.isnat(result.time.attrs["FILLVAL"]))
         np.testing.assert_array_equal(result.attrs["VALIDMIN"], np.zeros(2))
@@ -1977,8 +1968,7 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.attrs["VALIDMAX"][1], np.full(2, 2.0))
 
     def test_eis_combine_proton_spec_units(self):
-        # Fluxes only, in the same units, as IDL (counts and cps were combined,
-        # different units became a list)
+        # Fluxes only, in the same units, as IDL
         e_phx = np.array([11.9, 17.1, 23.4, 30.7, 40.5, 53.0, 68.4])
         e_ex = np.array([56.3, 81.9, 118.0, 180.7, 294.5, 480.2, 783.3])
         flux = "1/(cm^2 s sr keV)"
@@ -2023,8 +2013,7 @@ class EisCombineProtonSpecTestCase(unittest.TestCase):
         )
 
     def test_eis_combine_proton_spec_times(self):
-        # Only the times of both instruments, paired by time (samples of
-        # different times could be averaged)
+        # Only the times of both instruments, paired by time
         e_phx = np.array([20.0, 40.0])
         e_ex = np.array([45.0, 50.0, 120.0])
         phx = self._allt(e_phx, [0, 1, 2, 3, 5], 100)
@@ -2053,7 +2042,7 @@ class EisMomentsTestCase(unittest.TestCase):
         flux = 2 * e_j / mass**2 * vdf * 1e3 * constants.e / 1e4
         times = generate_timeline(1.0, n_t)
         flux = np.tile(flux, (n_t, 1))
-        # channel widths: to the geometric means of the neighbouring energies
+        # Channel widths: to the geometric means of the neighbouring energies
         edges = np.sqrt(energy[1:] * energy[:-1])
         edges = np.hstack(
             [energy[0] ** 2 / edges[0], edges, energy[-1] ** 2 / edges[-1]]
@@ -2076,7 +2065,7 @@ class EisMomentsTestCase(unittest.TestCase):
     def test_eis_moments_maxwellian(self, specie, mass):
         # n = 1 cm^-3, kT = 10 keV: P = n kT = 1.602 nPa (the 2nd order integral
         # is the energy density, 1.5 times larger), <|v|> = sqrt(8 kT / (pi m)),
-        # with the He2+ and O+ masses (they were 4 and 16 proton masses)
+        # with the He2+ and O+ masses
         n_i, v_i, p_i, t_i = mms.eis_moments(self._maxwellian_flux(mass), specie)
         k_t = 1e4 * constants.e
 
@@ -2106,7 +2095,7 @@ class EisMomentsTestCase(unittest.TestCase):
             mms.eis_moments(flux)
 
     def test_eis_moments_units(self):
-        # Fluxes only (counts and cps were accepted)
+        # Fluxes only
         flux = self._maxwellian_flux(constants.proton_mass)
 
         for units in ["1/s", " "]:
@@ -2119,8 +2108,8 @@ class EisMomentsTestCase(unittest.TestCase):
         np.testing.assert_allclose(mms.eis_moments(flux)[0].data, 1.0, rtol=1e-4)
 
     def test_eis_moments_channel_sum(self):
-        # Sums over the channels and their widths (Simpson's rule from the first
-        # to the last channel centre left out the half channels at both ends)
+        # Sums over the channels and their widths (Simpson's rule between the
+        # channel centres leaves out the half channels at both ends)
         energy = np.array([50.0, 80.0, 120.0])
         attrs = {
             "delta_energy_minus": np.array([10.0, 15.0, 20.0]),
@@ -2158,7 +2147,7 @@ class EisMomentsTestCase(unittest.TestCase):
         self.assertNotEqual(float(n_i.data[0]), 1e-6 * n_cl)
 
     def test_eis_moments_background(self):
-        # n - n_bg and P - p_bg, T from them (P was reduced by 3 p_bg)
+        # n - n_bg and P - p_bg, T from them
         flux = self._maxwellian_flux(constants.proton_mass)
         n_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.2))
         p_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.4))
@@ -2240,7 +2229,7 @@ class EisOmniTestCase(unittest.TestCase):
 
     def test_eis_omni_spin_sector_attrs(self):
         # The spin numbers and sectors as coordinates and the energy widths and
-        # species in the attributes (left out: KeyError in eis_spec_combine_sc)
+        # species in the attributes (needed by eis_spec_combine_sc)
         eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", 2)
         result = mms.eis_omni(eis)
 
@@ -2251,18 +2240,17 @@ class EisOmniTestCase(unittest.TestCase):
         )
         self.assertEqual(result.attrs["species"], "proton")
 
-        # attributes not shared with the telescope
+        # Attributes not shared with the telescope
         result.attrs["new"] = 1
         self.assertNotIn("new", eis.t0.attrs)
 
-        # ValueError (was AssertionError)
+        # ValueError for another method
         with self.assertRaises(ValueError):
             mms.eis_omni(eis, "median")
 
     def test_eis_omni_telescope_attrs(self):
-        # The attributes of the telescope 0 labelled the omni flux: those
-        # common to the telescopes kept, its name, energies and display
-        # maximum (as the data: mean or sum) for the omni flux
+        # Attributes of the omni flux: those common to the telescopes, its own
+        # name, energies and display maximum (as the data: mean or sum)
         eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", 2)
         pref = "mms2_epd_eis_srvy_l2_extof_proton"
         for i in range(6):
@@ -2333,8 +2321,7 @@ class EisAngAngTestCase(unittest.TestCase):
 
     def test_eis_ang_ang_look_directions(self):
         # Every sample in the cell of its look direction (azimuth in [0, 360),
-        # polar angle): all cells filled (about 19 % of the samples were
-        # binned, at the polar angle + 90 degrees)
+        # polar angle): all cells filled
         result = mms.eis_ang_ang(self._allt(), frame="gse")
 
         self.assertTupleEqual(result.shape, (3, 2, 8, 6))
@@ -2349,8 +2336,8 @@ class EisAngAngTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.time.data, self._allt().time.data[::8])
 
     def test_eis_ang_ang_mean_and_channels(self):
-        # Two telescopes in the same cell: their mean (the last one was kept);
-        # empty cells NaN (they were 0); widths of the channels used
+        # Two telescopes in the same cell: their mean; empty cells NaN; widths
+        # of the channels used
         allt = self._allt()
         allt["look_t1"] = allt["look_t0"].copy()
         result = mms.eis_ang_ang(allt, en_chan=[0], frame="gse")
@@ -2399,8 +2386,7 @@ class EisAngAngTestCase(unittest.TestCase):
         self.assertNotIn("FIELDNAM", result.attrs)
 
     def test_eis_ang_ang_array_attrs(self):
-        # Array attributes are kept when equal on all the telescopes (ValueError)
-        # and dropped when not
+        # Array attributes kept when equal on all the telescopes, else dropped
         allt = self._allt()
         for i in range(6):
             allt[f"t{i:d}"].attrs = {
@@ -2461,8 +2447,7 @@ class EisSkymapTestCase(unittest.TestCase):
         return out
 
     def test_eis_skymap_units(self):
-        # Energies and widths in eV (the widths stayed in keV, labelled keV);
-        # a single time (IndexError)
+        # Energies and widths in eV; a single time
         result = mms.eis_skymap(self._ang_ang([0.0]), to_psd=False)
 
         np.testing.assert_array_equal(result.energy.data[0], [6e4, 1.2e5])
@@ -2485,9 +2470,8 @@ class EisSkymapTestCase(unittest.TestCase):
         self.assertNotIn("LABLAXIS", result.data.attrs)
 
     def test_eis_skymap_inputs(self):
-        # Without global attributes (KeyError); the phase-space density of
-        # differential particle fluxes only (KeyError without UNITS, a
-        # conversion error for counts)
+        # Without global attributes; the phase-space density of differential
+        # particle fluxes only (ValueError without UNITS or for counts)
         ang_ang = self._ang_ang([0.0, 20.0])
         del ang_ang.attrs["GLOBAL"]
         result = mms.eis_skymap(ang_ang)
@@ -2516,7 +2500,7 @@ class EisSkymapTestCase(unittest.TestCase):
         self.assertNotIn("FIELDNAM", result.data.attrs)
 
     def test_eis_skymap_combine_sc_array_attrs(self):
-        # Array attributes equal on all the spacecraft are kept (dropped)
+        # Array attributes equal on all the spacecraft are kept
         ref = mms.eis_skymap(self._ang_ang([0, 20]), to_psd=False)
         other = mms.eis_skymap(self._ang_ang([1, 21]), to_psd=False)
         for skymap in [ref, other]:
@@ -2526,9 +2510,9 @@ class EisSkymapTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.data.attrs["VALIDMIN"], [1.0, 0.0])
 
     def test_eis_skymap_combine_sc(self):
-        # Combined at the nearest spin (by index, a missing spin shifted the
-        # next ones), with the widths per channel (repeated for every time) and
-        # NaN where no spacecraft has data (the sum was 0)
+        # Combined at the nearest spin (not by index), with the widths per
+        # channel (repeated for every time) and NaN where no spacecraft has
+        # data
         ref = mms.eis_skymap(self._ang_ang([0, 20, 40, 60]), to_psd=False)
         other = self._ang_ang([1, 21, 41, 61, 81], value=3.0)
         other.data[3:] = 5.0
@@ -2558,7 +2542,7 @@ class EisSkymapTestCase(unittest.TestCase):
 class UnitsEisTestCase(unittest.TestCase):
     def test_units_eis(self):
         # eis_pad without units gives none ("") and pitch angles in deg;
-        # eis_proton_correction keeps the attributes of a Dataset (lost);
+        # eis_proton_correction keeps the attributes of a Dataset;
         # spacecraft in different units can't be combined
         eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
         pad = mms.eis_pad(eis, [1, 0, 0])
@@ -2597,8 +2581,8 @@ class EisPadCombineScTestCase(unittest.TestCase):
         )
 
     def test_eis_pad_combine_sc_channels(self):
-        # Different numbers of channels (ValueError in both directions), at the
-        # closest channels, on the energies of the spacecraft with the fewest
+        # Different numbers of channels, in both directions: at the closest
+        # channels, on the energies of the spacecraft with the fewest
         ref = self._pad("2017-07-11T22:00:00", 10, 1.0)
         more = self._pad(
             "2017-07-11T22:00:00", 12, 3.0, energies=(48.0, 60.0, 81.0, 119.0)
@@ -2612,8 +2596,7 @@ class EisPadCombineScTestCase(unittest.TestCase):
             np.testing.assert_allclose(result.data, 2.0)
 
     def test_eis_pad_combine_sc_times(self):
-        # At the nearest time (by index, a spacecraft starting a sample later
-        # was paired with the next times); none within half a step: left out
+        # At the nearest time (not by index); none within half a step: left out
         ref = self._pad("2017-07-11T22:00:00", 10, 1.0)
         late = self._pad("2017-07-11T22:00:02.6", 10, 3.0)
         late.data[:] = 3.0 + np.arange(10)[:, None, None]
@@ -2629,8 +2612,7 @@ class EisPadCombineScTestCase(unittest.TestCase):
 
     def test_eis_pad_combine_sc_attrs(self):
         # The energy widths and energy attributes of the spacecraft of the
-        # energies (they were those of the spacecraft of the times: 4 widths
-        # for 3 energies); different species or methods raise ValueError
+        # energies; different species or methods raise ValueError
         ref = self._pad("2017-07-11T22:00:00", 10, 1.0)
         more = self._pad(
             "2017-07-11T22:00:00", 12, 3.0, energies=(48.0, 60.0, 81.0, 119.0)
@@ -2687,10 +2669,8 @@ class EisSpecCombineScTestCase(unittest.TestCase):
         return out.assign_coords(sector=("time", sector))
 
     def test_eis_spec_combine_sc_attributes(self):
-        # The attributes of the spacecraft with the fewest samples labelled the
-        # combination (CATDESC "MMS4 ExTOF-S", FIELDNAM mms4_..., its SCALEMAX
-        # and file, on MMS2-4 2017-07-23): those common to the spacecraft, the
-        # combined name (mmsx, as SPEDAS) and SCALEMAX
+        # Attributes of the combination (MMS2-4, 2017-07-23): those common to
+        # the spacecraft, the combined name (mmsx, as SPEDAS) and SCALEMAX
         omnis = []
         for mms_id, n_pts in [(2, 16), (3, 16), (4, 12)]:
             omni = self._omni("2017-07-23T16:10:00", n_pts, 0, np.ones_like)
@@ -2722,7 +2702,7 @@ class EisSpecCombineScTestCase(unittest.TestCase):
         self.assertNotIn("FIELDNAM", mms.eis_spec_combine_sc(omnis).attrs)
 
     def test_eis_spec_combine_sc_species(self):
-        # Spectra of different species raise ValueError (they were combined)
+        # Spectra of different species raise ValueError
         one = self._omni("2017-07-11T22:00:00", 16, 0, lambda x: np.ones(len(x)))
         two = one.copy()
         one.attrs = {**one.attrs, "species": "proton"}
@@ -2736,7 +2716,7 @@ class EisSpecCombineScTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.time.data, one.time.data)
 
     def test_eis_spec_combine_sc_documented_chain(self):
-        # get_eis_allt -> eis_omni -> eis_spec_combine_sc (KeyError: 'energy_dplus')
+        # The documented chain get_eis_allt -> eis_omni -> eis_spec_combine_sc
         omnis = [
             mms.eis_omni(
                 generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "flux", ic)
@@ -2768,8 +2748,8 @@ class EisSpecCombineScTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[2:-2], 2 * ref.data[2:-2])
 
     def test_eis_spec_combine_sc_spin_averages(self):
-        # Spin averages paired by time: a spin missing on one spacecraft is
-        # left out there (by index, all the next ones were shifted by a spin)
+        # Spin averages paired by time (not by index): a spin missing on one
+        # spacecraft is left out there
         ref = self._omni(
             "2017-07-11T22:00:00", 10, 0, lambda s: 0 * s + 1.0, spin_avg=True
         )
@@ -2818,7 +2798,7 @@ class EisSpecCombineScTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[~at_4], 2.0)
 
     def test_eis_spec_combine_sc_sum_without_data(self):
-        # NaN where no spacecraft has data, as the mean (the sum was 0)
+        # NaN where no spacecraft has data, as the mean
         ref = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 1.0)
         other = self._omni("2017-07-11T22:00:00", 16, 0, lambda s: 0 * s + 3.0)
         ref.data[0], other.data[0] = np.nan, np.nan
@@ -2832,7 +2812,7 @@ class EisSpecCombineScTestCase(unittest.TestCase):
 class EisPadTestCase(unittest.TestCase):
     @data([1, 0, 0], np.array([1, 0, 0]), generate_ts(64.0, 10, tensor_order=1))
     def test_eis_pad_output(self, vec):
-        # NumPy directions raised TypeError
+        # Directions as a list, a NumPy array or a time series
         eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
         result = mms.eis_pad(eis, vec)
         self.assertIsInstance(result, xr.DataArray)
@@ -2854,7 +2834,7 @@ class EisPadTestCase(unittest.TestCase):
 
     def test_eis_pad_values(self):
         # B along z: telescopes looking along -z (pitch angle 0), +z (180) and
-        # x (90); the zeros are averaged, as IDL and pySPEDAS (they were NaN)
+        # x (90); the zeros are averaged, as IDL and pySPEDAS
         look = np.array(
             [[0, 0, -1], [0, 0, -1], [0, 0, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
         )
@@ -2870,8 +2850,8 @@ class EisPadTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(result.data[:, 3, :])))
 
     def test_eis_pad_parallel(self):
-        # Telescopes looking along -B and +B are at 0 and 180 degrees: the
-        # cosine rounded beyond 1 (NaN, the telescopes left out)
+        # Telescopes looking along -B and +B are at 0 and 180 degrees, even
+        # when the cosine rounds beyond 1
         b_dir = np.array([-6.0, -6.0, -5.0])
         b_hat = b_dir / np.linalg.norm(b_dir)
         look = np.vstack([np.tile(-b_hat, (3, 1)), np.tile(b_hat, (3, 1))])
@@ -2884,8 +2864,7 @@ class EisPadTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[:, 11, :], 0.0)
 
     def test_eis_pad_b_coverage(self):
-        # No pitch angle (NaN) outside the time range of B and in its gaps (B
-        # was held at its last value and interpolated across), as
+        # No pitch angle (NaN) outside the time range of B and in its gaps, as
         # feeps_pitch_angles; elsewhere as with B constant
         look = np.array(
             [[0, 0, -1], [0, 0, -1], [0, 0, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0]]
@@ -2934,8 +2913,7 @@ class EisPadTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result.data[2, 0], [5.0, 2.0])
 
     def test_eis_pad_energy_edges(self):
-        # Channels with a lower (E - delta_minus, it was E + delta_minus) or
-        # upper edge in the range
+        # Channels with a lower (E - delta_minus) or upper edge in the range
         look = np.tile([0, 0, -1], (6, 1))
         eis = self._eis(np.ones((6, 3, 2)), look, np.array([100.0, 200.0]), 40.0, 5.0)
         result = mms.eis_pad(eis, [0, 0, 1], energy=[150, 180])
@@ -2965,7 +2943,7 @@ class EisPadTestCase(unittest.TestCase):
             mms.eis_pad(eis, [1, 0, 0], method="median")
 
     def test_eis_pad_attrs(self):
-        # Units, species, widths of the channels used and bin width (no attrs)
+        # Units, species, widths of the channels used and bin width
         eis = generate_eis(64.0, 100, "brst", "extof", "l2", "proton", "flux", 1)
         eis["t0"].attrs["UNITS"] = "1/(cm^2 s sr keV)"
         eis["t0"].attrs["LABLAXIS"] = "Intensity"
@@ -3004,12 +2982,12 @@ class EisPadSpinAvgTestCase(unittest.TestCase):
 @ddt
 class EisProtonCorrectionTestCase(unittest.TestCase):
     def test_eis_proton_correction_type(self):
-        # TypeError (was AssertionError)
+        # TypeError for a NumPy array
         with self.assertRaises(TypeError):
             mms.eis_proton_correction(np.ones((3, 16)))
 
     def test_eis_proton_correction_units(self):
-        # Fluxes only (counts and cps were corrected)
+        # Fluxes only
         eis = generate_eis(64.0, 100, "srvy", "extof", "l2", "proton", "cps", 1)
 
         for i in range(6):
@@ -3096,7 +3074,6 @@ class EisSpinAvgTestCase(unittest.TestCase):
 
     def test_eis_spin_avg_nan(self):
         # The samples without data are left out; a spin without data is NaN
-        # (its sum was 0, as data)
         spin = [11] * 4 + [12] * 4 + [13] * 4
         eis = self._eis(spin)
         for scope in [k for k in eis if k.startswith("t")]:
@@ -3111,8 +3088,7 @@ class EisSpinAvgTestCase(unittest.TestCase):
             np.testing.assert_allclose(result.t0.data[:, 0], expected)
 
     def test_eis_spin_avg_counter_wrap(self):
-        # The spins in time order across the wrap of the uint16 counter (they
-        # were ordered by number)
+        # The spins in time order across the wrap of the uint16 counter
         spin = [65533] * 2 + [65534] * 4 + [65535] * 4 + [0] * 4 + [1] * 4 + [2]
         result = mms.eis_spin_avg(self._eis(spin))
 
@@ -3127,8 +3103,7 @@ class EisSpinAvgTestCase(unittest.TestCase):
             mms.eis_spin_avg(self._eis([1] * 2 + [2] * 4 + [3]), "median")
 
     def test_eis_pad_spinavg_spins(self):
-        # Same spins as eis_spin_avg, stamped at their first sample (they were
-        # stamped one spin early, partial spins kept)
+        # Same spins as eis_spin_avg, stamped at their first sample
         spin = [10] * 2 + [11] * 4 + [12] * 4 + [13] * 3
         eis = self._eis(spin)
         pad = xr.DataArray(
@@ -3139,7 +3114,7 @@ class EisSpinAvgTestCase(unittest.TestCase):
         )
         result = mms.eis_pad_spinavg(pad, eis.spin)
 
-        # Attributes of the PAD kept (none)
+        # Attributes of the PAD kept
         self.assertDictEqual(result.attrs, pad.attrs)
         np.testing.assert_array_equal(result.time.data, eis.time.data[[2, 6]])
         np.testing.assert_allclose(result.data[:, 0, 0], [3.5, 7.5])
@@ -3147,8 +3122,8 @@ class EisSpinAvgTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.eis_pad_spinavg(pad, eis.spin[:-1])
 
-        # A counts PAD (method "sum" of eis_pad) summed over each spin (it was
-        # averaged, still labelled "sum"); NaN for a bin without data
+        # A counts PAD (method "sum" of eis_pad) summed over each spin; NaN for
+        # a bin without data
         counts = pad.copy(data=pad.data.copy())
         counts.attrs["method"] = "sum"
         counts.data[6:10, 1] = np.nan
@@ -3165,7 +3140,7 @@ class EisSpinAvgTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "method"):
             mms.eis_pad_spinavg(counts, eis.spin, method="median")
 
-        # Spin numbers of other times (misaligned silently)
+        # Spin numbers of other times: ValueError
         shifted = eis.spin.assign_coords(
             time=eis.spin.time.data + np.timedelta64(1, "s")
         )
@@ -3221,8 +3196,8 @@ class LhWaveAnalysisTestCase(unittest.TestCase):
     @data([1.0, 0.0, 0.0], [-1.0, 0.0, 0.0])
     def test_lh_wave_analysis_b_along_x(self, b_hat):
         # The wave of _lh_wave with B along +x or -x (axes permuted, z to x,
-        # x reversed for -x): B x x vanished and everything was NaN; the
-        # angles are then from y towards B x y
+        # x reversed for -x): B x x vanishes, so the angles are from y towards
+        # B x y
         tints, e_xyz, b_scm, b_xyz, n_e, d_vec = _lh_wave(300.0, np.deg2rad(30.0))
         sign = b_hat[0]
         e_xyz, b_scm, b_xyz = [
@@ -3295,8 +3270,7 @@ class LoadBrstSegmentsTestCase(unittest.TestCase):
         self.assertIn("TAIENDTIME>=1829006006", url)
 
     def test_load_brst_segments_tint_forms(self):
-        # The forms of time_clip (a time series failed): the same query and
-        # segments
+        # The forms of time_clip: the same query and segments
         rows = [(1829005990, 1829006120, "COMPLETE+FINISHED")]
         with mock.patch.object(
             requests, "get", return_value=_brst_segments_response(rows)
@@ -3415,7 +3389,7 @@ class MakeModelVDFTestCase(unittest.TestCase):
         return f_ * 1e18 / _rel_factor(energy, mass)[..., None, None]
 
     def test_make_model_vdf_phi_1d(self):
-        # phi as (phi,) (IndexError): as with phi as (time, phi), phi unchanged
+        # phi as (phi,): as with phi as (time, phi), phi unchanged
         vdf = self._skymap("ions", 10.0, 3e4)
         b_xyz, n_s, v_xyz, t_xyz = self._moments(
             vdf.time.data, 2.0, [100.0, 0.0, 0.0], 1000.0, 500.0
@@ -3429,8 +3403,8 @@ class MakeModelVDFTestCase(unittest.TestCase):
         self.assertEqual(result.phi.dims, ("idx1",))
 
     def test_make_model_vdf_b_along_x(self):
-        # B exactly along x gave an all-NaN model (through rotate_tensor). An
-        # isotropic Maxwellian doesn't depend on the direction of B
+        # B exactly along x: a finite model; an isotropic Maxwellian doesn't
+        # depend on the direction of B
         vdf = self._skymap("ions", 10.0, 3e4)
         b_z, n_s, v_xyz, t_xyz = self._moments(
             vdf.time.data, 2.0, [100.0, 0.0, 0.0], 1000.0, 1000.0
@@ -3499,7 +3473,7 @@ class MakeModelVDFTestCase(unittest.TestCase):
             )
 
     def test_make_model_vdf_velocity_along_b(self):
-        # v_perp = 0 gave 0 / 0 and an all-NaN model
+        # v_perp = 0 (0 / 0): a finite model
         for v_kms in [[0.0, 0.0, 300.0], [0.0, 0.0, 0.0]]:
             result, _ = self._check(
                 "ions",
@@ -3560,9 +3534,8 @@ class MakeModelVDFTestCase(unittest.TestCase):
             mms.make_model_vdf(vdf, b_xyz, sc_pot, n_s[:2], v_xyz, t_xyz)
 
     def test_make_model_vdf_moment_times(self):
-        # The moments at the times of the VDF: shifted by a constant (1 h)
-        # they were accepted and used by position, and the times of v_xyz and
-        # t_xyz were not checked
+        # The moments must be at the times of the VDF: n_s, v_xyz and t_xyz
+        # shifted by a constant (1 h) raise ValueError
         vdf = self._skymap("ions", 10.0, 3e4)
         moments = self._moments(vdf.time.data, 2.0, [0.0] * 3, 1e3, 1e3)
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(len(vdf.time)))
@@ -3625,11 +3598,11 @@ class UnitsDistributionsTestCase(unittest.TestCase):
         self.assertEqual(pad.theta.attrs["UNITS"], "deg")
         self.assertEqual(gpd.gyrophase.attrs["UNITS"], "deg")
 
-        # pad_diffusion: the units of the PAD per s (they were "s^3/cm^6/s")
+        # pad_diffusion: the units of the PAD per s
         df_dt = mms.pad_diffusion(pad, 1e-2)
         self.assertEqual(df_dt.data.attrs["UNITS"], "(s^3/cm^6)/s")
 
-        # No UNITS without input UNITS (KeyError, "" and "1/s")
+        # No UNITS without input UNITS
         self.vdf.data.attrs = {}
         pad = mms.get_pitch_angle_dist(self.vdf, self.b_z, angles=12, verbose=False)
         gpd = mms.get_gyrophase_dist(self.vdf, self.b_z)
@@ -3638,8 +3611,8 @@ class UnitsDistributionsTestCase(unittest.TestCase):
             self.assertNotIn("UNITS", out.data.attrs)
 
     def test_units_shift_rebin_models(self):
-        # vdf_shift and vdf_rebin keep LABLAXIS and the coordinate attributes
-        # (lost through s^3/m^6), the models drop the label of other units
+        # vdf_shift and vdf_rebin keep LABLAXIS and the coordinate attributes,
+        # the models drop the label of other units
         self.vdf.energy.attrs["UNITS"] = "eV"
         shifted = mms.vdf_shift(self.vdf, [10.0, 0.0, 0.0], n_mc=2, random_state=0)
         self.assertDictEqual(shifted.data.attrs, self.vdf.data.attrs)
@@ -3726,7 +3699,7 @@ class GetGyrophaseDistTestCase(unittest.TestCase):
         all_pa = mms.get_gyrophase_dist(vdf, b_z, angles=12)
         perp = mms.get_gyrophase_dist(vdf, b_z, angles=12, pitch_angle_range=[80, 100])
 
-        # look phi 5.625 -> velocity at 185.6 (bin 6), 95.625 -> 275.6 (bin 9)
+        # Look phi 5.625 -> velocity at 185.6 (bin 6), 95.625 -> 275.6 (bin 9)
         self.assertListEqual(np.flatnonzero(all_pa.data.data[0, 0]).tolist(), [6, 9])
         self.assertListEqual(np.flatnonzero(perp.data.data[0, 0] > 0).tolist(), [6])
         np.testing.assert_array_equal(perp.attrs["pitch_angle_range"], [80, 100])
@@ -3848,14 +3821,14 @@ class GetPitchAngleDistTestCase(unittest.TestCase):
         self.assertNotIn("mean_or_sum", self.vdf.attrs)
 
     def test_get_pitch_angle_dist_1d_phi(self):
-        # 1-D phi gave a coordinate with the length of time
+        # 1-D phi gives the same PAD
         vdf = self.vdf.copy()
         vdf["phi"] = xr.DataArray(self.vdf.phi.data[0], dims=["idx1"])
         pad = mms.get_pitch_angle_dist(vdf, self.b_xyz, verbose=False)
         np.testing.assert_allclose(pad.data.data[0], self._expected("mean"))
 
     def test_get_pitch_angle_dist_one_time(self):
-        # np.squeeze dropped the time dimension
+        # A single time keeps the time dimension
         tint = list(pyrf.datetime642iso8601(self.vdf.time.data[[1, 1]]))
         for vdf, tint_ in [(self.vdf.isel(time=[0]), None), (self.vdf, tint)]:
             pad = mms.get_pitch_angle_dist(vdf, self.b_xyz, tint_, verbose=False)
@@ -3863,17 +3836,16 @@ class GetPitchAngleDistTestCase(unittest.TestCase):
             np.testing.assert_allclose(pad.data.data[0], self._expected("mean"))
 
     def test_get_pitch_angle_dist_energy_tables(self):
-        # Each time step keeps its energy table (they were averaged)
+        # Each time step keeps its energy table
         vdf = generate_vdf(64.0, 4, [32, 32, 16], energy01=True, units="s^3/cm^6")
         vdf["phi"], vdf["theta"] = self.vdf.phi, self.vdf.theta
         pad = mms.get_pitch_angle_dist(vdf, self.b_xyz, verbose=False)
         np.testing.assert_array_equal(pad.energy.data, vdf.energy.data)
 
     def test_get_pitch_angle_dist_tint_attrs(self):
-        # With tint, the per-time attributes are those of the times kept (they
-        # were at full length: vdf_d3v of the PAD fell back to the midpoint
-        # energy edges), also for get_gyrophase_dist; 32 times and 32 energy
-        # channels: the energy tables are kept
+        # With tint, the per-time attributes are those of the times kept, also
+        # for get_gyrophase_dist; 32 times and 32 energy channels: the energy
+        # tables are kept
         n_t = 32
         vdf = generate_vdf(64.0, n_t, [32, 32, 16], energy01=True, units="s^3/cm^6")
         vdf = vdf.assign(energy=10.0 * 1.25**vdf.energy)
@@ -3997,11 +3969,11 @@ class HpcaPadTestCase(unittest.TestCase):
         vdf.attrs["UNITS"] = "cm^-6 s^3"
         pad = self._pad(vdf, saz, aze, b_xyz)
 
-        # Units of vdf and pitch angles in deg (none)
+        # Units of vdf and pitch angles in deg
         self.assertEqual(pad.attrs["UNITS"], "cm^-6 s^3")
         self.assertEqual(pad.theta.attrs["UNITS"], "deg")
 
-        # hpca_calc_anodes keeps the attributes of vdf and its energies (lost)
+        # hpca_calc_anodes keeps the attributes of vdf and its energies
         vdf.ccomp.attrs["UNITS"] = "eV"
         spec = mms.hpca_calc_anodes(vdf)
         self.assertEqual(spec.attrs["UNITS"], "cm^-6 s^3")
@@ -4014,12 +3986,12 @@ class HpcaPadTestCase(unittest.TestCase):
             spec = mms.hpca_calc_anodes(anodes, fov=[0.0, 90.0], method=method)
             np.testing.assert_array_equal(spec.data, expected)
 
-        # ValueError for another method (AssertionError)
+        # ValueError for another method
         with self.assertRaisesRegex(ValueError, "method"):
             mms.hpca_calc_anodes(anodes, method="median")
 
-        # An anode without data is left out (it made the spectrum NaN); NaN
-        # without warning where no anode has data
+        # An anode without data is left out; NaN without warning where no anode
+        # has data
         anodes = anodes.copy(data=anodes.data.copy())
         anodes.data[:, 3] = np.nan
         anodes.data[0, 2:6] = np.nan
@@ -4038,8 +4010,8 @@ class HpcaPadTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(pad.data[~is_par, :-1])))
 
     def test_hpca_pad_b_coverage(self):
-        # No pitch angle (NaN) after the end of B (it was held at its last
-        # value), as feeps_pitch_angles; before as with B to the end
+        # No pitch angle (NaN) after the end of B, as feeps_pitch_angles;
+        # before as with B to the end
         aze_deg = np.full((2, self.N_AZ), 180.0)
         vdf, saz, aze, b_xyz = self._inputs(aze_deg)
         expected = self._pad(vdf, saz, aze, b_xyz)
@@ -4067,8 +4039,8 @@ class HpcaPadTestCase(unittest.TestCase):
         np.testing.assert_array_equal(pad.data[:, pa_bin], 1.0)
 
     def test_hpca_pad_b_time(self):
-        # B along +x in half-spin 0 and along -x in half-spin 1, looking along -x:
-        # pitch angle 0 then 180 (B was paired with the wrong samples)
+        # B along +x in half-spin 0 and -x in half-spin 1, looking along -x:
+        # pitch angle 0 then 180
         def b_dir(t_s):
             sign = np.where(t_s < 16 * self.D_T, 1.0, -1.0)
             return np.stack([sign, np.zeros_like(t_s), np.zeros_like(t_s)], axis=1)
@@ -4081,7 +4053,7 @@ class HpcaPadTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(pad.data[1:15, -1])))
 
     def test_hpca_pad_energy_range(self):
-        # Both ends of elim are included (the top channel was dropped)
+        # Both ends of elim are included
         vdf, saz, aze, b_xyz = self._inputs(np.full((2, self.N_AZ), 180.0))
         vdf.data[...] = vdf.ccomp.data  # value = energy
         pad = self._pad(vdf, saz, aze, b_xyz, elim=[2.0, 3.0])
@@ -4098,8 +4070,8 @@ class HpcaPadTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._pad(vdf, saz, aze_shifted, b_xyz)
 
-        # start azimuths of a half-spin not 0..15: that half-spin is NaN (the
-        # whole PAD raised), all of them: ValueError
+        # Start azimuths of a half-spin not 0..15: that half-spin is NaN; all
+        # of them: ValueError
         saz_bad = saz.copy()
         saz_bad.data[20] = 7
         pad = self._pad(vdf, saz_bad, aze, b_xyz)
@@ -4118,12 +4090,10 @@ class HpcaPadTestCase(unittest.TestCase):
     def test_hpca_pad_half_spins_by_time(self, centred):
         # Looking along -x with B along +x: pitch angle 0 (bin 0). Each
         # half-spin is matched with its samples by time, as get_hpca_dist:
-        # - half-spin 1 without azimuths (zeros): NaN, as IDL SPEDAS (the
-        #   zeros were azimuths: looking along +x, bin 11);
+        # - half-spin 1 without azimuths (zeros): NaN, as IDL SPEDAS;
         # - aze record 1 missing: half-spin 1 NaN, half-spin 2 with its own
-        #   record (it got the next one, 180 deg away);
-        # - a gap in vdf (3 samples of half-spin 1): half-spin 1 NaN (it
-        #   raised ValueError)
+        #   record;
+        # - a gap in vdf (3 samples of half-spin 1): half-spin 1 NaN
         aze_deg = np.full((3, self.N_AZ), 180.0)
         aze_deg[2] = 360.0  # half-spin 2 looks along +x: bin 11
         vdf, saz, aze, b_xyz = self._inputs(aze_deg, n_spins=3, centred=centred)
@@ -4218,8 +4188,8 @@ class GetHpcaDistTestCase(unittest.TestCase):
 
     @data(True, False)
     def test_get_hpca_dist_half_spins(self, centred):
-        # The data of a half-spin are the samples from its first one (they were
-        # shifted by one sample); NaN without azimuths or not complete in vdf
+        # The data of a half-spin are the samples from its first one; NaN
+        # without azimuths or not complete in vdf
         vdf, aze = self._inputs(centred)
         out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
 
@@ -4241,8 +4211,8 @@ class GetHpcaDistTestCase(unittest.TestCase):
             self.assertTrue(np.all(np.isnan(out[key][[2, 4]])))
 
     def test_get_hpca_dist_angles(self):
-        # Elevations of the anodes (they were the anode numbers), with the
-        # dimensions of a distribution (energy, azimuth, elevation)
+        # Elevations of the anodes, with the dimensions of a distribution
+        # (energy, azimuth, elevation)
         vdf, aze = self._inputs()
         out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
         dim = (self.N_EN, self.N_AZ, self.N_PO)
@@ -4255,7 +4225,7 @@ class GetHpcaDistTestCase(unittest.TestCase):
         np.testing.assert_array_equal(out["bins"], 1.0)
         self.assertEqual((out["species"], out["charge"]), ("hydrogen+", 1))
 
-        # Units name from the UNITS of vdf, as IDL SPEDAS (always "df_cm")
+        # Units name from the UNITS of vdf, as IDL SPEDAS
         self.assertEqual(out["units_name"], "df_cm")
         vdf.attrs["UNITS"] = "1/(cm^2 s sr eV)"
         out = mms.get_hpca_dist(vdf, aze, elevation=self.ELEVATION)
@@ -4277,16 +4247,16 @@ class GetHpcaDistTestCase(unittest.TestCase):
     def test_get_hpca_dist_errors(self):
         vdf, aze = self._inputs()
 
-        # not monotonic
+        # Not monotonic
         aze_bad = aze.assign_coords(time=aze.time.data[[1, 0, 2, 3, 4]])
         with self.assertRaisesRegex(ValueError, "non-monotonic"):
             mms.get_hpca_dist(vdf, aze_bad, elevation=self.ELEVATION)
 
-        # without azimuths
+        # Without azimuths
         with self.assertRaisesRegex(ValueError, "no complete half-spin"):
             mms.get_hpca_dist(vdf, aze * 0, elevation=self.ELEVATION)
 
-        # times out of vdf
+        # Times out of vdf
         aze_bad = aze.assign_coords(time=aze.time.data + np.timedelta64(100, "s"))
         with self.assertRaisesRegex(ValueError, "no complete half-spin"):
             mms.get_hpca_dist(vdf, aze_bad, elevation=self.ELEVATION)
@@ -4341,12 +4311,12 @@ class HpcaSkymapTestCase(unittest.TestCase):
         np.testing.assert_array_equal(out.theta.data, [45.0, 135.0])
 
         for i in range(2):
-            # side B looks at 45 * step + 2 i, side A at 180 more (the
+            # Side B looks at 45 * step + 2 i, side A at 180 more (the
             # circular mean over the energies)
             np.testing.assert_allclose(
                 out.phi.data[i], np.arange(8) * 45.0 + 2.0 * i, atol=1e-12
             )
-            # look phi 45 * step (side B, anodes 2 and 3), theta 45 (particle
+            # Look phi 45 * step (side B, anodes 2 and 3), theta 45 (particle
             # polar angle 135: anode 2)
             for step in range(4):
                 np.testing.assert_array_equal(
@@ -4431,9 +4401,7 @@ class MakeModelKappaTestCase(unittest.TestCase):
 
     @data(5.0, 20.0)
     def test_make_model_kappa_moments(self, kappa):
-        # psd_moments of the model gives back n, V and T. The model was
-        # centred at V / 1000 (km/s taken as m/s), 1e6 too small (cm^-3) and
-        # along the look directions
+        # psd_moments of the model gives back n, V and T
         v_kms = [100.0, -50.0, 200.0]
         vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
         moments = self._moments(vdf, 2.0, v_kms, 500.0)
@@ -4450,9 +4418,8 @@ class MakeModelKappaTestCase(unittest.TestCase):
     def test_make_model_charge_mass(self):
         # He++ (charge 2, the alpha mass): the speeds of the energies E + 2 V,
         # so that the models with a potential V are those without it on the
-        # energies raised by 2 V (V and the proton mass were taken, and
-        # make_model_kappa rejected the species), and psd_moments, with the
-        # same mass, gives back the density and temperature
+        # energies raised by 2 V, and psd_moments, with the same mass, gives
+        # back the density and temperature
         vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
         vdf.attrs.update(species="helium++", charge=2)
         time = vdf.time.data
@@ -4501,8 +4468,7 @@ class MakeModelKappaTestCase(unittest.TestCase):
         self.assertLess(error, 1e-3)
 
     def test_make_model_kappa_phi_per_time(self):
-        # Each time uses its own azimuths (FPI burst); the first time's were
-        # used for all times
+        # Each time uses its own azimuths (FPI burst)
         vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 500.0, [0.0] * 3)
         vdf.phi.data[1] += 5.0
         moments = self._moments(vdf, 2.0, [300.0, 0.0, 0.0], 500.0)
@@ -4532,8 +4498,7 @@ class MakeModelKappaTestCase(unittest.TestCase):
         shifted.energy.data[:] = np.clip(shifted.energy.data, 0.0, None)
         expected = mms.make_model_kappa(shifted, *moments)
 
-        # On the corrected grid (the energies E + q V), the model of those
-        # energies (it was labelled with the measured energies)
+        # On the corrected grid (energies E + q V), the model of those energies
         np.testing.assert_array_equal(model.energy.data, shifted.energy.data)
         np.testing.assert_allclose(
             model.data.data[:, valid], expected.data.data[:, valid], rtol=1e-12
@@ -4969,8 +4934,8 @@ class Psd2DpfTestCase(unittest.TestCase):
 
 class KeywordOnlyOptionsTestCase(unittest.TestCase):
     # The options of psd_moments, reduce and get_pitch_angle_dist are
-    # keyword-only parameters: a misspelt one raises TypeError (it was
-    # ignored in **kwargs), and they can't be given by position
+    # keyword-only parameters: a misspelt one raises TypeError, and they
+    # can't be given by position
 
     def test_misspelt_option(self):
         for func, args, option in [
@@ -5041,8 +5006,7 @@ class PsdMomentsTestCase(unittest.TestCase):
 
     def test_midpoint_kernels(self):
         # The kernels at the centres of the bins, and the exact kernels of
-        # small bins over their solid angle (the numba kernel computed them
-        # for each time step)
+        # small bins over their solid angle
         module = sys.modules["pyrfu.mms.psd_moments"]
         rng = np.random.default_rng(0)
         phi = rng.uniform(0, 360, (3, 8)).astype(np.float32)
@@ -5169,8 +5133,8 @@ class PsdMomentsTestCase(unittest.TestCase):
         np.testing.assert_allclose(v.data[0], v_kms, atol=2.0)
         np.testing.assert_allclose(np.diag(t.data[0]), 1000.0, rtol=0.01)
 
-        # Off-diagonal elements: T is isotropic (0) and the full second moment
-        # p2 reduces to m n Vi Vj (nPa). Pxz/Pyz used the wrong angular kernel.
+        # Off-diagonal elements, Pxz and Pyz included: T is isotropic (0) and
+        # the full second moment p2 reduces to m n Vi Vj (nPa)
         i_row = [0, 0, 1]
         i_col = [1, 2, 2]
         np.testing.assert_allclose(t.data[0][i_row, i_col], 0.0, atol=5.0)
@@ -5182,8 +5146,7 @@ class PsdMomentsTestCase(unittest.TestCase):
 
     def test_psd_moments_species_mass(self):
         # O+ Maxwellian with the speeds of the proton one: same n and V, T
-        # times the mass ratio (AssertionError, and the proton mass for all
-        # the ions)
+        # times the mass ratio (the mass of the species is used)
         v_kms = [200.0, 150.0, -250.0]
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, v_kms)
         m_o = 15.99491461957 * constants.atomic_mass - constants.electron_mass
@@ -5219,10 +5182,9 @@ class PsdMomentsTestCase(unittest.TestCase):
             mms.psd_moments(vdf, sc_pot)
 
     def test_psd_moments_no_warnings(self):
-        # Electrons with V_sc above the lowest channel (unused speeds warned
-        # "invalid value in sqrt"), and a time without particles: n = 0 and
-        # NaN bulk velocity, pressure, temperature and heat flux (0 / 0
-        # warned)
+        # Electrons with V_sc above the lowest channel, and a time without
+        # particles: n = 0 and NaN bulk velocity, pressure, temperature and
+        # heat flux, without RuntimeWarning
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
         vdf.attrs["species"] = "electrons"
         vdf.data.data[1] = 0.0
@@ -5244,8 +5206,7 @@ class PsdMomentsTestCase(unittest.TestCase):
     @unpack
     def test_psd_moments_units(self, units, scale):
         # The same Maxwellian in other units, or without UNITS (s^3/cm^6, as
-        # FPI), gives the same moments. s^3/m^6 and s^3/km^6 were taken as
-        # s^3/cm^6 (moments 1e12 and 1e30 too large)
+        # FPI), gives the same moments
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
         expected = mms.psd_moments(vdf, sc_pot)
 
@@ -5264,7 +5225,7 @@ class PsdMomentsTestCase(unittest.TestCase):
     @data("keV/(cm^2 s sr keV)", "1/(cm^2 s sr eV)")
     def test_psd_moments_units_flux(self, units):
         # Fluxes are converted to phase-space densities (vdf_convert), as
-        # irfu-matlab; they were taken as s^3/cm^6
+        # irfu-matlab
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
         vdf.data.attrs["UNITS"] = "s^3/cm^6"
         expected = mms.psd_moments(vdf, sc_pot)
@@ -5299,9 +5260,9 @@ class PsdMomentsTestCase(unittest.TestCase):
         )
 
     def test_psd_moments_tables_differ_in_some_channels(self):
-        # Tables that differ in all but one channel must use the alternating-table
-        # speed widths (which don't use delta_energy_*). `all(e_tmp) == 0` flagged
-        # them as a single table, so zero delta_energy widths gave n = 0.
+        # Tables that differ in all but one channel use the alternating-table
+        # speed widths (which don't use delta_energy_*): zero delta_energy
+        # widths do not give n = 0
         ratio = (3e4 / 10.0) ** (1 / 31)
         energy1 = 10.0 * ratio ** (np.arange(32) + 0.5)
         energy1[0] = 10.0
@@ -5315,7 +5276,7 @@ class PsdMomentsTestCase(unittest.TestCase):
 
     def test_psd_moments_non_contiguous(self):
         # get_dist returns the data as a transposed float32 view (not
-        # C-contiguous), which made the numba kernels fail on every call
+        # C-contiguous)
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
         data = vdf.data.data.astype(np.float32)
         data_t = np.ascontiguousarray(data.transpose(0, 3, 2, 1)).transpose(0, 3, 2, 1)
@@ -5335,12 +5296,11 @@ class PsdMomentsTestCase(unittest.TestCase):
         np.testing.assert_array_equal(vdf_t.data.data, data)
 
     def test_psd_moments_clipped_tables(self):
-        # Fewer than 32 channels (vdf_elim output) raised IndexError in the
-        # alternating-table and fast-mode speed widths. The clipped VDF gives
-        # the same moments as the same channels of the full one: to rounding
-        # with one table (delta_energy widths), to 1 % with alternating tables
-        # (the widths of the end channels are extrapolated linearly, as in
-        # irfu-matlab).
+        # Fewer than 32 channels (vdf_elim output), also with alternating
+        # tables and in fast mode. The clipped VDF gives the same moments as
+        # the same channels of the full one: to rounding with one table
+        # (delta_energy widths), to 1 % with alternating tables (the widths
+        # of the end channels are extrapolated linearly, as in irfu-matlab).
         ratio = (3e4 / 10.0) ** (1 / 31)
         energy1 = 10.0 * ratio ** (np.arange(32) + 0.5)
         vdf_alt, sc_pot_alt = self._drifting_maxwellian(
@@ -5480,16 +5440,15 @@ class PsdMomentsTestCase(unittest.TestCase):
     @unpack
     def test_psd_moments_sc_pot_widths(self, t_ev, sc_pot, energy01, rate):
         # The speed widths come from the channel edges corrected for the
-        # spacecraft potential (irfu-matlab); the uncorrected edges gave
-        # n = 0.87, 0.80, 0.86 for these cold electrons
+        # spacecraft potential (irfu-matlab)
         vdf, scpot = self._electrons_through_potential(t_ev, sc_pot, energy01, rate)
         n_psd = mms.psd_moments(vdf, scpot)[0]
         np.testing.assert_allclose(n_psd.data, 1.0, rtol=0.02)
 
     def test_psd_moments_angular_widths_attrs(self):
-        # delta_phi_* and delta_theta_* attrs are in degrees (FPI files); they
-        # were used as radians (n x 3283). Half-widths of 5.625 deg give the
-        # same moments as the 11.25 deg grid spacing used without them.
+        # delta_phi_* and delta_theta_* attrs are in degrees (FPI files).
+        # Half-widths of 5.625 deg give the same moments as the 11.25 deg grid
+        # spacing used without them.
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, 0.0])
         expected = self._moments(vdf, sc_pot)
 
@@ -5572,8 +5531,8 @@ class PsdMomentsTestCase(unittest.TestCase):
                 mms.psd_moments(vdf, sc_pot, **kwargs)
 
     def test_psd_moments_float32(self):
-        # FPI angles and data are float32: the exact kernels (float64) failed
-        # in numba; the moments are those of float64 inputs
+        # FPI angles and data are float32: the moments are those of float64
+        # inputs
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [200.0, 150.0, -250.0])
         vdf_32 = vdf.assign(
             phi=vdf.phi.astype(np.float32), theta=vdf.theta.astype(np.float32)
@@ -5637,7 +5596,7 @@ class PsdMomentsTestCase(unittest.TestCase):
 
     def test_psd_moments_any_data_rate(self):
         # The data rate in FIELDNAM is for information only: survey skymaps
-        # (FEEPS) and skymaps without FIELDNAM used to raise
+        # (FEEPS) and skymaps without FIELDNAM are accepted
         vdf, sc_pot = self._drifting_maxwellian(1.0, 1000.0, [0.0, 0.0, 0.0])
         expected = self._moments(vdf, sc_pot)
 
@@ -5668,7 +5627,7 @@ class PsdMomentsTestCase(unittest.TestCase):
         )
         self._assert_moments_equal(result, expected)
 
-        # It was ignored: full moments
+        # The range is applied: less than the full moments
         n_full = self._moments(vdf, sc_pot)[0]
         self.assertTrue(np.all(result[0] < 0.9 * n_full))
 
@@ -5759,9 +5718,8 @@ class PsdMomentsTestCase(unittest.TestCase):
             n_same = mms.psd_moments(vdf, sc_pot, partial_moments=same)[0].data
             np.testing.assert_array_equal(n_same, n_half)
 
-        # A wrong mask raises ValueError (the full moments were returned, the
-        # error only logged at INFO): not 0/1 (it used to be applied as
-        # weights before), wrong shape, a DataArray at other times
+        # A wrong mask raises ValueError: not 0/1, wrong shape, a DataArray at
+        # other times
         shifted = xr.DataArray(
             mask,
             coords={"time": vdf.time.data + np.timedelta64(1, "s")},
@@ -5878,7 +5836,7 @@ class PsdMomentsTestCase(unittest.TestCase):
             atol = 1e-12 * np.max(np.abs(exp.data))
             np.testing.assert_allclose(res.data, exp.data, rtol=1e-10, atol=atol)
 
-        # The argument was removed (TypeError, as any unknown option)
+        # No relativistic option (TypeError, as any unknown option)
         with self.assertRaisesRegex(TypeError, "relativistic"):
             mms.psd_moments(vdf, sc_pot, relativistic=True)
 
@@ -5918,8 +5876,7 @@ class PsdRebinTestCase(unittest.TestCase):
             )
 
     def test_psd_rebin_table_types(self):
-        # phi, energy0, energy1 and the stepping table as numpy arrays (the
-        # test of phi raised on its first argument, not a Dataset)
+        # phi, energy0, energy1 and the stepping table as numpy arrays
         vdf = generate_vdf(64.0, 10, (32, 32, 16), energy01=True, species="ions")
         args = [
             vdf,
@@ -5971,11 +5928,11 @@ class PsdRebinTestCase(unittest.TestCase):
             vdf.attrs["esteptable"],
         )
 
-        # Time stamps at the middle of each pair (the time step used to overflow int16)
+        # Time stamps at the middle of each pair
         np.testing.assert_array_equal(time_r, time[::2] + np.timedelta64(15, "ms"))
 
-        # Every pair is filled, including the last one (used to be all zeros).
-        # esteptable[2k] = 0 -> energy0 (sample 2k) on even rows, energy1 on odd.
+        # Every pair is filled, including the last one. esteptable[2k] = 0 ->
+        # energy0 (sample 2k) on even rows, energy1 on odd.
         expected_even = np.arange(1.0, n_t, 2)[:, None, None, None]
         expected_odd = np.arange(2.0, n_t + 1, 2)[:, None, None, None]
         np.testing.assert_array_equal(
@@ -6014,7 +5971,7 @@ class PsdRebinTestCase(unittest.TestCase):
         np.testing.assert_allclose(phi_r, phi[0:-1:2] + advance / 2, atol=1e-4)
 
         # Both energy tables at a column see the same direction (to the spin
-        # advance): it was 31 deg apart (shift by 2 bins) for relabelled pairs
+        # advance), also for relabelled pairs
         np.testing.assert_array_less(
             np.abs(vdf_r[:, 0::2] - vdf_r[:, 1::2]), np.deg2rad(advance) * 1.01
         )
@@ -6022,10 +5979,10 @@ class PsdRebinTestCase(unittest.TestCase):
     @idata(itertools.product([False, True], [0, 1]))
     @unpack
     def test_psd_rebin_energy_table_order(self, phi_wrap, first_step):
-        # The lower table (energy0) must always go to the even channels, whether
-        # or not phi wraps between the two samples of a pair (the phi-wrap
-        # branch ignored the step table). Each sample holds a constant value,
-        # so the order does not depend on the phi shift.
+        # The lower table (energy0) must always go to the even channels,
+        # whether or not phi wraps between the two samples of a pair. Each
+        # sample holds a constant value, so the order does not depend on the
+        # phi shift.
         n_t = 8
         vdf = generate_vdf(64.0, n_t, (32, 32, 16), energy01=True)
         step_table = (np.arange(n_t) + first_step) % 2
@@ -6050,8 +6007,8 @@ class PsdRebinTestCase(unittest.TestCase):
         np.testing.assert_array_equal(energy_r[0:63:2], vdf.attrs["energy0"])
 
     def test_psd_rebin_channels(self):
-        # Twice the channels of a table (64 were assumed: the 15 channels kept
-        # by vdf_elim raised ValueError); each channel holds its energy
+        # Twice the channels of a table (e.g. the 15 channels kept by
+        # vdf_elim); each channel holds its energy
         vdf = generate_vdf(64.0, 10, (32, 32, 16), energy01=True, species="ions")
         vdf = vdf.assign(energy=vdf.energy + 1.0)
         for key in ["energy0", "energy1"]:
@@ -6086,8 +6043,8 @@ class PsdRebinTestCase(unittest.TestCase):
 
 class EstimatePhaseSpeedTestCase(unittest.TestCase):
     def test_estimate_phase_speed(self):
-        # Power ridge along f = v k / (2 pi), v = 20 km/s: the speed is recovered
-        # and the caller's power spectrum is unchanged (parts were set to 0)
+        # Power ridge along f = v k / (2 pi), v = 20 km/s: the speed is
+        # recovered and the caller's power spectrum is unchanged
         k = np.linspace(-0.3, 0.3, 121)
         freq = np.linspace(0.0, 1000.0, 201)
         k_mat, f_mat = np.meshgrid(k, freq)
@@ -6104,8 +6061,8 @@ class EstimatePhaseSpeedTestCase(unittest.TestCase):
     def test_estimate_phase_speed_weights(self):
         # The fit is irfu-matlab's least squares weighted by
         # w = 1 + log10(P / P_max): the slope 2 pi sum(w k f) / sum(w k^2)
-        # over the selected points. scipy's sigma=w weighted them by 1 / w^2,
-        # the weakest the most (two modes: 13 % from the speed, against 10 %)
+        # over the selected points (not scipy's sigma=w, which weights them by
+        # 1 / w^2, the weakest the most)
         k = np.linspace(-0.1, 0.1, 201)
         freq = np.linspace(0.0, 4000.0, 401)
         k_mat, f_mat = np.meshgrid(k, freq)
@@ -6178,7 +6135,7 @@ class FeepsActiveEyesTestCase(unittest.TestCase):
 
     def test_feeps_active_eyes_time_types(self):
         # str, datetime64 and datetime.datetime give the same eyes on each side
-        # of the 2017-08-16 change (datetime.datetime used to raise)
+        # of the 2017-08-16 change
         var = {"tmmode": "srvy", "dtype": "electron", "lev": "l2"}
         new = {"top": [3, 5, 9, 10, 12], "bottom": [2, 4, 5, 9, 10]}
         old = {"top": [3, 4, 5, 11, 12], "bottom": [3, 4, 5, 11, 12]}
@@ -6306,9 +6263,8 @@ class FeepsAvg4scTestCase(unittest.TestCase):
 
     def test_feeps_avg_4sc_gaps(self):
         # MMS1, 3 and 4 at 1; MMS2 at 10, a gap of 100 samples, then 30, and
-        # MMS4 stopping early: a spacecraft without data is left out (the
-        # resampling filled the gap from 10 to 30 and extrapolated past the
-        # end, averaged as data: 3.8 to 7.8 in the gap)
+        # MMS4 stopping early: a spacecraft without data is left out (no
+        # filling of the gap or extrapolation past the end)
         time = generate_timeline(0.05, 200)
         ones = np.ones(200)
         mms2 = np.r_[np.full(50, 10.0), np.full(50, 30.0)]
@@ -6326,7 +6282,7 @@ class FeepsAvg4scTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data[[150, 199], 0], 32.0 / 3.0)
 
     def test_feeps_avg_4sc_offset_times(self):
-        # Continuous data on offset times: interpolated as before; next to a
+        # Continuous data on offset times: interpolated; next to a
         # gap and after the end, the nearest sample (not a value interpolated
         # across the gap), within half a sampling period
         time = generate_timeline(0.05, 20)
@@ -6337,14 +6293,14 @@ class FeepsAvg4scTestCase(unittest.TestCase):
         result = mms.feeps_avg_4sc([omni[0], mms2, omni[1], omni[2]])
 
         # MMS2 at t is 4 (t + 0.3 period) / period: interpolated; the last
-        # time is 0.3 period after MMS2's last sample: that sample (it was
+        # time is 0.3 period after MMS2's last sample: that sample (not
         # extrapolated, 19.3)
         np.testing.assert_allclose(result.data[:-1, 0], (4.0 * ramp[:-1] + 1.2) / 4.0)
         self.assertAlmostEqual(result.data[-1, 0], 19.0)
 
         # MMS2 without samples 10 to 14: 0.3 period after its sample 9, then
-        # the gap: sample 9 (it was interpolated towards sample 15, 9.3), the
-        # gap without MMS2, interpolated again from sample 15
+        # the gap: sample 9 (not interpolated towards sample 15, 9.3), the gap
+        # without MMS2, interpolated again from sample 15
         keep = np.r_[0:10, 15:20]
         mms2 = self._omni(time[keep] - shift, 4.0 * ramp[keep], 2)
         result = mms.feeps_avg_4sc([omni[0], mms2, omni[1], omni[2]])
@@ -6392,7 +6348,7 @@ class FeepsAvg4scTestCase(unittest.TestCase):
         with self.assertRaises(TypeError):
             mms.feeps_avg_4sc(_feeps_omni_4sc([1.0, 2.0]), combined_energies=[[1, 1]])
 
-        # Datasets were documented but failed with AttributeError
+        # Datasets give a TypeError
         omni = [b.to_dataset(name="omni") for b in _feeps_omni_4sc([1.0, 2.0])]
         with self.assertRaisesRegex(TypeError, "DataArray"):
             mms.feeps_avg_4sc(omni)
@@ -6434,8 +6390,8 @@ class FeepsCorrectEnergiesTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.Dataset)
 
     def test_feeps_correct_energies_values(self):
-        # Energies from the table, the loader's dimension names kept (they were
-        # renamed energy-top-1), and the caller's attrs left alone
+        # Energies from the table, the loader's dimension names kept, and the
+        # caller's attrs left alone
         feeps_alle = generate_feeps(64.0, 10, "brst", "electron", "l2", "flux", 2)
         attrs = dict(feeps_alle.attrs)
 
@@ -6558,7 +6514,7 @@ class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
         result = mms.feeps_flat_field_corrections(feeps_alle)
 
         # Each eye is scaled by its gain (1 if not in the table), and the eyes
-        # with a gain of 0 are NaN (they used to be zeros)
+        # with a gain of 0 are NaN
         for k in filter(lambda x: x[:3] in ["top", "bot"], feeps_ref):
             sensor, eye = k.split("-")
             gain = g_corr.get(f"mms{mms_id}-{sensor[:3]}{int(eye)}", 1.0)
@@ -6571,7 +6527,7 @@ class FeepsFlatFieldCorrectionsTestCase(unittest.TestCase):
 
         self.assertDictEqual(result.attrs, feeps_ref.attrs)
 
-        # The caller's data must not be changed (they used to be scaled in place)
+        # The caller's data must not be changed
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
 
@@ -6693,7 +6649,7 @@ class FeepsOmniTestCase(unittest.TestCase):
             mms.feeps_omni(feeps_alle, method="median")
 
     def test_feeps_omni_unsplit(self):
-        # Unsplit eyes (16 channels) used to fail with a broadcasting error
+        # Unsplit eyes (16 channels) are rejected
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
 
         with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
@@ -6751,8 +6707,8 @@ class FeepsPadTestCase(unittest.TestCase):
         self.assertTrue(np.isfinite(result.data).all())
         self.assertEqual(result.attrs["energy_range"], [70.0, 600.0])
 
-        # The zeros used to be set to NaN in the caller's data, and
-        # energy_range added to the caller's attrs
+        # The caller's data and attrs are left alone (no NaN for the zeros, no
+        # energy_range)
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
     def test_feeps_pad_cdf_angles(self):
@@ -6769,8 +6725,8 @@ class FeepsPadTestCase(unittest.TestCase):
         b_bcs = generate_ts(64.0, 100, tensor_order=1)
         result = mms.feeps_pad(feeps_alle, b_bcs)
 
-        # Burst: the CDF angles are used (they used to be computed from B),
-        # 10 +/- 21.4 degrees covers the first two bins only
+        # Burst: the CDF angles are used, 10 +/- 21.4 degrees covers the first
+        # two bins only
         self.assertTrue(np.isfinite(result.data[:, :2]).all())
         self.assertTrue(np.isnan(result.data[:, 2:]).all())
 
@@ -6796,13 +6752,13 @@ class FeepsPadTestCase(unittest.TestCase):
         b_bcs = generate_ts(64.0, 20, tensor_order=1)
 
         # bin_size not dividing 180: bins of 25 degrees from 0 up to 175, as
-        # IDL SPEDAS and pyspedas (they were 25.7 degrees wide, labelled as 25)
+        # IDL SPEDAS and pyspedas
         result = mms.feeps_pad(feeps_alle, b_bcs, bin_size=25.0, energy=[32.0, 600.0])
         np.testing.assert_allclose(result.theta.data, 12.5 + 25.0 * np.arange(7))
         self.assertTrue(np.isfinite(result.data[:, :2]).all())
         self.assertTrue(np.isnan(result.data[:, 2:]).all())
 
-        # 32 keV accepted (it raised), units of the input (count rate)
+        # 32 keV accepted, units of the input (count rate)
         self.assertEqual(result.attrs["UNITS"], "counts/s")
 
         with self.assertRaises(ValueError):
@@ -6817,7 +6773,8 @@ class FeepsPadTestCase(unittest.TestCase):
             mms.feeps_pad(feeps_alle, b_bcs)
 
     def test_feeps_pad_unsplit(self):
-        # Unsplit eyes (16 channels) used to average the integral channel
+        # Unsplit eyes (16 channels) are rejected: the integral channel is not
+        # averaged
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
 
         with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
@@ -6953,8 +6910,8 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
         feeps_alle = _feeps_split("srvy", "electron", 1)
         feeps_pad = mms.feeps_pad(feeps_alle, generate_ts(64.0, 100, tensor_order=1))
 
-        # A NumPy array used to raise TypeError; the 8 complete spins (the
-        # partial last one was kept)
+        # A NumPy array as a DataArray; the 8 complete spins (not the partial
+        # last one)
         result = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum)
         result_np = mms.feeps_pad_spinavg(feeps_pad, feeps_alle.spinsectnum.data)
 
@@ -6969,9 +6926,7 @@ class FeepsPadSpinAvgTestCase(unittest.TestCase):
 
         result = mms.feeps_pad_spinavg(pad, spin_sectors)
 
-        # One row per complete spin, at its first sample, on the PAD bins: the
-        # windows used to be shifted by one sample and interpolated onto 12 bin
-        # edges, and the partial spins were kept
+        # One row per complete spin, at its first sample, on the PAD bins
         expected = np.tile(np.arange(1.0, 6.0)[:, None], (1, 11))
         expected[0, 4] = np.nan
         np.testing.assert_array_equal(result.data, expected)
@@ -7042,8 +6997,8 @@ class FeepsPitchAnglesTestCase(unittest.TestCase):
             b_xyz, coords=[time, ["x", "y", "z"]], dims=["time", "comp"]
         )
 
-        # The angles at the FEEPS times are those of B at these times (they
-        # used to be averaged over the sample, while B turns)
+        # The angles at the FEEPS times are those of B at these times (not
+        # averaged over the sample, while B turns)
         result, _ = mms.feeps_pitch_angles(feeps_alle, b_fast)
         expected, _ = mms.feeps_pitch_angles(feeps_alle, b_fast[::10])
 
@@ -7052,7 +7007,7 @@ class FeepsPitchAnglesTestCase(unittest.TestCase):
 
     def test_feeps_pitch_angles_along_eye(self):
         # B along the electron top-5 eye (and against bottom-5): 0 and 180
-        # degrees, not NaN from cos slightly beyond 1 (it used to be NaN)
+        # degrees, not NaN from cos slightly beyond 1
         module = importlib.import_module("pyrfu.mms.feeps_pitch_angles")
         v_eye = -np.matmul(module.t_top, module.v_fcs[5])
         b_bcs = pyrf.ts_vec_xyz(
@@ -7118,7 +7073,7 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
     )
     @unpack
     def test_feeps_remove_bad_data_ions(self, mms_id, t_start, n_bad):
-        # Ion eyes (6-8) used to be skipped: bad eyes and channels kept
+        # Ion eyes (6-8) included: bad eyes and channels removed
         feeps_alle = generate_feeps(64.0, 100, "brst", "ion", "l2", "flux", mms_id)
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
         time = feeps_alle.time.data
@@ -7151,7 +7106,7 @@ class FeepsRemoveBadDataTestCase(unittest.TestCase):
 
     def test_feeps_remove_bad_data_nan_energies(self):
         # mms2 top-5 is a good eye in the 2018-10-01 table, without energy
-        # calibration: its bad lowest channel used to be kept
+        # calibration: its bad lowest channel is removed
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 2)
         eye = feeps_alle["top-5"].rename(energy="energy-top-5")
         eye = eye.assign_coords({"energy-top-5": np.full(eye.shape[1], np.nan)})
@@ -7203,8 +7158,7 @@ class ReadFeepsSectorMasksCsvTestCase(unittest.TestCase):
     )
     @unpack
     def test_read_feeps_sector_masks_csv_date(self, t_start, file_date):
-        # Masks from the file nearest to the start time; the list used to
-        # stop at 20181005
+        # Masks from the file nearest to the start time, also after 20181005
         masks = mms.read_feeps_sector_masks_csv([t_start, t_start])
 
         for mms_id in range(1, 5):
@@ -7233,8 +7187,8 @@ class ReadFeepsSectorMasksCsvTestCase(unittest.TestCase):
         self.assertEqual(int(self._table(4, "20250216").sum()), 564)
 
     def test_read_feeps_sector_masks_csv_cached(self):
-        # The files of a date are read once (four files on every call), and the
-        # masks returned are copies: changing them doesn't change the next ones
+        # The files of a date are read once, and the masks returned are
+        # copies: changing them doesn't change the next ones
         module = sys.modules["pyrfu.mms.read_feeps_sector_masks_csv"]
         module._read_masks.cache_clear()
         tint = ["2017-07-11T22:00:00", "2017-07-11T22:00:00"]
@@ -7249,8 +7203,7 @@ class ReadFeepsSectorMasksCsvTestCase(unittest.TestCase):
         module._read_masks.cache_clear()
 
     def test_feeps_bad_data_tables_cached(self):
-        # feeps_bad_data.json is read once (on every call of
-        # feeps_remove_bad_data)
+        # feeps_bad_data.json is read once
         module = sys.modules["pyrfu.mms.feeps_remove_bad_data"]
         module._bad_data_tables.cache_clear()
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
@@ -7335,8 +7288,7 @@ class FeepsRemoveSunlitSectorsTestCase(unittest.TestCase):
         feeps_alle[eyes[0]].data[sunlit] = 1e3
 
         # Quantile between the sunlit average and the others, over the 8
-        # sectors with data (the 56 empty sectors used to count as zeros, and 4
-        # more eye-sector pairs were masked)
+        # sectors with data
         n_cells = 8 * len(eyes)
         result = mms.feeps_remove_sunlit_sectors(
             feeps_alle, outliers_q=(n_cells - 1.5) / (n_cells - 1)
@@ -7410,8 +7362,8 @@ def _feeps_skymap_case(data_rate, n_pts, value=2.0, mms_id=1):
 
 
 class UnitsFeepsTestCase(unittest.TestCase):
-    # UNITS of the FEEPS products: those of the eyes (none without them, an
-    # intensity was invented), pitch angles in deg, energies in keV
+    # UNITS of the FEEPS products: those of the eyes (none without them),
+    # pitch angles in deg, energies in keV
     def test_units_feeps(self):
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
         feeps_alle, _ = mms.feeps_split_integral_ch(feeps_alle)
@@ -7489,7 +7441,7 @@ class FeepsSkymapTestCase(unittest.TestCase):
 
         result = mms.feeps_skymap(feeps_alle, to_psd=False)
 
-        # one skymap per spin, every bin filled with the intensity
+        # One skymap per spin, every bin filled with the intensity
         self.assertTupleEqual(result.data.shape, (2, 15, n_phi, 4))
         np.testing.assert_array_equal(result.data.data, 2.0)
         np.testing.assert_array_equal(result.theta.data, [5.0, 65.0, 115.0, 175.0])
@@ -7512,8 +7464,7 @@ class FeepsSkymapTestCase(unittest.TestCase):
 
     def test_feeps_skymap_complete_spins(self):
         # Partial spin (sectors 31-63), a complete spin, partial spin (7-47):
-        # one skymap, at the first sample of the complete spin (the partial
-        # spins gave skymaps too)
+        # one skymap, at the first sample of the complete spin
         feeps_alle = _feeps_skymap_case("srvy", 24).isel(time=slice(3, 22))
         result = mms.feeps_skymap(feeps_alle, to_psd=False)
 
@@ -7538,7 +7489,7 @@ class FeepsSkymapTestCase(unittest.TestCase):
         finite = np.argwhere(np.isfinite(result.data.data).all(axis=1))
         self.assertListEqual(finite.tolist(), [[0, i_phi, 1]])
         np.testing.assert_array_equal(result.data.data[0, :, i_phi, 1], 1.0)
-        # one bin of the 35-90 degree band
+        # One bin of the 35-90 degree band
         self.assertAlmostEqual(
             result.attrs["coverage"][0, 0], np.cos(np.deg2rad(35)) / 2 / n_phi
         )
@@ -7785,10 +7736,10 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
         feeps_omni = mms.feeps_omni(feeps_alle)
 
         # Spin sectors 0..11 repeated: complete spins start at 0, 12, ..., 84
-        # (the partial last one, 96-99, was kept)
+        # (not the partial last one, 96-99)
         spin_starts = np.arange(0, 96, 12)
 
-        # A DataArray used to give one row per sample (aligned on time)
+        # A DataArray as a NumPy array: one row per spin
         result = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum)
         result_np = mms.feeps_spin_avg(feeps_omni, feeps_alle.spinsectnum.data)
 
@@ -7805,9 +7756,7 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
 
         result = mms.feeps_spin_avg(flux, spin_sectors)
 
-        # One row per complete spin, at its first sample: the windows used to
-        # be shifted by one sample and the last two spins set to 0, and the
-        # partial spins were kept
+        # One row per complete spin, at its first sample
         expected = np.array([np.nan, 2.0, 3.0, 4.0, 5.0])
         np.testing.assert_array_equal(result.data[:, 0], expected)
         np.testing.assert_array_equal(result.data[:, 1], expected)
@@ -7850,8 +7799,8 @@ class FeepsSpinAvgTestCase(unittest.TestCase):
     def test_feeps_spin_avg_gap_whole_spins(self):
         # A gap of a whole number of spins starting mid-spin: the sectors keep
         # increasing across it, and the two partial spins (sectors 0-3 of spin
-        # 1, 4-7 of spin 3) made one complete spin of value 2 stamped before
-        # the gap; they are left out, also in feeps_pad_spinavg
+        # 1, 4-7 of spin 3) are left out, not merged into one spin, also in
+        # feeps_pad_spinavg
         for func, dim in [
             (mms.feeps_spin_avg, "energy"),
             (mms.feeps_pad_spinavg, "theta"),
@@ -7893,9 +7842,7 @@ class FeepsSectorSpecTestCase(unittest.TestCase):
 
         result = mms.feeps_sector_spec(feeps_alle)
 
-        # One row per complete spin at its first sample (the spectra used to be
-        # padded with NaN to every sample, row 0 empty and spins one row late,
-        # and the partial spins were kept)
+        # One row per complete spin at its first sample
         self.assertListEqual(sorted(result.data_vars), ["bottom-1", "top-1"])
         np.testing.assert_array_equal(result.time.data, time[[2, 66]])
         self.assertEqual(result.sizes["sectornum"], 64)
@@ -7909,12 +7856,13 @@ class FeepsSectorSpecTestCase(unittest.TestCase):
         np.testing.assert_array_equal(result["bottom-1"].data, expected)
         self.assertDictEqual(result.attrs, feeps_alle.attrs)
 
-        # Float spin sectors (used to raise IndexError)
+        # Float spin sectors
         feeps_alle["spinsectnum"] = feeps_alle["spinsectnum"].astype(float)
         xr.testing.assert_identical(mms.feeps_sector_spec(feeps_alle), result)
 
     def test_feeps_sector_spec_unsplit(self):
-        # Unsplit eyes (16 channels) used to average the integral channel
+        # Unsplit eyes (16 channels) are rejected: the integral channel is not
+        # averaged
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
 
         with self.assertRaisesRegex(ValueError, "feeps_split_integral_ch"):
@@ -7942,8 +7890,8 @@ class FeepsSplitIntegralChTestCase(unittest.TestCase):
 
         out, out_500kev = mms.feeps_split_integral_ch(feeps_alle)
 
-        # Only the eyes are split: pitch_angle used to lose its last column
-        # and the 1-D variables other than spinsectnum used to be dropped
+        # Only the eyes are split: pitch_angle keeps its last column and the
+        # 1-D variables other than spinsectnum are kept
         for k in eyes:
             np.testing.assert_array_equal(out[k].data, feeps_alle[k].data[:, :-1])
             np.testing.assert_array_equal(out_500kev[k].data, feeps_alle[k].data[:, -1])
@@ -8162,9 +8110,8 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
             mms.fk_power_spectrum_4sc(e_mms, r_m, b_mms, tint, f_range=[3, 5])
 
     def test_fk_power_spectrum_4sc_k_bins(self):
-        # The wave numbers are the centres of the bins of the power maps
-        # (linspace(-k_max, k_max, num_k) was up to half a bin off): the peak
-        # of each map within half a bin of the wave vector
+        # The wave numbers are the centres of the bins of the power maps: the
+        # peak of each map within half a bin of the wave vector
         k_vec = np.array([0.04, -0.02, 0.03])
         e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
         result = mms.fk_power_spectrum_4sc(
@@ -8192,7 +8139,7 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
             self.assertLessEqual(abs(result[name].data[i_k] - value / 1e3), width / 2)
 
     def test_fk_power_spectrum_4sc_vector(self):
-        # Vector input raised AttributeError; the first component is used
+        # Vector input: the first component is used
         e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
         e_vec = [
             pyrf.ts_vec_xyz(e_.time.data, np.stack([e_.data, -e_.data, 0 * e_.data], 1))
@@ -8203,8 +8150,7 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         xr.testing.assert_identical(result_vec, result)
 
     def test_fk_power_spectrum_4sc_position_gap(self):
-        # A gap raised ValueError (array must not contain infs or NaNs); the
-        # windows without position are left out
+        # A gap in the positions: the windows without position are left out
         e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
         r_gap = [r_.copy() for r_ in r_mms]
         r_gap[2].data[400:500] = np.nan
@@ -8226,7 +8172,7 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         self.assertTupleEqual(result.k_z_f.dims, ("k_z", "f"))
 
     def test_fk_power_spectrum_4sc_no_complex_warning(self):
-        # The power was cast from complex to float (ComplexWarning)
+        # The power is real, without ComplexWarning
         e_mms, r_mms, b_mms, tint = self._plane_wave(np.array([0.04, -0.02, 0.03]))
 
         with warnings.catch_warnings():
@@ -8236,8 +8182,7 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
     @data(4, 5, 8)
     def test_fk_power_spectrum_4sc_average_windows(self, cav):
         # Contiguous windows of cav samples, labelled by the sample before
-        # their centre (even cav) or their centre (odd cav): an odd cav used
-        # cav - 1 samples per window and skipped one
+        # their centre (even cav) or their centre (odd cav)
         module = sys.modules["pyrfu.mms.fk_power_spectrum_4sc"]
         starts, pos_av = module._average_windows(43, cav)
 
@@ -8312,8 +8257,7 @@ class FkPowerSpectrum4scTestCase(unittest.TestCase):
         )
 
     def test_fk_power_spectrum_4sc_field_gap(self):
-        # A NaN gap in the field made every wavelet coefficient NaN, so no
-        # wave vector was left; the windows around the gap are left out
+        # A NaN gap in the field: the windows around the gap are left out
         k_vec = np.array([0.04, -0.02, 0.03])
         e_mms, r_mms, b_mms, tint = self._plane_wave(k_vec)
         e_mms[1].data[400:440] = np.nan
@@ -8329,7 +8273,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
         self.module = importlib.import_module("pyrfu.mms.get_data")
 
     def test_get_file_content_aws_error(self):
-        # S3 errors are raised (they were logged, then gave UnboundLocalError)
+        # S3 errors are raised
         s3_object = mock.Mock(key="mms1/file.cdf")
         s3_object.get.side_effect = ClientError(
             {"Error": {"Code": "InternalError", "Message": "We encountered an error"}},
@@ -8363,7 +8307,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
     @idata(_READ_ERRORS)
     def test_get_file_content_aws_retry(self, error):
         # A connection reset (or timed out) while the file is received: the
-        # file is requested again (the error was raised at once)
+        # file is requested again
         s3_object = self._s3_object([error, b"cdfdata"])
 
         with (
@@ -8476,8 +8420,8 @@ class GetDataDownloadTestCase(unittest.TestCase):
         self.assertEqual(result.time.dtype, np.dtype("datetime64[ns]"))
 
     def test_get_data_tint_forms(self):
-        # The time interval in the forms of time_clip (only a list of str was
-        # accepted), with the same listing and data
+        # The time interval in the forms of time_clip, with the same listing
+        # and data
         tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
         content = _cdf_four_columns("2019-09-14T07:54:10")
         with tempfile.TemporaryDirectory() as root:
@@ -8516,8 +8460,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
     @unpack
     def test_get_data_source(self, source, expected):
         # The source in any case, the default of the configuration if empty or
-        # "default", as db_get_ts ("SDC" and "default" raised
-        # NotImplementedError)
+        # "default", as db_get_ts
         tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
         with (
             mock.patch.object(
@@ -8560,8 +8503,7 @@ class GetDataDownloadTestCase(unittest.TestCase):
 
     def test_source_not_implemented(self):
         # An unknown source is a ValueError, as in db_get_ts and the other
-        # readers (it was NotImplementedError); the internal helpers keep
-        # their NotImplementedError
+        # readers; the internal helpers keep their NotImplementedError
         with self.assertRaisesRegex(ValueError, "Invalid source"):
             mms.get_data("b_gse_fgm_srvy_l2", [], 1, source="cdaweb")
 
@@ -8777,8 +8719,7 @@ class DownloadDataTestCase(unittest.TestCase):
 
     def test_download_file_concurrent(self):
         # A second download of the file while the first one is running (e.g.
-        # two notebooks on the same interval): both complete (they shared
-        # out_file.part, the first one raised FileNotFoundError at the end)
+        # two notebooks on the same interval): both complete
         with tempfile.TemporaryDirectory() as root:
             out_file = os.path.join(root, "file.cdf")
 
@@ -8798,7 +8739,7 @@ class DownloadDataTestCase(unittest.TestCase):
     @unittest.skipIf(os.name == "nt", "POSIX file modes")
     def test_download_file_mode(self):
         # The downloaded file has the mode of the files created by the user
-        # (umask), as before: the temporary file is not created private
+        # (umask): the temporary file is not created private
         umask = os.umask(0o022)
         try:
             with tempfile.TemporaryDirectory() as root:
@@ -8885,7 +8826,7 @@ class GetFeepsTestCase(unittest.TestCase):
     def setUp(self):
         self.module = importlib.import_module("pyrfu.mms.get_feeps_alleyes")
 
-    # quality indicator of every eye at the 5 times
+    # Quality indicator of every eye at the 5 times
     quality = np.array([0, 1, 2, 3, 4])
 
     def _fake_read(
@@ -8928,8 +8869,7 @@ class GetFeepsTestCase(unittest.TestCase):
         self.assertEqual(out["top-3"].attrs["species"], "electrons")
 
     def test_get_feeps_alleyes_quality(self):
-        # Samples with a quality indicator >= quality_flag are NaN (they used
-        # to be kept, the indicators weren't read)
+        # Samples with a quality indicator >= quality_flag are NaN
         with mock.patch.object(
             self.module, "_db_get_ts_dict", side_effect=self._fake_read
         ) as read:
@@ -8958,7 +8898,7 @@ class GetFeepsTestCase(unittest.TestCase):
             self.assertTrue(np.isfinite(out_none[k].data).all())
 
     def test_get_feeps_alleyes_units(self):
-        # Sector masks: one value per spin sector, no quality cut (used to fail)
+        # Sector masks: one value per spin sector, no quality cut
         with mock.patch.object(
             self.module, "_db_get_ts_dict", side_effect=self._fake_read
         ) as read:
@@ -8973,8 +8913,7 @@ class GetFeepsTestCase(unittest.TestCase):
         self.assertEqual(out["top-3"].dims, ("time", "sectornum"))
         self.assertTrue(np.isfinite(out["top-3"].data).all())
 
-        # Counts are in the L1b files, read from the L1b dataset (it used to
-        # read the L2 dataset for every level)
+        # Counts are in the L1b files, read from the L1b dataset
         dset_name, cdf_names = read.call_args_list[1].args[:2]
         self.assertEqual(dset_name, "mms2_feeps_brst_l1b_electron")
         self.assertIn(
@@ -8987,11 +8926,10 @@ class GetFeepsTestCase(unittest.TestCase):
             mms.get_feeps_alleyes("fluxerre_brst_l1b", self.TINT, 2)
 
     def test_get_feeps_alleyes_counts_errors_l2(self):
-        # L2 counts (100 / percent_error)^2 (ValueError: the counts were only
-        # read from the L1b files), 0 where the count rate is 0 (percent_error
-        # 100 or a negative fill there), NaN where the count rate is NaN (no
-        # data: percent_error 100 there, 1 count); intensity errors intensity
-        # * percent_error / 100, 0 without counts
+        # L2 counts (100 / percent_error)^2, 0 where the count rate is 0
+        # (percent_error 100 or a negative fill there), NaN where the count
+        # rate is NaN (no data: percent_error 100 there, 1 count); intensity
+        # errors intensity * percent_error / 100, 0 without counts
         percent_error = np.array([50.0, 10.0, 100.0, -2147483648.0, 100.0])
         count_rate = np.array([2.0, 50.0, 0.0, 0.0, np.nan])
         intensity = 7.0 * count_rate
@@ -9084,7 +9022,7 @@ class GetFeepsTestCase(unittest.TestCase):
         self.assertEqual(out["top-6"].attrs["species"], "ions")
 
     def test_get_feeps_alleyes_input(self):
-        # Invalid species and units (the units raised a bare KeyError)
+        # Invalid species and units
         with mock.patch.object(self.module, "_db_get_ts_dict") as read:
             with self.assertRaisesRegex(ValueError, "specie"):
                 mms.get_feeps_alleyes("fluxp_brst_l2", self.TINT, 2)
@@ -9120,7 +9058,7 @@ class GetFeepsTestCase(unittest.TestCase):
         xr.testing.assert_identical(feeps_alle, feeps_ref)
 
     def test_get_feeps_omni_counts(self):
-        # Counts summed over the eyes and the spins (they were averaged as
+        # Counts summed over the eyes and the spins (not averaged as
         # intensities), from the units of the eyes
         module = importlib.import_module("pyrfu.mms.get_feeps_omni")
         feeps_alle = generate_feeps(64.0, 100, "brst", "electron", "l2", "flux", 1)
@@ -9199,7 +9137,7 @@ def _cdf_four_columns(t_start="2019-09-14T07:54:00"):
 class GetTsTestCase(unittest.TestCase):
     def test_get_ts_sector_mask(self):
         # Non-record-varying FEEPS sector mask (1, 64) with an epoch: the same
-        # mask at all times, one value per spin sector (used to fail)
+        # mask at all times, one value per spin sector
         time = np.datetime64("2019-09-14T07:54:00", "ns") + np.arange(
             5
         ) * np.timedelta64(1, "s")
@@ -9246,7 +9184,7 @@ class GetTsTestCase(unittest.TestCase):
     @unpack
     def test_get_ts_four_columns(self, cdf_name, comps):
         # Only the magnitude of (x, y, z, magnitude) variables is removed (HPCA
-        # "x,y,z,total" raised KeyError)
+        # "x,y,z,total" included)
         result = get_ts(_cdf_four_columns(), cdf_name)
         np.testing.assert_array_equal(
             result.data[0], [1.0, 2.0, 3.0, 4.0][: len(comps)]
@@ -9254,7 +9192,7 @@ class GetTsTestCase(unittest.TestCase):
         self.assertListEqual(list(result[result.dims[1]].data), comps)
 
     @data(
-        (1, 0.0, 30.0, 15),  # start times, single record (used to be NaT)
+        (1, 0.0, 30.0, 15),  # start times, single record
         (3, 0.0, 30.0, 15),  # start times
         (1, 15.0, 15.0, 0),  # centred times, single record
         (3, 15.0, 15.0, 0),  # centred times
@@ -9292,8 +9230,7 @@ class GetTsTestCase(unittest.TestCase):
         )
 
     def test_get_ts_fpi_epoch_shift_rounded(self):
-        # Half of 8.2 ms is 4.1 ms to the ns (8.2 * 1e6 / 2 was truncated to
-        # 4099999 ns)
+        # Half of 8.2 ms is 4.1 ms to the ns (not truncated to 4099999 ns)
         time = np.array([np.datetime64("2019-09-14T07:54:00", "ns")])
         cdf = pycdfpp.CDF()
         cdf.add_variable(
@@ -9344,7 +9281,7 @@ class GetTsTestCase(unittest.TestCase):
 
     def test_get_ts_depend_of_missing_dimension(self):
         # HPCA data_quality: 1-D (one flag per sweep) with the DEPEND_1 of the
-        # 16 anodes (ValueError): a time series of the flags
+        # 16 anodes: a time series of the flags
         values = np.array([3, 3, 0], dtype=np.uint16)
         content, _ = self._cdf(
             "mms1_hpca_hplus_data_quality",
@@ -9357,8 +9294,8 @@ class GetTsTestCase(unittest.TestCase):
         self.assertEqual(result.attrs["DEPEND_1"], "mms1_hpca_polar_anode_number")
 
     def test_get_ts_fill_values(self):
-        # FILLVAL of floating-point data to NaN, as irfu-matlab (the HPCA
-        # moments of the species without data were -1e31), float32 data with
+        # FILLVAL of floating-point data to NaN, as irfu-matlab (e.g. the -1e31
+        # of the HPCA moments of the species without data), float32 data with
         # its float32 fill included; integer data unchanged
         cases = [
             (np.array([1.0, -1e31, 3.0]), [-1e31], [1.0, np.nan, 3.0]),
@@ -9399,8 +9336,7 @@ class GetTsTestCase(unittest.TestCase):
 
     def test_get_ts_four_dimensions(self):
         # HPCA azimuths (time, azimuth, anode, energy) with blank labels of
-        # DEPEND_1 and DEPEND_3: distinct dimensions (they were ('time', '_',
-        # 'comp', '_'), on which isel selected both); DEPEND_2 and DEPEND_3
+        # DEPEND_1 and DEPEND_3: distinct dimensions; DEPEND_2 and DEPEND_3
         # with the same label: rcomp and ccomp; REPRESENTATION_3
         values = np.arange(3 * 2 * 4 * 5, dtype=float).reshape(3, 2, 4, 5)
         content, _ = self._cdf(
@@ -9469,7 +9405,6 @@ class GetTsTestCase(unittest.TestCase):
 
     def test_get_ts_epoch_types(self):
         # CDF_EPOCH and CDF_EPOCH16 epochs converted to datetime64 as TT2000
-        # (KeyError: 'attrs')
         for epoch_type in [
             pycdfpp.DataType.CDF_EPOCH,
             pycdfpp.DataType.CDF_EPOCH16,
@@ -9479,7 +9414,7 @@ class GetTsTestCase(unittest.TestCase):
                 result = get_ts(content, "mms1_x")
                 np.testing.assert_array_equal(result.time.data, time)
 
-        # Times that are not a CDF time (they were left as numbers)
+        # Times that are not a CDF time: TypeError
         cdf = pycdfpp.CDF()
         cdf.add_variable("Epoch", values=np.arange(3.0))
         cdf.add_variable("mms1_x", values=np.arange(3.0))
@@ -9488,8 +9423,7 @@ class GetTsTestCase(unittest.TestCase):
             get_ts(bytes(pycdfpp.save(cdf)), "mms1_x")
 
     def test_get_ts_tint_types(self):
-        # tint in the forms of time_clip (a tuple, datetime.datetime and a
-        # time series raised TypeError); other types raise TypeError
+        # tint in the forms of time_clip; other types raise TypeError
         content, time = self._cdf("mms1_x", np.arange(5.0), n_t=5)
         result = get_ts(content, "mms1_x", list(time[[1, 3]]))
         np.testing.assert_array_equal(result.time.data, time[1:4])
@@ -9581,8 +9515,7 @@ class GetTsTestCase(unittest.TestCase):
 
     def test_get_ts_not_supported(self):
         # A variable that is not a time series (no epoch DEPEND_0): ValueError;
-        # a fourth dimension of components: NotImplementedError (both
-        # AssertionError)
+        # a fourth dimension of components: NotImplementedError
         cdf = pycdfpp.CDF()
         cdf.add_variable("mms1_x", values=np.ones((3, 2)))
         with self.assertRaisesRegex(ValueError, "not a time series"):
@@ -9639,8 +9572,8 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
 
     @data(0, 1, 4, 5)
     def test_get_ts_record_varying_table(self, n_records):
-        # 0 records raised MissingDimensionsError (the empty 2-D table was used
-        # as the coordinate), 4 records ValueError (compared with x, y, z, r)
+        # 0, 1, 4 and 5 records: an empty table for 0 records, and 4 records
+        # not taken as the components x, y, z, r
         result = get_ts(_cdf_fpi_brst_spectr(n_records), self.cdf_name)
         self.assertTupleEqual(result.shape, (n_records, 32))
         self.assertTupleEqual(result.energy.shape, (32,))
@@ -9651,7 +9584,7 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
 
     def test_get_ts_alternating_tables(self):
         # Two alternating energy tables (FPI burst, early mission): each record
-        # keeps its table, as pyrf.ts_spectr (the first table labelled all)
+        # keeps its table, as pyrf.ts_spectr
         n_records = 6
         content = _cdf_fpi_brst_spectr(n_records, alternate=0.5)
         constant = get_ts(_cdf_fpi_brst_spectr(n_records), self.cdf_name)
@@ -9671,7 +9604,7 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
 
     def test_get_ts_alternating_tables_clipped(self):
         # One record in the interval: a DataArray with the energies of that
-        # record (those of the first record of the file before)
+        # record
         content = _cdf_fpi_brst_spectr(6, alternate=0.5)
         times = get_ts(_cdf_fpi_brst_spectr(6), self.cdf_name).time.data
         result = get_ts(content, self.cdf_name, [times[1], times[1]])
@@ -9759,8 +9692,8 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
                     file.write(content)
                 paths.append(path)
 
-            # The local files (the default resource of the user's
-            # configuration was used, e.g. AWS)
+            # The local files (not the default resource of the user's
+            # configuration, e.g. AWS)
             with mock.patch.object(module, "list_files", return_value=paths):
                 result = mms.get_data(
                     "defe_fpi_brst_l2", tint, 1, False, root, source="local"
@@ -9863,8 +9796,8 @@ class GetDataEmptyFilesTestCase(unittest.TestCase):
         self.assertNotIn("delta_time_minus", result.attrs)
 
     def test_get_dist_no_energy_delta(self):
-        # A file without energy widths: no delta_energy_* attributes (they
-        # were None, on which reduce raised TypeError), also when appended
+        # A file without energy widths: no delta_energy_* attributes, also
+        # when appended
         content = _cdf_fpi_brst_dist(4, "2019-09-14T07:54:10", energy_delta=False)
         result = mms.get_dist(content, "mms1_dis_dist_brst")
 
@@ -10000,8 +9933,7 @@ class GetDistTestCase(unittest.TestCase):
     @data(("dis", "ions"), ("des", "electrons"))
     @unpack
     def test_get_dist_fast(self, species, name):
-        # A single table, energy0 = energy1 (energy0 was the energies of the
-        # second record, the same in the files), no stepping
+        # A single table, energy0 = energy1, no stepping
         cdf_name = f"mms1_{species}_dist_fast"
         result = mms.get_dist(_cdf_fpi_dist(3, "fast", species), cdf_name)
         self._check(result, 3, _FPI_TABLES[0], _FPI_TABLES[0], np.zeros(3))
@@ -10014,8 +9946,7 @@ class GetDistTestCase(unittest.TestCase):
 
     @data("brst", "fast")
     def test_get_dist_single_record(self, mode):
-        # Tables of a file of a single record (were squeezed to 1-D: fast
-        # raised IndexError)
+        # Tables of a file of a single record (not squeezed to 1-D)
         result = mms.get_dist(_cdf_fpi_dist(1, mode), f"mms1_dis_dist_{mode}")
         self._check(result, 1, _FPI_TABLES[0], _FPI_TABLES[0], [0])
 
@@ -10026,8 +9957,7 @@ class GetDistTestCase(unittest.TestCase):
 
     @data("brst", "fast")
     def test_get_dist_energy_nrv(self, mode):
-        # A non-record-varying energy table, at all times (fast raised
-        # IndexError)
+        # A non-record-varying energy table, at all times
         content = _cdf_fpi_dist(4, mode, energy_nrv=True)
         result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
 
@@ -10039,8 +9969,8 @@ class GetDistTestCase(unittest.TestCase):
         self._check(result, 4, _FPI_TABLES[0], _FPI_TABLES[0], parity)
 
     def test_get_dist_brst_one_parity(self):
-        # Burst records of one parity only (IndexError): the table of the
-        # first record for the other
+        # Burst records of one parity only: the table of the first record for
+        # the other
         content = _cdf_fpi_dist(3, parity=[0, 0, 0])
         result = mms.get_dist(content, "mms1_dis_dist_brst")
         self._check(result, 3, _FPI_TABLES[0], _FPI_TABLES[0], np.zeros(3))
@@ -10051,7 +9981,7 @@ class GetDistTestCase(unittest.TestCase):
 
     def test_get_dist_brst_energy_tables(self):
         # The energy0 and energy1 variables, when in the file, rather than the
-        # energies of the records (energy0 and energy1 were 2-D)
+        # energies of the records
         content = _cdf_fpi_dist(4, energy_tables=True)
         result = mms.get_dist(content, "mms1_dis_dist_brst")
         self._check(result, 4, 2 * _FPI_TABLES[0], 2 * _FPI_TABLES[1], [0, 1, 0, 1])
@@ -10074,8 +10004,7 @@ class GetDistTestCase(unittest.TestCase):
         )
 
     def test_get_dist_tint_forms(self):
-        # The forms of time_clip (a tuple, datetime.datetime and a time series
-        # raised TypeError)
+        # The forms of time_clip
         tint = ["2019-09-14T07:54:10.100", "2019-09-14T07:54:10.400"]
         expected = mms.get_dist(_cdf_fpi_dist(4), "mms1_dis_dist_brst", tint)
         for name, form in _tint_forms(tint).items():
@@ -10085,8 +10014,8 @@ class GetDistTestCase(unittest.TestCase):
 
     @data("brst", "fast")
     def test_get_dist_compressionloss(self, mode):
-        # The compression indicator of each record (it was not read), clipped
-        # with the times; none without it in the file
+        # The compression indicator of each record, clipped with the times;
+        # none without it in the file
         content = _cdf_fpi_dist(4, mode, compressionloss=[0, 1, 1, 0])
         result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
         np.testing.assert_array_equal(result.attrs["compressionloss"], [0, 1, 1, 0])
@@ -10100,7 +10029,7 @@ class GetDistTestCase(unittest.TestCase):
 
     def test_get_dist_compressionloss_file(self):
         # One indicator for the file (the fast survey files): for all the
-        # distributions (ValueError); of another size, left out
+        # distributions; of another size, left out
         content = _cdf_fpi_dist(4, "fast", compressionloss=[1])
         result = mms.get_dist(content, "mms1_dis_dist_fast")
         np.testing.assert_array_equal(result.attrs["compressionloss"], [1, 1, 1, 1])
@@ -10187,13 +10116,13 @@ class GetEisAlltTestCase(unittest.TestCase):
                 result = mms.get_eis_allt(
                     tar_var, tint or self.tint, 1, verbose=False, source="sdc"
                 )
-        # one listing, and each file read (downloaded) once
+        # One listing, and each file read (downloaded) once
         self.assertEqual(list_files.call_count, 1)
         self.assertEqual(get_content.call_count, len(contents))
         return result
 
     @data(
-        # minor version 0 (all files since late 2019) and burst
+        # Minor version 0 (all files since late 2019) and burst
         ("flux_extof_proton_brst_l2", "brst", "extof", ["proton"], 5, "proton"),
         # P# is not the major version of the file (v2.1.100 has P3)
         (
@@ -10255,7 +10184,7 @@ class GetEisAlltTestCase(unittest.TestCase):
             np.testing.assert_array_equal(result[f"look_t{i:d}"].data, i)
 
     def test_get_eis_allt_files(self):
-        # two files appended in time and clipped to tint, P# changes but not
+        # Two files appended in time and clipped to tint, P# changes but not
         # the energy table
         pref = "mms1_epd_eis_srvy_l2_extof"
         contents = [
@@ -10284,7 +10213,7 @@ class GetEisAlltTestCase(unittest.TestCase):
             self._get_eis_allt("flux_extof_proton_srvy_l2", contents)
 
     def test_get_eis_allt_old_naming(self):
-        # not reprocessed v3.0.0 files: mms1_epd_eis_extof_alpha_P2_flux_t0
+        # Not reprocessed v3.0.0 files: mms1_epd_eis_extof_alpha_P2_flux_t0
         content = _cdf_eis(
             "mms1_epd_eis_extof", ["proton", "alpha"], 2, "2021-07-11T00:10:00"
         )
@@ -10292,7 +10221,7 @@ class GetEisAlltTestCase(unittest.TestCase):
             self._get_eis_allt("flux_extof_proton_srvy_l2", [content])
 
     def test_get_eis_allt_species(self):
-        # no helium in PHxTOF
+        # No helium in PHxTOF
         content = _cdf_eis(
             "mms1_epd_eis_srvy_l2_phxtof",
             ["proton", "oxygen"],
@@ -10305,7 +10234,7 @@ class GetEisAlltTestCase(unittest.TestCase):
             self._get_eis_allt("flux_phxtof_alpha_srvy_l2", [content])
 
     def test_get_eis_allt_file_name_in_errors(self):
-        # The name of the file of an S3 object (the object was printed)
+        # The name of the file of an S3 object (not the object)
         pref = "mms1_epd_eis_srvy_l2_phxtof"
         cdf = pycdfpp.load(_cdf_eis(pref, ["proton"], 4, "2021-07-11T00:10:00"))
         for i in range(6):
@@ -10332,8 +10261,8 @@ class GetEisAlltTestCase(unittest.TestCase):
         self.assertNotIn("Mock", str(error.exception))
 
     def test_get_eis_allt_single_channel(self):
-        # PHxTOF oxygen: one channel per telescope without energy table
-        # (KeyError), as the v4.2.100 files
+        # PHxTOF oxygen: one channel per telescope without energy table, as the
+        # v4.2.100 files
         pref = "mms1_epd_eis_srvy_l2_phxtof"
         cdf = pycdfpp.load(_cdf_eis(pref, ["proton"], 4, "2021-07-11T00:10:00"))
         for i in range(6):
@@ -10439,8 +10368,8 @@ class ListFilesAwsTestCase(unittest.TestCase):
     )
     @unpack
     def test_list_files_aws_end_fraction(self, t_end, n_files):
-        # A file starting in the last fraction of a second of the interval (the
-        # end was cut to the second below: the 08:07:03 file was left out)
+        # A file starting in the last fraction of a second of the interval is
+        # listed (the end is not cut to the second below)
         directory = f"{self.HELIO}/mms1/fgm/brst/l2/2019/09"
         times = ["075043", "075403", "080703"]
         keys = [f"{directory}/mms1_fgm_brst_l2_20190914{t}_v5.207.0.cdf" for t in times]
@@ -10517,8 +10446,7 @@ class ListFilesAwsTestCase(unittest.TestCase):
     )
     @unpack
     def test_list_files_aws_input(self, tint, var):
-        # The forms of time_clip (only a list of str was accepted); other
-        # types raise TypeError
+        # The forms of time_clip; other types raise TypeError
         directory = f"{self.HELIO}/mms1/fgm/brst/l2/2019/09"
         keys = [
             f"{directory}/mms1_fgm_brst_l2_20190914{t}_v5.207.0.cdf"
@@ -10634,7 +10562,7 @@ class ReduceTestCase(unittest.TestCase):
         vdf = generate_vdf(64.0, 42, [32, 32, 16], energy01, species)
         result = mms.reduce(vdf, xyz, dim, base)
         self.assertIsInstance(result, xr.DataArray)
-        # SI units on velocities in km/s (none)
+        # SI units, velocities in km/s
         self.assertEqual(result.attrs["UNITS"], "s/m^4")
         self.assertEqual(result.vx.attrs["UNITS"], "km/s")
 
@@ -10702,8 +10630,8 @@ class ReduceTestCase(unittest.TestCase):
             mms.reduce(vdf, np.eye(3), seed=-3, **options)
 
     def test_reduce_xyz_per_time(self):
-        # One matrix per time as an array (n_t, 3, 3) (TypeError), as the
-        # same matrices as a time series; a wrong number of times raises
+        # One matrix per time as an array (n_t, 3, 3), as the same matrices
+        # as a time series; a wrong number of times raises
         vdf = generate_vdf(64.0, 3, [8, 4, 4], energy01=False, species="ions")
         vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
         xyz = np.tile(np.eye(3), (3, 1, 1))
@@ -10731,9 +10659,8 @@ class ReduceTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(result.data)))
 
     def test_reduce_species_mass(self):
-        # The speeds of the channels with the mass of the species (oxygen
-        # raised ValueError, the ions were protons); energy widths per channel,
-        # as the EIS skymaps (ValueError)
+        # The speeds of the channels with the mass of the species (oxygen);
+        # energy widths per channel, as the EIS skymaps
         vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
         vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
         energy = vdf.energy.data[0].astype(np.float64)
@@ -10759,8 +10686,8 @@ class ReduceTestCase(unittest.TestCase):
         self.assertTrue(np.all(np.isfinite(result.data)))
 
     def test_reduce_input_handling(self):
-        # lower_e_lim as an int (TypeError), base and dim in capitals (base
-        # was compared case-sensitively), no progress bar with verbose=False
+        # lower_e_lim as an int, base and dim in capitals, no progress bar
+        # with verbose=False
         vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
         stderr = io.StringIO()
 
@@ -10802,8 +10729,7 @@ class ReduceTestCase(unittest.TestCase):
 
     def test_reduce_units_convert(self):
         # Any units of vdf_convert: a differential energy or particle flux as
-        # its phase-space density ("Invalid units!!" for all but s^3/cm^6,
-        # s^3/m^6 and s^3/km^6); int_sph_dist given the same distributions
+        # its phase-space density; int_sph_dist given the same distributions
         vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
         vdf["energy"] = vdf.energy + 10.0
         module = sys.modules["pyrfu.mms.reduce"]
@@ -10822,7 +10748,7 @@ class ReduceTestCase(unittest.TestCase):
             np.testing.assert_allclose(call_2.args[0], call_ref.args[0], rtol=1e-6)
 
     def test_reduce_no_channel(self):
-        # V_sc above every channel at the first time: NaN there (IndexError),
+        # V_sc above every channel at the first time: NaN there,
         # the grid from the next time; at all times: ValueError. Electrons,
         # attracted by the spacecraft (the ions are not cut, see below)
         vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="electrons")
@@ -10839,8 +10765,8 @@ class ReduceTestCase(unittest.TestCase):
             mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
 
     def test_reduce_sc_pot_charge(self):
-        # Energies at infinity, E + q V: the ions gain q V (they lost e V) and
-        # the electrons lose e V; the default grid ends at the speed of the top
+        # Energies at infinity, E + q V: the ions gain q V and the electrons
+        # lose e V; the default grid ends at the speed of the top
         # channel (31 eV) at infinity
         reduce_module = importlib.import_module("pyrfu.mms.reduce")
         mass = reduce_module._mass
@@ -10860,15 +10786,15 @@ class ReduceTestCase(unittest.TestCase):
             self.assertAlmostEqual(float(np.max(np.abs(result.vx.data))), expected)
 
         # The ions are repelled: all their channels are ambient ions, kept
-        # whatever the potential (those below e V were set to zero, NaN here)
+        # whatever the potential
         vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=False, species="ions")
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(3, 1e3))
         result = mms.reduce(vdf, np.eye(3), sc_pot=sc_pot, n_mc=5, verbose=False)
         self.assertTrue(np.all(np.isfinite(result.data)))
 
     def test_reduce_default_phi_grid(self):
-        # Default azimuthal grid has one point per instrument azimuth. phi is
-        # (time, phi), so len(phi) gave one point per time step (5 here).
+        # Default azimuthal grid has one point per instrument azimuth, not per
+        # time step (phi is (time, phi))
         vdf = generate_vdf(64.0, 5, [32, 32, 16], energy01=True, species="ions")
         vdf.data.attrs["UNITS"] = "s^3/cm^6"
 
@@ -10885,9 +10811,7 @@ class ReduceTestCase(unittest.TestCase):
     def test_reduce_drifting_maxwellian(self, removed):
         # 1 keV proton Maxwellian (n = 1 cm^-3) drifting at (-300, 200, 100) km/s,
         # reduced along x. Uses the channel widths from delta_energy_* or, if
-        # missing, the default speed bin edges. The reduced distribution used to
-        # be shifted to lower speeds (n 6 %, V 7 % and T 12 % too low), and
-        # failed without delta_energy_plus.
+        # missing, the default speed bin edges.
         v_d = [-300.0, 200.0, 100.0]
         vdf, sc_pot = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, v_d)
         vdf.data.attrs["UNITS"] = "s^3/cm^6"
@@ -10910,9 +10834,8 @@ class ReduceTestCase(unittest.TestCase):
         self.assertAlmostEqual(t_x, 1000.0, delta=40.0)
 
     def test_reduce_angle_widths(self):
-        # FEEPS skymap: 4 polar bands of different widths (delta_theta_*). The
-        # Monte-Carlo particles used to be drawn over the median spacing around
-        # the eye cones, beyond the poles, and the density was 4 % too large
+        # FEEPS skymap: 4 polar bands of different widths (delta_theta_*), the
+        # Monte-Carlo particles drawn within each band
         sky = mms.feeps_skymap(_feeps_skymap_case("brst", 128))
         energy = sky.energy.data
         half = np.diff(energy, axis=1, append=1.1 * energy[:, -1:]) / 2
@@ -11102,8 +11025,8 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
             mms.remove_edist_background(vdf, source="bazinga")
 
     def test_remove_edist_background_model(self):
-        # Parity 1 samples used the parity 0 model; each sample uses the model
-        # record of its spin phase, scaled by the photoelectron factor
+        # Each sample uses the model record of its spin phase and parity,
+        # scaled by the photoelectron factor
         vdf, n_e, startdelphi, model = self._inputs()
         (vdf_new, vdf_bkg, _), _ = self._run(vdf, n_e, startdelphi, model)
 
@@ -11113,7 +11036,7 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
 
     def test_remove_edist_background_spin_phase_time(self):
         # startdelphi_count is read separately: an extra sample before the
-        # distributions used to shift every sample to the next spin phase
+        # distributions does not shift the spin phases
         vdf, n_e, startdelphi, model = self._inputs()
         dt = vdf.time.data[1] - vdf.time.data[0]
         extra = pyrf.ts_scalar(
@@ -11167,8 +11090,8 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
             self._run(vdf, n_e, late, model)
 
     def test_remove_edist_background_default_source(self):
-        # "default" (ValueError) and no source: the default of the
-        # configuration, as the other readers
+        # "default" and no source: the default of the configuration, as the
+        # other readers
         get_data_module = sys.modules["pyrfu.mms.get_data"]
         vdf, n_e, startdelphi, model = self._inputs()
 
@@ -11184,7 +11107,7 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
             self.assertEqual(load_model.call_args.args[1], "aws")
 
     def test_remove_edist_background_n_art(self):
-        # n_art = 0 removes no photoelectrons (it used to mean "default")
+        # n_art = 0 removes no photoelectrons
         vdf, n_e, startdelphi, model = self._inputs()
         (vdf_new, vdf_bkg, _), _ = self._run(vdf, n_e, startdelphi, model, n_art=0.0)
 
@@ -11199,7 +11122,7 @@ class RemoveEdistBackgroundTestCase(unittest.TestCase):
 
     def test_remove_edist_background_n_sec(self):
         # The secondary electrons are n_sec times the model averaged over
-        # azimuth (phi), as irfu-matlab: it was averaged over the polar angle.
+        # azimuth (phi), as irfu-matlab
         # Model (stored as record, phi, theta, energy) = i_phi + 100 i_theta
         vdf, n_e, startdelphi, model = self._inputs()
         i_phi = np.arange(32.0)[None, :, None, None]
@@ -11228,7 +11151,7 @@ class RemoveIdistBackgroundTestCase(unittest.TestCase):
     def test_remove_idist_background(self):
         # The background (omni differential energy flux, 1/(cm^2 s sr)) converted
         # to phase-space density is removed (negative values set to 0), and the
-        # caller's VDF is unchanged (it was a shallow copy)
+        # caller's VDF is unchanged
         vdf = generate_vdf(64.0, 10, [32, 32, 16], species="ions")
         vdf.data.data[...] = 1e-23
         vdf_in = vdf.data.data.copy()
@@ -11249,9 +11172,8 @@ class RemoveIdistBackgroundTestCase(unittest.TestCase):
         np.testing.assert_array_equal(vdf.data.data, vdf_in)
 
     def test_remove_idist_background_units(self):
-        # The same background in any units of vdf (it was converted to
-        # s^3/cm^6 whatever the units: nothing removed in s^3/m^6), in the
-        # convention of vdf_convert; for an energy flux, the flux itself
+        # The same background in any units of vdf, in the convention of
+        # vdf_convert; for an energy flux, the flux itself
         vdf = generate_vdf(64.0, 4, [32, 32, 16], species="ions", units="s^3/cm^6")
         vdf = vdf.assign(energy=vdf.energy + 10.0)
         vdf.data.data[...] = 1e-21
@@ -11285,7 +11207,7 @@ class RemoveIdistBackgroundTestCase(unittest.TestCase):
 
     def test_remove_idist_background_input(self):
         # Electrons, a background at other times (used by position) or not an
-        # energy flux raise ValueError (they were accepted)
+        # energy flux raise ValueError
         vdf = generate_vdf(64.0, 4, [32, 32, 16], species="ions", units="s^3/cm^6")
         def_bg = pyrf.ts_scalar(vdf.time.data, np.full(4, 1e3))
         shifted = def_bg.assign_coords(time=def_bg.time.data + np.timedelta64(1, "h"))
@@ -11332,8 +11254,8 @@ class RemoveImomsBackgroundTestCase(unittest.TestCase):
         return time, measured, (n_true, v_true, p_true), (n_bg, p_bg)
 
     def test_remove_imoms_background_values(self):
-        # The dynamic pressure terms lacked a 1e21 unit factor, so only p_bg
-        # was removed from the pressure tensor
+        # The dynamic pressure terms are removed from the pressure tensor, not
+        # only p_bg
         time, measured, expected, (n_bg, p_bg) = self._measured()
         n_i, v_i, p_i = mms.remove_imoms_background(
             *measured,
@@ -11349,8 +11271,7 @@ class RemoveImomsBackgroundTestCase(unittest.TestCase):
         self.assertEqual(p_i.attrs["UNITS"], "nPa")
 
     def test_remove_imoms_background_time_alignment(self):
-        # Background moments on another time line are resampled first (they
-        # used to be subtracted sample by sample, or raise a shape error)
+        # Background moments on another time line are resampled first
         time, measured, expected, (n_bg, p_bg) = self._measured(10)
         time_bg = time[0] + (time[-1] - time[0]) * np.linspace(0, 1, 4)
         _, _, p_i = mms.remove_imoms_background(
@@ -11381,7 +11302,7 @@ class RotateTensorTestCase(unittest.TestCase):
         ]
 
     def test_rotate_tensor_fac_b_along_x(self):
-        # B exactly along x gave NaN (B x x = 0); now y is the reference
+        # B exactly along x: y is the reference (B x x = 0), no NaN
         time = generate_timeline(1.0, 3)
         p_xyz = self._tensor(time)
         for perp in ["pp", ""]:
@@ -11401,7 +11322,7 @@ class RotateTensorTestCase(unittest.TestCase):
             )
 
     def test_rotate_tensor_rot_along_y(self):
-        # A single vector exactly along y gave NaN (reference axis y)
+        # A single vector exactly along y (the reference axis): no NaN
         time = generate_timeline(1.0, 3)
         result = mms.rotate_tensor(self._tensor(time), "rot", np.array([0.0, 5.0, 0.0]))
         self.assertTrue(np.all(np.isfinite(result.data)))
@@ -11409,7 +11330,7 @@ class RotateTensorTestCase(unittest.TestCase):
         self.assertAlmostEqual(float(np.trace(result.data[0])), 4.5)
 
     def test_rotate_tensor_pp_no_warning(self):
-        # P23 = 0 (diagonal tensor) gave divide-by-zero warnings in "pp"
+        # P23 = 0 (diagonal tensor): no divide-by-zero warning in "pp"
         time = generate_timeline(1.0, 3)
         p_xyz = pyrf.ts_tensor_xyz(time, np.tile(np.diag([2.0, 1.0, 3.0]), (3, 1, 1)))
         b_xyz = pyrf.ts_vec_xyz(time, np.tile([0.0, 0.0, 10.0], (3, 1)))
@@ -11419,9 +11340,9 @@ class RotateTensorTestCase(unittest.TestCase):
         np.testing.assert_allclose(np.diag(result.data[0]), [3.0, 1.5, 1.5])
 
     def test_rotate_tensor_fac_time_varying(self):
-        # A different tensor and B at each time (rotated at all times at once;
-        # it was a loop): P_par = b.P.b, trace kept, equal perpendicular
-        # diagonal terms for "pp", no perpendicular off-diagonal term for "qq"
+        # A different tensor and B at each time: P_par = b.P.b, trace kept,
+        # equal perpendicular diagonal terms for "pp", no perpendicular
+        # off-diagonal term for "qq"
         time = generate_timeline(1.0, 50)
         rng = np.random.default_rng(3)
         a_mat = rng.standard_normal((50, 3, 3))
@@ -11535,7 +11456,6 @@ class RotateTensorTestCase(unittest.TestCase):
     @data("gse", "gsm")
     def test_rotate_tensor_dsl_consistent_with_dsl2gse(self, frame):
         # T = a I + v v^T in DSL must rotate to a I + v' v'^T with v' = dsl2gse(v).
-        # The spin-axis angles were converted from degrees to radians twice.
         n_t = 50
         time = generate_timeline(1.0, n_t)
         defatt = xr.Dataset(
@@ -11564,9 +11484,8 @@ class RotateTensorTestCase(unittest.TestCase):
         return pyrf.ts_tensor_xyz(generate_timeline(1.0, 5), np.tile(p_xyz, (5, 1, 1)))
 
     def test_rotate_tensor_rot_no_perp_rotation(self):
-        # "rot" rotates to the given axes only, as irfu-matlab (the default
-        # "pp" also rotated the 2-3 components, even for the identity): the
-        # identity leaves P unchanged, (L, M, N) = (y, z, x) permutes it
+        # "rot" rotates to the given axes only, as irfu-matlab: the identity
+        # leaves P unchanged, (L, M, N) = (y, z, x) permutes it
         inp = self._rot_tensor()
         np.testing.assert_allclose(
             mms.rotate_tensor(inp, "rot", np.eye(3)).data, inp.data, atol=1e-15
@@ -11590,8 +11509,7 @@ class RotateTensorTestCase(unittest.TestCase):
         np.testing.assert_allclose(result.data, inp.data, atol=1e-15)
 
     def test_rotate_tensor_rot_right_handed_silent(self):
-        # A right-handed orthonormal system gives no warning (the check
-        # compared the new y axis with the x column of the input)
+        # A right-handed orthonormal system gives no warning
         with self.assertNoLogs("pyrfu.mms.rotate_tensor", "WARNING"):
             mms.rotate_tensor(self._rot_tensor(), "rot", np.eye(3))
 
@@ -11607,8 +11525,8 @@ class RotateTensorTestCase(unittest.TestCase):
         self.assertIn("perpendicular components", "".join(logs.output))
 
     def test_rotate_tensor_coordinate_system(self):
-        # The coordinates of the output (the input ones were kept, e.g. "GSE"
-        # on a FAC tensor); none for an arbitrary system
+        # The coordinates of the output, not those of the input; none for an
+        # arbitrary system
         inp = self._rot_tensor()
         inp.attrs.update({"COORDINATE_SYSTEM": "GSE", "UNITS": "nPa"})
         b_xyz = pyrf.ts_vec_xyz(inp.time.data, np.tile([0.2, 0.3, 1.0], (5, 1)))
@@ -11646,7 +11564,7 @@ class RotateTensorTestCase(unittest.TestCase):
 
 
 class UnitsMomentsTestCase(unittest.TestCase):
-    # UNITS of the moments and reductions (they had none)
+    # UNITS of the moments and reductions
     def test_units_psd_moments(self):
         vdf = generate_vdf(64.0, 10, [32, 32, 16], False, "ions", "s^3/cm^6")
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(10))
@@ -11656,8 +11574,8 @@ class UnitsMomentsTestCase(unittest.TestCase):
         self.assertListEqual([out.attrs["UNITS"] for out in moments], units)
 
     def test_units_spectr_to_dataset(self):
-        # UNITS on the data (only on the Dataset, so that the unit conversions
-        # raised KeyError), attributes not shared with the spectrum
+        # UNITS on the data (used by the unit conversions), attributes not
+        # shared with the spectrum
         spectr = generate_spectr(64.0, 10, 32)
         spectr.attrs = {"UNITS": "1/(cm^2 s sr keV)", "species": "ions"}
         result = mms.spectr_to_dataset(spectr)
@@ -11724,8 +11642,7 @@ class Scpot2NeTestCase(unittest.TestCase):
     @data(np.float64, np.float32)
     def test_scpot2ne_two_populations(self, dtype):
         # The fit finds the two photoelectron populations again, and the
-        # density from the potential is the density. The second population
-        # was subtracted in the fit, though added in the reconstruction
+        # density from the potential is the density
         i_ph, sc_pot, n_e, t_e = self._case(dtype)
         n_esc, *params = mms.scpot2ne(sc_pot, n_e, t_e)
         np.testing.assert_allclose(params, i_ph, rtol=1e-4)
@@ -11733,7 +11650,6 @@ class Scpot2NeTestCase(unittest.TestCase):
 
     def test_scpot2ne_scalar_temperature(self):
         # A scalar temperature gives the result of the tensor with that trace
-        # (an assert refused it, though documented)
         _, sc_pot, n_e, t_e = self._case()
         t_scalar = pyrf.ts_scalar(
             t_e.time.data, np.trace(t_e.data, axis1=1, axis2=2) / 3
@@ -11751,7 +11667,7 @@ class Scpot2NeTestCase(unittest.TestCase):
             mms.scpot2ne(sc_pot, n_e, t_vector)
 
     def test_scpot2ne_silent(self):
-        # scipy's fmin printed its convergence messages
+        # No convergence messages of scipy's fmin
         _, sc_pot, n_e, t_e = self._case()
 
         with contextlib.redirect_stdout(io.StringIO()) as stdout:
@@ -11806,8 +11722,8 @@ class VdfReduceDeprecationTestCase(unittest.TestCase):
 
 class VdfToE64TestCase(unittest.TestCase):
     def test_vdf_to_e64_energy_widths_per_channel(self):
-        # Energy widths per channel (energy,), as average_vdf keeps them
-        # (IndexError): the outer edges as with the same widths at every time
+        # Energy widths per channel (energy,), as average_vdf keeps them: the
+        # outer edges as with the same widths at every time
         vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
         vdf = vdf.assign(energy=vdf.energy + 10.0)
         vdf.attrs["energy0"] = vdf.attrs["energy0"] + 10.0
@@ -11825,8 +11741,7 @@ class VdfToE64TestCase(unittest.TestCase):
 
     def test_vdf_to_e64_delta_energy(self):
         # The input attrs are unchanged; the 64-channel widths are the same at
-        # every time, the top/bottom edges from the 32-channel widths (they were
-        # written into the last/first time step)
+        # every time, the top/bottom edges from the 32-channel widths
         vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
         attrs = {k: np.array(v, copy=True) for k, v in vdf.attrs.items()}
 
@@ -11846,8 +11761,7 @@ class VdfToE64TestCase(unittest.TestCase):
 
     def test_vdf_to_e64_elim(self):
         # After vdf_elim (15 channels in each table): 30 channels, the union of
-        # the tables (ValueError, 64 channels were assumed), and vdf_projection
-        # of two times (rebinned in the same way)
+        # the tables, and vdf_projection of two times (rebinned the same way)
         vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True, species="ions")
         vdf = vdf.assign(energy=vdf.energy + 1.0)
         for key in ["energy0", "energy1"]:
@@ -11869,7 +11783,7 @@ class VdfToE64TestCase(unittest.TestCase):
 
     def test_vdf_to_e64_one_table(self):
         # energy0 equal to energy1: returned unchanged (a copy), as irfu-matlab
-        # PDist.e64; it was merged into 64 duplicated channels
+        # PDist.e64
         vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=False)
 
         with self.assertLogs("pyrfu", level="INFO"):
@@ -11908,7 +11822,7 @@ class VdfToE64TestCase(unittest.TestCase):
             np.testing.assert_allclose(result.attrs[key], 2 * half, rtol=1e-6)
 
     def test_vdf_to_e64_delta_time_rounded(self):
-        # The widths in ns are rounded (truncated, 0.0157 s was 0.015699999 s)
+        # The widths in ns are rounded, not truncated (0.0157 s)
         vdf = generate_vdf(64.0, 10, [32, 32, 16], energy01=True)
         vdf.attrs["delta_time_minus"] = np.full(10, 0.0157)
         vdf.attrs["delta_time_plus"] = np.full(10, 0.0157)
@@ -12243,8 +12157,8 @@ class VdfConvertTestCase(unittest.TestCase):
 
     def test_vdf_convert_species_masses(self):
         # The fluxes of the same phase-space density scale as 1 / m^2: oxygen
-        # (EIS) and the HPCA species (they raised ValueError), the 16O and 4He
-        # ions from their atomic masses
+        # (EIS) and the HPCA species, the 16O and 4He ions from their atomic
+        # masses
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
         vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
         flux_p = mms.vdf_convert(vdf, "1/(cm^2 s sr eV)").data.data
@@ -12273,7 +12187,7 @@ class VdfConvertTestCase(unittest.TestCase):
         self.assertAlmostEqual((m_he - 2 * m_e) / alpha, 1.0, places=7)
 
     def test_vdf_convert_feeps_species(self):
-        # The species of the FEEPS data, "i" and "e" ("i" raised ValueError)
+        # The species of the FEEPS data, "i" and "e"
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
         vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
 
@@ -12285,8 +12199,8 @@ class VdfConvertTestCase(unittest.TestCase):
             np.testing.assert_array_equal(result, expected)
 
     def test_vdf_convert_def_alias(self):
-        # "1/(cm^2 s sr)", the energy flux name of def2psd, in vdf_convert too
-        # (ValueError: units not supported), as the same quantity
+        # "1/(cm^2 s sr)", the energy flux name of def2psd, in vdf_convert
+        # too, as the same quantity
         vdf = generate_vdf(64.0, 4, (32, 32, 16), False, "ions", "s^3/cm^6")
         vdf = vdf.assign(energy=(vdf.energy + 1.0) * 10.0)
         flux = mms.vdf_convert(vdf, "keV/(cm^2 s sr keV)")
@@ -12407,7 +12321,7 @@ class VdfVelocityTestCase(unittest.TestCase):
             mms.vdf_velocity(vdf, sc_pot=np.ones(3))
 
     def test_vdf_velocity_sc_pot_charge(self):
-        # Ions of charge q gain q V, as in psd_moments (they gained V)
+        # Ions of charge q gain q V, as in psd_moments
         vdf = self._vdf("ions").assign_attrs(species="helium++", charge=2)
         alpha = constants.physical_constants["alpha particle mass"][0]
         speed = mms.vdf_velocity(vdf, sc_pot=150.0).vx.data
@@ -12417,8 +12331,7 @@ class VdfVelocityTestCase(unittest.TestCase):
         np.testing.assert_allclose(speed, _rel_speed(energy, alpha) / 1e3, rtol=1e-6)
 
     def test_vdf_velocity_relativistic(self):
-        # Always relativistic (the relativistic argument was removed): 10 keV
-        # to 3.2 MeV electrons below c (the classical speeds were above c)
+        # Always relativistic: 10 keV to 3.2 MeV electrons below c
         vdf = self._vdf("electrons")
         vdf = vdf.assign(energy=vdf.energy * 100.0)
         speed = np.abs(mms.vdf_velocity(vdf).vz.data[:, -1, 0, 0])
@@ -12569,8 +12482,7 @@ class VdfPartialDensityTestCase(unittest.TestCase):
 
     def test_vdf_partial_density_charge(self):
         # With a spacecraft potential, the sums are the psd_moments density for
-        # the ions of charge 2 too (the energies were corrected by V, not 2 V:
-        # 0.7 % lower at 20 V)
+        # the ions of charge 2 too (energies corrected by 2 V)
         vdf, _ = PsdMomentsTestCase._drifting_maxwellian(1.0, 1000.0, [200.0, 0, 0])
         vdf.data.attrs["UNITS"] = "s^3/cm^6"
 
@@ -12796,7 +12708,7 @@ class VdfCountsTestCase(unittest.TestCase):
         self.assertTrue(np.isnan(mms.vdf_error(vdf, counts).data.data[0, 0, 0, 0]))
 
     def test_vdf_one_count_n(self):
-        # The level of n counts, n f / N, NaN without counts (n was 1)
+        # The level of n counts, n f / N, NaN without counts
         vdf, vdf_err, k, n = self._poisson_vdf()
         counts = mms.vdf_counts(vdf, vdf_err)
 
@@ -12850,7 +12762,7 @@ class VdfCountsTestCase(unittest.TestCase):
     def test_vdf_counts_spectra(self):
         # Spectra (xarray.DataArray, e.g. the FEEPS omni intensity and counts):
         # the counts, the one-count level and the error as for the
-        # distributions (they raised TypeError)
+        # distributions
         vdf, vdf_err, k, n = self._poisson_vdf()
         flux = vdf.data[:, :, 0, 0]
         flux_err = vdf_err.data[:, :, 0, 0]
@@ -13595,7 +13507,6 @@ class TokenizeTestCase(unittest.TestCase):
 
     def test_get_data_docstring_keys(self):
         # The keys listed in the get_data docstring are those of mms_keys.json
-        # (it listed v_gse_mec_* instead of vel_gse_mec_*, and missed 30 keys)
         keys_path = os.path.join(os.path.dirname(mms.__file__), "mms_keys.json")
         with open(keys_path, "r", encoding="utf-8") as file:
             keys = {k for inst in json.load(file).values() for k in inst}
@@ -13676,8 +13587,7 @@ class TokenizeTestCase(unittest.TestCase):
         "V_edp_brst_l2",
     )
     def test_tokenize_case(self, var_str):
-        # Any case, as the irfu-matlab names of the docstring examples (they
-        # raised ValueError: invalid parameter)
+        # Any case, as the irfu-matlab names of the docstring examples
         self.assertDictEqual(mms.tokenize(var_str), mms.tokenize(var_str.lower()))
 
     @data(
@@ -13692,8 +13602,7 @@ class TokenizeTestCase(unittest.TestCase):
     )
     @unpack
     def test_tokenize_invalid(self, var_str, message):
-        # ValueError naming the part (the number of parts and the parameter
-        # raised AssertionError)
+        # ValueError naming the part
         with self.assertRaisesRegex(ValueError, re.escape(message)):
             mms.tokenize(var_str)
 
@@ -13731,7 +13640,6 @@ class ListFilesTestCase(unittest.TestCase):
     @data("2019-09-14T07:54:00", "2019-09-14T00:00:00")
     def test_list_files_latest_version_srvy(self, t_start):
         # One file per day, several versions of one of them: only the latest
-        # (the old code kept the last listed one, or all from midnight)
         with tempfile.TemporaryDirectory() as root:
             self._touch(
                 root,
@@ -13784,7 +13692,7 @@ class ListFilesTestCase(unittest.TestCase):
 
     def test_list_files_brst_across_midnight(self):
         # A segment starting at 23:59 the day before covers the start of the
-        # interval: it is in the previous day directory, which was not listed
+        # interval: it is in the previous day directory, which is listed
         with tempfile.TemporaryDirectory() as root:
             self._touch(
                 root,
@@ -13835,7 +13743,7 @@ class ListFilesTestCase(unittest.TestCase):
         )
 
     def test_list_files_walks_each_directory_once(self):
-        # The month directory of survey data was walked for every day
+        # The month directory of survey data is walked once
         with tempfile.TemporaryDirectory() as root:
             self._touch(
                 root,
@@ -13862,8 +13770,8 @@ class ListFilesTestCase(unittest.TestCase):
     )
     @unpack
     def test_list_files_end_fraction(self, t_end, n_files):
-        # A file starting in the last fraction of a second of the interval (the
-        # end was cut to the second below: the 07:53:43 file was left out)
+        # A file starting in the last fraction of a second of the interval is
+        # listed (the end is not cut to the second below)
         names = [
             "mms1_fgm_brst_l2_20190914075000_v5.214.0.cdf",
             "mms1_fgm_brst_l2_20190914075343_v5.214.0.cdf",
@@ -13920,7 +13828,7 @@ class ListFilesTestCase(unittest.TestCase):
         tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
         name = "mms1_fgm_srvy_l2_20190914_v5.211.0.cdf"
         with tempfile.TemporaryDirectory() as root:
-            # The forms of time_clip (only a list of str was accepted)
+            # The forms of time_clip
             self._touch(root, "mms1/fgm/srvy/l2/2019/09", [name])
             expected = mms.list_files(tint, 1, var, root)
             self.assertEqual([os.path.basename(f) for f in expected], [name])
@@ -13935,7 +13843,7 @@ class ListFilesTestCase(unittest.TestCase):
                     mms.list_files(form, 1, var, root)
 
     def test_list_files_missing_path(self):
-        # FileNotFoundError (AssertionError)
+        # FileNotFoundError
         with self.assertRaises(FileNotFoundError):
             mms.list_files(TEST_TINT, 1, mms.tokenize("b_gse_fgm_srvy_l2"), "/bazinga")
 
@@ -13978,8 +13886,7 @@ _SDC_URL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 
 
 class ListFilesSdcTestCase(unittest.TestCase):
-    # Offline: the SDC session is replaced by a fake one (the tests used to
-    # query lasp.colorado.edu with the user's configuration and keyring)
+    # Offline: the SDC session is replaced by a fake one
 
     def _list(self, tint, mms_id, var_str, files, error=None):
         module = importlib.import_module("pyrfu.mms.list_files_sdc")
@@ -13999,7 +13906,7 @@ class ListFilesSdcTestCase(unittest.TestCase):
             _, session = self._list(tint, 2, var_str, [])
             path, query = _sdc_query(session.urls[0])
             self.assertTrue(path.endswith("file_info/science"))
-            # The base URL ends with "/": it was doubled (".../v1//file_info")
+            # The base URL ends with "/": no ".../v1//file_info"
             self.assertNotIn("//", path)
             self.assertEqual(query.get("descriptor"), descriptor)
             expected = {
@@ -14013,8 +13920,7 @@ class ListFilesSdcTestCase(unittest.TestCase):
             self.assertDictEqual({k: query[k] for k in expected}, expected)
 
     def test_list_files_sdc_tint_forms(self):
-        # The forms of time_clip (a time series failed): the same query and
-        # files
+        # The forms of time_clip: the same query and files
         tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
         names = [
             f"mms2_fgm_brst_l2_20190914{t}_v5.215.0.cdf"
@@ -14057,10 +13963,9 @@ class ListFilesSdcTestCase(unittest.TestCase):
 
     @unittest.skipUnless(hasattr(time, "tzset"), "time.tzset (POSIX only)")
     def test_list_files_sdc_utc(self):
-        # The file times in UTC whatever the time zone of the computer:
-        # dateutil read them as local time, so that on the night of a change
-        # to summer time (02:00-03:00 doesn't exist in Stockholm on 26 Mar
-        # 2017) the files were out of order and two holding data left out
+        # The file times in UTC whatever the time zone of the computer: in time
+        # order, none left out, on the night of a change to summer time
+        # (02:00-03:00 doesn't exist in Stockholm on 26 Mar 2017)
         names = [
             f"mms1_fgm_brst_l2_20170326{t}_v5.1.0.cdf"
             for t in ["013000", "020000", "023000", "030500", "033000"]
@@ -14092,7 +13997,7 @@ class ListFilesSdcTestCase(unittest.TestCase):
     def test_list_files_sdc_end_fraction(self):
         # The query ends at the last second at or before which a file starting
         # before the end of the interval starts (an end in the last fraction of
-        # a second left out the file starting then)
+        # a second keeps the file starting then)
         for t_end, end_date in [
             ("2019-09-14T08:11:00", "2019-09-14-08-10-59"),
             ("2019-09-14T08:11:00.000000001", "2019-09-14-08-11-00"),
@@ -14131,7 +14036,7 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
 
         path, query = _sdc_query(session.urls[0])
         self.assertTrue(path.endswith("file_info/ancillary"))
-        # The base URL ends with "/": it was doubled (".../v1//file_info")
+        # The base URL ends with "/": no ".../v1//file_info"
         self.assertNotIn("//", path)
         self.assertDictEqual(
             {k: query[k] for k in ["start_date", "end_date", "sc_id", "product"]},
@@ -14148,7 +14053,7 @@ class ListFilesAncillarySdcTestCase(unittest.TestCase):
         )
 
     def test_list_files_ancillary_sdc_tint_forms(self):
-        # The forms of time_clip (a time series failed): the same query
+        # The forms of time_clip: the same query
         module = importlib.import_module("pyrfu.mms.list_files_ancillary_sdc")
         tint = ["2019-09-14T07:54:00", "2019-09-14T08:11:00"]
         urls = {}
@@ -14300,7 +14205,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             file.write("\n".join(lines) + "\n")
 
     def test_load_ancillary_defeph(self):
-        # Without footer, the last sample is data (it was dropped)
+        # Without footer, the last sample is data
         self._write(
             "defeph",
             "MMS1_DEFEPH_2019257_2019258.V01",
@@ -14315,14 +14220,13 @@ class LoadAncillaryTestCase(unittest.TestCase):
         np.testing.assert_allclose(
             result.x.data, [-10539.488308885, -10639.511569375, -10736.816612409]
         )
-        # The units of the header (they had no UNITS)
+        # The units of the header
         self.assertEqual(result.epoch_mms_tai.attrs["UNITS"], "d")
         self.assertEqual(result.x.attrs["UNITS"], "km")
         self.assertEqual(result.vz.attrs["UNITS"], "km/s")
 
     def test_load_ancillary_tint_forms(self):
-        # The forms of time_clip (a tuple, datetime.datetime and a time series
-        # failed)
+        # The forms of time_clip (a tuple, datetime.datetime and a time series)
         self._write(
             "defeph",
             "MMS1_DEFEPH_2019257_2019258.V01",
@@ -14408,9 +14312,8 @@ class LoadAncillaryTestCase(unittest.TestCase):
             mms.load_ancillary("defeph", self.tint, 1, False, self.root, "local")
 
     def test_load_ancillary_defq(self):
-        # One file for the four spacecraft (it was looked for as MMS1_DEFQ in
-        # ancillary/mms1): the same for any mms_id; the maneuver flag is NaN,
-        # or its value when set
+        # One file for the four spacecraft: the same for any mms_id; the
+        # maneuver flag is NaN, or its value when set
         rows = _DEFQ_ROWS[:2] + [_DEFQ_ROWS[2].rstrip() + "     1"]
         self._write("defq", "MMS_DEFQ_2017187_2017188.V00", _DEFQ_HEADER + rows, "mms")
         tint = ["2017-07-06T13:50:00", "2017-07-06T13:55:00"]
@@ -14436,7 +14339,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
             mms.load_ancillary("defq", self.tint, 1, False, self.root, "local")
 
     def test_load_ancillary_defq_no_data(self):
-        # A day without data: no row (the reader raised ValueError)
+        # A day without data: no row
         self._write(
             "defq",
             "MMS_DEFQ_2017275_2017276.V00",
@@ -14593,7 +14496,7 @@ class LoadAncillaryTestCase(unittest.TestCase):
     def test_load_ancillary_sdc_file_from_the_day_before(self):
         # Early DEFATT files cover about 16:00 to 16:00 (MMS1 2015361_2015362:
         # 2015-361T15:56 to 362T15:54): the morning of a day is in the file of
-        # the day before (it was not read: no row)
+        # the day before
         def content(times):
             rows = [
                 _DEFATT_ROWS[0].replace("2019-257T00:00:00.012", time) for time in times
@@ -14707,7 +14610,7 @@ class ListFilesAncillaryTestCase(unittest.TestCase):
         )
 
     def test_list_files_ancillary_glob_characters(self):
-        # A data path with glob characters (nothing was found in mms_data[2])
+        # A data path with glob characters (mms_data[2])
         name = "MMS_DEFQ_2019257_2019258.V00"
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = os.path.join(tmp_dir, "mms_data[2]")
@@ -14732,7 +14635,7 @@ class ListFilesAncillaryTestCase(unittest.TestCase):
     def test_list_files_ancillary_input(self):
         name = "MMS1_DEFATT_2019257_2019258.V00"
         with tempfile.TemporaryDirectory() as root:
-            # The forms of time_clip (only a list of str was accepted)
+            # The forms of time_clip
             self._touch(os.path.join(root, "ancillary", "mms1", "defatt"), [name])
             expected = mms.list_files_ancillary(self._TINT, 1, "defatt", root)
             self.assertEqual([os.path.basename(f) for f in expected], [name])
@@ -14749,7 +14652,7 @@ class ListFilesAncillaryTestCase(unittest.TestCase):
                     mms.list_files_ancillary(form, 1, "defatt", root)
 
     def test_list_files_ancillary_missing_path(self):
-        # FileNotFoundError (AssertionError)
+        # FileNotFoundError
         with self.assertRaises(FileNotFoundError):
             mms.list_files_ancillary(TEST_TINT, 1, "defatt", "/bazinga")
 
@@ -14787,8 +14690,8 @@ class VdfProjectionTestCase(unittest.TestCase):
         return vdf
 
     def test_vdf_projection_phi_clipped(self):
-        # With a tint that doesn't start at the first sample, psd_rebin used to
-        # get the phi of the first samples instead of those in tint
+        # With a tint that doesn't start at the first sample, psd_rebin gets
+        # the phi of the samples in tint
         vdf = self._vdf()
         tint = list(pyrf.datetime642iso8601(vdf.time.data[[10, 21]]))
         module = importlib.import_module("pyrfu.mms.vdf_projection")
@@ -14802,7 +14705,7 @@ class VdfProjectionTestCase(unittest.TestCase):
 
     @data(0, 1)
     def test_vdf_projection_single_time_energy_table(self, step):
-        # A single time used the energy1 edges for both step table values
+        # A single time: the energy edges of its own step table
         vdf = self._vdf()
         t_id = int(np.flatnonzero(vdf.attrs["esteptable"] == step)[0])
         tint = [pyrf.datetime642iso8601(vdf.time.data[t_id])]
@@ -14818,9 +14721,8 @@ class VdfProjectionTestCase(unittest.TestCase):
 
     @data(0, 1)
     def test_vdf_projection_energy_widths(self, step):
-        # Edges from the channel widths of the time (they were halfway between
-        # the channels in log(E), wrong for EIS and FEEPS), and the speeds of
-        # the grid from them
+        # Edges from the channel widths of the time, and the speeds of the grid
+        # from them
         vdf = self._vdf()
         vdf.attrs["delta_energy_minus"] = 0.1 * vdf.energy.data
         vdf.attrs["delta_energy_plus"] = 0.2 * vdf.energy.data
@@ -14840,8 +14742,8 @@ class VdfProjectionTestCase(unittest.TestCase):
 
     def test_vdf_projection_angle_widths(self):
         # A polar band centred 28.1 degrees from the plane, 22.5 degrees wide:
-        # outside e_lim = 20 by its centre (all NaN, the widths were ignored),
-        # inside by its lower part
+        # outside e_lim = 20 by its centre (all NaN without the widths), inside
+        # by its lower part
         vdf = self._maxwellian([0.0, 0.0, 0.0])
         vdf.data.data[:] = 0.0
         vdf.data.data[:, :, :, 5] = 1.0  # theta 61.875
@@ -14891,7 +14793,7 @@ class VdfProjectionTestCase(unittest.TestCase):
     def test_vdf_projection_peak(self, angle, coord_sys):
         # 400 km/s drift in the (x, y) plane of coord_sys, at an azimuthal bin
         # centre: the projection peaks there. An orthonormal frame gives no
-        # warning (the check compared rows to columns and always warned).
+        # warning
         coord_sys = coord_sys.astype(float)
         rad = np.deg2rad(angle)
         v_d = 400.0 * (np.cos(rad) * coord_sys[0] + np.sin(rad) * coord_sys[1])
@@ -14907,9 +14809,8 @@ class VdfProjectionTestCase(unittest.TestCase):
 
     @data(False, True)
     def test_vdf_projection_interval(self, alternating):
-        # Intervals with one energy table used to crash (.data on an array);
-        # with alternating tables (rebinned to 64 energies) phi was used in
-        # degrees as radians, so the peak was misplaced
+        # Intervals with one energy table or alternating tables (rebinned to 64
+        # energies): the peak at the drift
         rot = np.deg2rad(5.625)
         vdf = self._maxwellian(
             [400.0 * np.cos(rot), 400.0 * np.sin(rot), 0.0], 20, alternating
@@ -14924,8 +14825,7 @@ class VdfProjectionTestCase(unittest.TestCase):
 
     def test_vdf_projection_species(self):
         # O+ Maxwellian with the speeds of the proton one: the same peak
-        # speed (the mass was the proton mass for all the ions, 4 times
-        # larger speeds). He++ (charge 2) at V is He at 2 V.
+        # speed. He++ (charge 2) at V is He at 2 V.
         vdf = self._maxwellian([400.0, 0.0, 0.0])
         m_o = 15.99491461957 * constants.atomic_mass - constants.electron_mass
         ratio = m_o / constants.proton_mass
@@ -15010,7 +14910,7 @@ class VdfProjectionTestCase(unittest.TestCase):
         )
 
     def test_vdf_projection_sc_pot(self):
-        # Energy edges below the spacecraft potential gave NaN speeds
+        # Energy edges below the spacecraft potential: no NaN speeds
         vdf = self._maxwellian([400.0, 0.0, 0.0])
         vdf.attrs["species"] = "electrons"
         sc_pot = pyrf.ts_scalar(vdf.time.data, np.full(2, 20.0))
@@ -15076,9 +14976,8 @@ class FftBandpassTestCase(unittest.TestCase):
 
     def test_fft_bandpass_frequency_grid(self):
         # The frequencies of the FFT bins, as irfu-matlab: a 10 Hz sine (a bin
-        # of 1024 samples at 128 Hz) is kept whole by a band starting at 10 Hz
-        # (it was halved: its negative frequency was taken for 9.95 Hz), and
-        # integer frequencies are accepted (they raised TypeError)
+        # of 1024 samples at 128 Hz) is kept whole by a band starting at 10 Hz,
+        # and integer frequencies are accepted
         times = generate_timeline(128.0, 1024)
         sig = np.sin(2 * np.pi * 10 * np.arange(1024) / 128.0)
         inp = pyrf.ts_scalar(times, sig)
@@ -15091,8 +14990,7 @@ class FftBandpassTestCase(unittest.TestCase):
 
     def test_fft_bandpass_shape_and_coords(self):
         # The output has the dimensions, coordinates and attributes of the
-        # input: (time, 2) and (time, 6) raised "data must have shape (n, 3)",
-        # (time, 1) was squeezed and the labels of the components were dropped
+        # input, also for (time, 1), (time, 2) and (time, 6)
         times = generate_timeline(128.0, 1024)
         sig = np.sin(2 * np.pi * 10 * np.arange(1024) / 128.0)
 
@@ -15113,7 +15011,7 @@ class FftBandpassTestCase(unittest.TestCase):
             self.assertDictEqual(result.time.attrs, {"UNITS": "ns"})
             np.testing.assert_allclose(result.data, inp.data, atol=1e-9)
 
-        # An odd number of samples: the last one dropped, as before
+        # An odd number of samples: the last one dropped
         result = mms.fft_bandpass(inp[:-1], 5.0, 30.0)
         self.assertEqual(result.shape, (1022, 6))
 
@@ -15192,7 +15090,6 @@ class HpcaSpinSumTestCase(unittest.TestCase):
 
     def test_hpca_spin_sum_nan(self):
         # The samples without data are left out; a spin without data is NaN
-        # (its sum was 0, as data)
         inp, saz = self._inputs(np.arange(48) % 16)
         inp.data[16:32] = np.nan
         inp.data[3] = np.nan
@@ -15204,7 +15101,7 @@ class HpcaSpinSumTestCase(unittest.TestCase):
             self.assertTrue(np.all(np.isnan(result.data[1])))
 
     def test_hpca_spin_sum_errors(self):
-        # One spin start (it raised IndexError) or none: no complete spin
+        # One spin start or none: no complete spin
         for start_az in [np.arange(20) % 32, np.arange(1, 20)]:
             with self.assertRaisesRegex(ValueError, "two spin starts"):
                 mms.hpca_spin_sum(*self._inputs(start_az))
@@ -15214,16 +15111,15 @@ class HpcaSpinSumTestCase(unittest.TestCase):
 
     def test_hpca_spin_sum_saz_times(self):
         # saz is used by position: at other times than inp (inp clipped, saz
-        # not) the spins were misaligned
+        # not), ValueError
         inp, saz = self._inputs(np.arange(64) % 16)
 
         with self.assertRaisesRegex(ValueError, "times of inp"):
             mms.hpca_spin_sum(inp[5:], saz)
 
     def test_hpca_spin_sum_gaps(self):
-        # The spins cut by data gaps are left out (they were kept as partial
-        # sums), also the two partial spins around a gap of a whole spin
-        # (start azimuths 0-7, gap, 8-15)
+        # The spins cut by data gaps are left out, also the two partial spins
+        # around a gap of a whole spin (start azimuths 0-7, gap, 8-15)
         inp, saz = self._inputs(np.arange(80) % 16)
         inp.data[...] = 1.0
 
@@ -15582,8 +15478,9 @@ class PsdMomentsErrTestCase(unittest.TestCase):
         np.testing.assert_allclose(moments[:, 0], n.data * 1e6, rtol=1e-10)
 
     def test_cold_beam_positive_variances(self):
-        # A beam of 1 eV at 1000 km/s fills four bins: J Sigma J^T of the raw
-        # moments cancelled to negative variances (NaN errors)
+        # A beam of 1 eV at 1000 km/s fills four bins: finite, non-negative
+        # errors (J Sigma J^T of the raw moments does not cancel to negative
+        # variances)
         f, grid, _ = _err_maxwellian(5.0, 1.0, [1000.0, 0.0, 0.0], "ions", n_t=1)
         c_e, lam = _err_counts_model(f, grid[0], 3e4)
         vdf = _err__skymap(c_e * lam, *grid, "ions")

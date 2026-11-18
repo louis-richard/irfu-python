@@ -41,11 +41,10 @@ np.random.seed(0)
 
 @pytest.fixture(autouse=True)
 def _mms_config(monkeypatch, tmp_path):
-    # The tests never read nor write the MMS configuration of the user: a
-    # configuration file in the temporary directory of the test, the default
-    # settings until a test writes it (default resource "local"; with the
-    # user's "aws", the tests without source read the AWS archive instead of
-    # their mocked local files). The tests of db_init patch MMS_CFG_PATH too.
+    # Never the MMS configuration of the user: a file in the temporary
+    # directory of the test, the default settings until a test writes it
+    # (resource "local", so that the tests without source read their mocked
+    # local files). The tests of db_init patch MMS_CFG_PATH too.
     db_init = importlib.import_module("pyrfu.mms.db_init")
     path = str(tmp_path / "mms_config.json")
     monkeypatch.setattr(db_init, "MMS_CFG_PATH", path, raising=False)
@@ -72,7 +71,7 @@ def _no_mms_cache(monkeypatch, tmp_path_factory):
 @pytest.fixture(autouse=True)
 def _seed_and_close_figures():
     # Each test starts from the same random state, whatever ran before it,
-    # and closes the figures it opened (more than 20 were left open)
+    # and closes the figures it opened
     random.seed(0)
     np.random.seed(0)
     yield

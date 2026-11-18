@@ -55,6 +55,7 @@ def generate_timeline(
         Timeline.
 
     """
+
     ref = np.datetime64(ref_time)
     times = [ref + np.timedelta64(int(i * 1e9 / f_s), "ns") for i in range(n_pts)]
     out = np.array(times).astype(dtype)
@@ -111,6 +112,7 @@ def generate_ts(
         Synthetic timeseries.
 
     """
+
     if attrs is None:
         attrs = {}
 
@@ -156,6 +158,7 @@ def generate_spectr(
 
 
     """
+
     out = cast(
         DataArray,
         pyrf.ts_spectr(
@@ -274,6 +277,7 @@ def generate_defatt(f_s: float, n_pts: int) -> Dataset:
         Defatt dataset.
 
     """
+
     z_ra = generate_ts(f_s, n_pts, 0)
     z_dec = generate_ts(f_s, n_pts, 0)
     defatt_dict = {"z_ra": z_ra, "z_dec": z_dec}

@@ -124,9 +124,9 @@ class DispSurfCalcTestCase(unittest.TestCase):
 @ddt
 class OneFluidDispersionTestCase(unittest.TestCase):
     def test_one_fluid_dispersion_cold(self):
-        # Cold plasma (c_s = 0: LinAlgError): the slow mode at 0 and the two
-        # others the roots of the cold relation (the term of c_s goes to 0),
-        # the limit of a warm plasma
+        # Cold plasma (c_s = 0): the slow mode at 0 and the two others the
+        # roots of the cold relation (the term of c_s goes to 0), the limit of
+        # a warm plasma
         cold = {"n": 10e6, "t": 0.0, "gamma": 5 / 3}
         wc_1, wc_2, wc_3 = dispersion.one_fluid_dispersion(10e-9, 30.0, cold, cold, 20)
         attrs = wc_1.attrs
