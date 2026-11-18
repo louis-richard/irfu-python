@@ -166,7 +166,9 @@ def shock_normal(spec, leq90: bool = True):
     if spec["b_u"].ndim > 1 or spec["b_d"].ndim > 1:
         return _monte_carlo(spec, leq90)
 
-    return _shock_normal(spec, leq90)
+    out = _shock_normal(spec, leq90)
+
+    return out
 
 
 def _shock_normal(spec, leq90, fits=None):
@@ -178,8 +180,10 @@ def _shock_normal(spec, leq90, fits=None):
     # normal vector, according to different models
     normal = {}
 
-    b_u, b_d = np.array(spec["b_u"]), np.array(spec["b_d"])
-    v_u, v_d = np.array(spec["v_u"]), np.array(spec["v_d"])
+    b_u = np.array(spec["b_u"])
+    b_d = np.array(spec["b_d"])
+    v_u = np.array(spec["v_u"])
+    v_d = np.array(spec["v_d"])
 
     delta_b = b_d - b_u
     delta_v = v_d - v_u

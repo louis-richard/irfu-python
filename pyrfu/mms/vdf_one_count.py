@@ -107,4 +107,6 @@ def vdf_one_count(vdf, counts, *, n: float = 1.0):
     with np.errstate(divide="ignore", invalid="ignore"):
         one_count = np.where(n_counts > 0.0, n * f_data / n_counts, np.nan)
 
-    return _like(vdf, one_count, _units(vdf))
+    out = _like(vdf, one_count, _units(vdf))
+
+    return out

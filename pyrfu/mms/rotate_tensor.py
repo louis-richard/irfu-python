@@ -31,7 +31,8 @@ def _angle(u_vec, v_vec):
 def _rotate_perp(tensor, thetas):
     r"""Rotates the tensors about the first axis by the angles thetas, all at
     once (it was a loop over the times)."""
-    cos_t, sin_t = np.cos(thetas), np.sin(thetas)
+    cos_t = np.cos(thetas)
+    sin_t = np.sin(thetas)
     rot_mat = np.zeros((len(thetas), 3, 3), dtype=np.float64)
     rot_mat[:, 0, 0] = 1.0
     rot_mat[:, 1, 1], rot_mat[:, 1, 2] = cos_t, sin_t
@@ -152,7 +153,10 @@ def rotate_tensor(
     # The perpendicular rotations are for field-aligned coordinates only, as
     # irfu-matlab: elsewhere they rotate away from the requested axes
     if perp is None:
-        perp = "pp" if rot_flag.lower() == "fac" else ""
+        if rot_flag.lower() == "fac":
+            perp = "pp"
+        else:
+            perp = ""
     elif perp.lower() in ["pp", "qq"] and rot_flag.lower() != "fac":
         logger.warning(
             "perp=%s applies to field-aligned coordinates (rot_flag='fac') only: "

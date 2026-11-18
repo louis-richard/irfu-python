@@ -125,4 +125,6 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     # The kappa distribution at the relativistic speeds is the relativistic
     # phase-space density: in the convention of vdf (that of the FPI, HPCA and
     # EIS files, divided by 2 gamma^5 / (gamma + 1)), comparable with it
-    return _in_convention(model_vdf, _is_relativistic(vdf))
+    out = _in_convention(model_vdf, _is_relativistic(vdf))
+
+    return out

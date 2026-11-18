@@ -40,38 +40,37 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
             )
 
         fs_ = fs_e
+    elif fs_b > 1.5 * fs_e:
+        e_xyz = resample(e_xyz, db_xyz, **resample_b_options)
+        b_bgd = resample(b_bgd, db_xyz, **resample_b_options)
+
+        fs_ = fs_b
+        logger.info("Interpolating e to b")
+    elif fs_e > 1.5 * fs_b:
+        db_xyz = resample(db_xyz, e_xyz)
+        b_bgd = resample(b_bgd, e_xyz)
+
+        fs_ = fs_e
+        logger.info("Interpolating b to e")
+    elif fs_e == fs_b and len(e_xyz) == len(db_xyz):
+        fs_ = fs_e
     else:
-        if fs_b > 1.5 * fs_e:
-            e_xyz = resample(e_xyz, db_xyz, **resample_b_options)
-            b_bgd = resample(b_bgd, db_xyz, **resample_b_options)
+        fs_ = 2 * fs_e
+        start_time = np.max([_unix(e_xyz.time.data)[0], _unix(db_xyz.time.data)[0]])
+        end_time = np.min([_unix(e_xyz.time.data)[-1], _unix(db_xyz.time.data)[-1]])
 
-            fs_ = fs_b
-            logger.info("Interpolating e to b")
-        elif fs_e > 1.5 * fs_b:
-            db_xyz = resample(db_xyz, e_xyz)
-            b_bgd = resample(b_bgd, e_xyz)
+        nt = np.floor((end_time - start_time) * fs_).astype(np.int64)
 
-            fs_ = fs_e
-            logger.info("Interpolating b to e")
-        elif fs_e == fs_b and len(e_xyz) == len(db_xyz):
-            fs_ = fs_e
-        else:
-            fs_ = 2 * fs_e
-            start_time = np.max([_unix(e_xyz.time.data)[0], _unix(db_xyz.time.data)[0]])
-            end_time = np.min([_unix(e_xyz.time.data)[-1], _unix(db_xyz.time.data)[-1]])
+        t = np.linspace(start_time, end_time, nt)
 
-            nt = np.floor((end_time - start_time) * fs_).astype(np.int64)
+        t = ts_time(t)
 
-            t = np.linspace(start_time, end_time, nt)
+        e_xyz = resample(e_xyz, t)
+        b_bgd = resample(b_bgd, t)
+        b_xyz = resample(b_xyz, t)
+        db_xyz = resample(db_xyz, t)
 
-            t = ts_time(t)
-
-            e_xyz = resample(e_xyz, t)
-            b_bgd = resample(b_bgd, t)
-            b_xyz = resample(b_xyz, t)
-            db_xyz = resample(db_xyz, t)
-
-            logger.info("Interpolating b and e to 2x e sampling")
+        logger.info("Interpolating b and e to 2x e sampling")
 
     return e_xyz, db_xyz, b_xyz, b_bgd, fs_
 
@@ -660,9 +659,11 @@ def ebsp(
                 e_xyz = convert_fac(e_xyz, fac_matrix)
 
         else:
-            idx_nan_e = (
-                np.isnan(e_xyz.data) if want_ee else np.full((len(in_time), 3), False)
-            )
+            if want_ee:
+                idx_nan_e = np.isnan(e_xyz.data)
+            else:
+                idx_nan_e = np.full((len(in_time), 3), False)
+
             eisr2 = None
             idx_nan_eisr2 = np.full((len(in_time), 2), False)
 
@@ -671,9 +672,11 @@ def ebsp(
         else:
             db_xyz = convert_fac(db_xyz, fac_matrix)
     else:
-        idx_nan_e = (
-            np.isnan(e_xyz.data) if want_ee else np.full((len(in_time), 3), False)
-        )
+        if want_ee:
+            idx_nan_e = np.isnan(e_xyz.data)
+        else:
+            idx_nan_e = np.full((len(in_time), 3), False)
+
         eisr2 = None
         idx_nan_eisr2 = np.full((len(in_time), 2), False)
 
@@ -762,7 +765,11 @@ def ebsp(
         wb[idx_nan_b] = np.nan
 
         if want_ee:
-            w_exp_e = w_exp_mat2 if sw_e.shape[1] == 2 else w_exp_mat
+            if sw_e.shape[1] == 2:
+                w_exp_e = w_exp_mat2
+            else:
+                w_exp_e = w_exp_mat
+
             we = fft.ifft(sw_e * w_exp_e, axis=0, workers=os.cpu_count())
             we[idx_nan_e] = np.nan
 
@@ -807,10 +814,12 @@ def ebsp(
             # j = c + 2 (cyclic) of E and B
             coeff_poynting = 10 / 4 / np.pi * (1 / 4) * (4 * np.pi)
 
-            we, wb_ = np.asarray(we), wb
+            we = np.asarray(we)
+            wb_ = wb
 
             for c_ in range(3):
-                i, j = (c_ + 1) % 3, (c_ + 2) % 3
+                i = (c_ + 1) % 3
+                j = (c_ + 2) % 3
                 poynting[:, ind_a, c_] = (
                     coeff_poynting
                     * np.real(
@@ -925,7 +934,8 @@ def ebsp(
         the_svd_fac, phi_svd_fac, planarity, ellipticity = [
             np.real(pol_params[..., i]) for i in range(4)
         ]
-        dop_3d, dop_2d = pol_params[..., 4], pol_params[..., 5]
+        dop_3d = pol_params[..., 4]
+        dop_2d = pol_params[..., 5]
 
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore", category=RuntimeWarning)

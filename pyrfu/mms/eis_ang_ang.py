@@ -146,7 +146,8 @@ def eis_ang_ang(
     i_t, i_s, i_e = np.nonzero(keep)
 
     shape = (len(spin_starts), len(en_chan), n_azi, len(_POL_EDGES) - 1)
-    sums, counts = np.zeros(shape), np.zeros(shape)
+    sums = np.zeros(shape)
+    counts = np.zeros(shape)
     index = (i_spin[i_t], i_e, i_azi[i_t, i_s], i_pol[i_t, i_s])
     np.add.at(sums, index, flux[i_t, i_s, i_e])
     np.add.at(counts, index, 1.0)

@@ -57,7 +57,9 @@ def c_4_k(r_list: Sequence[DataArray]) -> Sequence[DataArray]:
 
     for i in range(4):
         # The other three spacecraft, in the cyclic order i - 1, i - 2, i - 3
-        alpha, beta, gamma = (i - 1) % 4, (i - 2) % 4, (i - 3) % 4
+        alpha = (i - 1) % 4
+        beta = (i - 2) % 4
+        gamma = (i - 3) % 4
 
         dr_jk_x_dr_jm = cross(
             r_list[beta] - r_list[alpha],

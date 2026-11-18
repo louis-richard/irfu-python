@@ -27,7 +27,9 @@ def _plasma_frequencies(b_mag, n_e, ref):
     else:
         b_mag, n_e = [np.asarray(inp, dtype=float) for inp in [b_mag, n_e]]
 
-    q_e, m_e, ep0 = constants.e, constants.m_e, constants.epsilon_0
+    q_e = constants.e
+    m_e = constants.m_e
+    ep0 = constants.epsilon_0
     f_pe = np.sqrt(1e6 * n_e * q_e**2 / (m_e * ep0)) / (2 * np.pi)
     f_ce = q_e * 1e-9 * b_mag / m_e / (2 * np.pi)
 
@@ -84,7 +86,11 @@ def whistler_b2e(b2, freq, theta_k, b_mag, n_e):
 
     freq = np.asarray(freq, dtype=float)
     is_spectrogram = isinstance(b2, xr.DataArray) and b2.ndim == 2
-    b2_data = b2.data if isinstance(b2, xr.DataArray) else np.asarray(b2)
+
+    if isinstance(b2, xr.DataArray):
+        b2_data = b2.data
+    else:
+        b2_data = np.asarray(b2)
 
     # Check input
     if b2_data.shape[-1] != len(freq):

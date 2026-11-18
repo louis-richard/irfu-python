@@ -193,7 +193,8 @@ def reduce(
     """
 
     # Make sure the projection dimension and base are correct
-    base, dim = base.lower(), dim.lower()
+    base = base.lower()
+    dim = dim.lower()
 
     if base not in ["cart", "pol"]:
         raise ValueError(f'base must be "pol" or "cart", not {base!r}')
@@ -303,7 +304,8 @@ def reduce(
 
     # Read the keyword arguments
     # Velocity projection grid and edges
-    velocity_grid, velocity_grid_edges = vg, vg_edges
+    velocity_grid = vg
+    velocity_grid_edges = vg_edges
 
     # azimuthal angle of projection plane (phi is (time, phi) in burst mode)
     n_phi_grid = vdf_phi.shape[-1]
@@ -357,7 +359,10 @@ def reduce(
     else:
         n_vg = 100
         if base == "pol":
-            n_vg = 2 * n_en if ndim == 1 else n_en
+            if ndim == 1:
+                n_vg = 2 * n_en
+            else:
+                n_vg = n_en
 
     # Initialize output arrays
     f_g = np.zeros([n_t, *[n_vg] * ndim])

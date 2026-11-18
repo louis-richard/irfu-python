@@ -129,7 +129,11 @@ def deprecated_kwarg(
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         signature = inspect.signature(func)
         name = f"argument {old!r} of {func.__name__}"
-        alternative = None if new is None else f"{new!r}"
+
+        if new is None:
+            alternative = None
+        else:
+            alternative = f"{new!r}"
 
         if new is None and old not in signature.parameters:
             raise ValueError(f"{func.__name__} has no argument {old!r}")

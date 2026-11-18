@@ -46,4 +46,6 @@ def iso86012unix(time):
 
     # The same parsing as iso86012datetime64 (tuples raised TypeError and "Z"
     # gave a numpy warning)
-    return datetime642unix(iso86012datetime64(time))
+    out = datetime642unix(iso86012datetime64(time))
+
+    return out

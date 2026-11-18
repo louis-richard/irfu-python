@@ -273,7 +273,10 @@ def int_sph_dist(
 
     # The grid indices computed on a cartesian grid uniform to near machine
     # precision, searched otherwise (see the implementation notes)
-    v_step = _uniform_step(velocity_grid_edges) if n_dim > 1 else 0.0
+    if n_dim > 1:
+        v_step = _uniform_step(velocity_grid_edges)
+    else:
+        v_step = 0.0
 
     f_g = _mc_project(
         vdf,
@@ -629,7 +632,10 @@ def _mc_project(
                         if n_dim > 2:
                             idx = idx * n_vg + _grid_index(v_z_p, vg_edges, v_step)
 
-                        d_a = d_a_grid[i_vxg] if n_dim == 1 else d_a_grid[0]
+                        if n_dim == 1:
+                            d_a = d_a_grid[i_vxg]
+                        else:
+                            d_a = d_a_grid[0]
 
                         if use_point:
                             f_g_chunks[c, idx] += f_ijk * c_ijk / d_a

@@ -145,7 +145,10 @@ def psd_rebin(
     )
 
     for k, (i_1, i_2) in enumerate(zip(first, second)):
-        data_2 = np.roll(vdf_data[i_2], -1, axis=1) if wrap[k] else vdf_data[i_2]
+        if wrap[k]:
+            data_2 = np.roll(vdf_data[i_2], -1, axis=1)
+        else:
+            data_2 = vdf_data[i_2]
 
         if esteptable[i_1]:
             vdf_r[k, 0::2], vdf_r[k, 1::2] = data_2, vdf_data[i_1]

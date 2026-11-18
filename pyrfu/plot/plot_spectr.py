@@ -172,12 +172,16 @@ def plot_spectr(
     # and, with a time-dependent table, the times without one
     if y_data.ndim == 1:
         keep = np.isfinite(y_data)
-        y_data, inp_data = y_data[keep], inp_data[keep]
+        y_data = y_data[keep]
+        inp_data = inp_data[keep]
     else:
         keep = np.any(np.isfinite(y_data), axis=1)
-        y_data, inp_data = y_data[keep], inp_data[keep]
+        y_data = y_data[keep]
+        inp_data = inp_data[keep]
         keep = np.all(np.isfinite(y_data), axis=0)
-        x_data, y_data, inp_data = x_data[keep], y_data[:, keep], inp_data[:, keep]
+        x_data = x_data[keep]
+        y_data = y_data[:, keep]
+        inp_data = inp_data[:, keep]
 
     if cscale == "log":
         if clim is not None:

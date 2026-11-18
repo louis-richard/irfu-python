@@ -235,4 +235,6 @@ def calculate_epsilon(
     epsilon /= 1e6 * (n_s.data * 2)
 
     # Dimensionless (no UNITS)
-    return ts_scalar(vdf.time.data, epsilon, {"UNITS": ""})
+    out = ts_scalar(vdf.time.data, epsilon, {"UNITS": ""})
+
+    return out

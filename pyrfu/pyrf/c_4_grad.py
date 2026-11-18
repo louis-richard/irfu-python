@@ -200,7 +200,8 @@ def c_4_grad(
 
     # Units: those of the field per those of the positions, the field squared
     # for (B.grad)B, per those of the positions for the curvature (none)
-    units_b, units_r = _units(b_list[0]), _units(r_list[0])
+    units_b = _units(b_list[0])
+    units_r = _units(r_list[0])
     units = {
         "bdivb": _ratio(_power(units_b, 2), units_r),
         "curv": _ratio("", units_r),

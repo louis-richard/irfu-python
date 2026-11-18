@@ -50,7 +50,8 @@ def _read_masks(str_date):
 
         # sectors (rows) masked for each eye (columns: top 1-12, bottom 1-12)
         for i in range(12):
-            top, bottom = csv_data[:, i] == 1, csv_data[:, i + 12] == 1
+            top = csv_data[:, i] == 1
+            bottom = csv_data[:, i + 12] == 1
             masks[f"mms{mms_sc:d}_imask_top-{i + 1:d}"] = np.flatnonzero(top).tolist()
             masks[f"mms{mms_sc:d}_imask_bottom-{i + 1:d}"] = np.flatnonzero(
                 bottom
@@ -90,4 +91,6 @@ def read_feeps_sector_masks_csv(tint):
 
     # A copy: the masks of each date are read once (four files on every call
     # before)
-    return copy.deepcopy(_read_masks(str_date))
+    out = copy.deepcopy(_read_masks(str_date))
+
+    return out

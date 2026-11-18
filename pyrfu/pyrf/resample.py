@@ -150,7 +150,8 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
     # Both datetime64 (checked in resample) or both numeric
     if np.issubdtype(inp.time.dtype, np.datetime64):
         # Integer nanoseconds for the averaging windows, float seconds otherwise
-        inp_time_ns, ref_time_ns = _ns(inp.time.data), _ns(ref.time.data)
+        inp_time_ns = _ns(inp.time.data)
+        ref_time_ns = _ns(ref.time.data)
         inp_time = _seconds(inp.time.data, inp.time.data[0])
         ref_time = _seconds(ref.time.data, inp.time.data[0])
     elif np.issubdtype(inp.time.dtype, np.number) and np.issubdtype(
@@ -199,7 +200,10 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
 
         # Extrapolation outside the time range of inp with the interpolant,
         # as irf_resamp (MATLAB interp1 with 'extrap'), or NaN there
-        fill_value = "extrapolate" if extrapolate else np.nan
+        if extrapolate:
+            fill_value = "extrapolate"
+        else:
+            fill_value = np.nan
 
         if method in _GLOBAL_METHODS and not np.all(np.isfinite(inp.data)):
             out_data = _interp_finite(inp_time, inp.data, ref_time, method, fill_value)
@@ -356,7 +360,11 @@ def resample(
         raise TypeError("inp must be a xarray.DataArray or xarray.Dataset")
 
     if method and method not in _METHODS:
-        hint = ' (MATLAB "spline" is "cubic")' if method == "spline" else ""
+        if method == "spline":
+            hint = ' (MATLAB "spline" is "cubic")'
+        else:
+            hint = ""
+
         raise ValueError(
             f"method must be one of {', '.join(_METHODS)}, not {method!r}{hint}"
         )

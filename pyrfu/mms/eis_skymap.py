@@ -78,7 +78,8 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
     }
 
     # Same energy table at all times (a single time raised IndexError)
-    energy0, energy1 = energy[0, :], energy[0, :]
+    energy0 = energy[0, :]
+    energy1 = energy[0, :]
     e_step_table = np.zeros(len(time_data))
 
     out = ts_skymap(

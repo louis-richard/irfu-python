@@ -53,4 +53,6 @@ def datetime642unix(
         raise TypeError("time must be list or numpy.ndarray of datetime64")
 
     # Unix times, NaN for NaT (it was -9.2e9 s, the int64 of NaT)
-    return _unix(time)
+    out = _unix(time)
+
+    return out

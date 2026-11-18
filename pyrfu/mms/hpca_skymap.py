@@ -99,7 +99,8 @@ def hpca_skymap(
     dist = get_hpca_dist(inp, azimuth, elevation, source, data_path)
 
     # half-spin, energy, azimuth, anode
-    phi_p, data = dist["phi"], dist["data"]
+    phi_p = dist["phi"]
+    data = dist["data"]
     colat_p = 90.0 - dist["theta"][0, 0, :]
     n_t, n_en, n_az, _ = data.shape
 

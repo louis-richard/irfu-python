@@ -82,7 +82,9 @@ def _settings() -> dict:
 
 def enabled() -> bool:
     r"""True if the cache is on."""
-    return _settings()["enabled"]
+    out = _settings()["enabled"]
+
+    return out
 
 
 def mms_path(mms_id: str, var: Mapping[str, str], file_name: str) -> str:
@@ -96,7 +98,9 @@ def mms_path(mms_id: str, var: Mapping[str, str], file_name: str) -> str:
         year, month, day = match.groups()[:3]
         parts += [year, month] + ([day] if var["tmmode"] == "brst" else [])
 
-    return posixpath.join(*parts, file_name)
+    out = posixpath.join(*parts, file_name)
+
+    return out
 
 
 def _ensure_dir(settings: dict, sub_dir: str, path: str) -> None:
@@ -270,7 +274,7 @@ def cache_info() -> dict:
     listings_dir = os.path.join(settings["dir"], _LISTINGS) + os.sep
     n_listings = sum(path.startswith(listings_dir) for _, _, path in files)
 
-    return {
+    out = {
         "enabled": settings["enabled"],
         "dir": settings["dir"],
         "max_size": settings["size"],
@@ -281,6 +285,8 @@ def cache_info() -> dict:
         ),
         "n_listings": n_listings,
     }
+
+    return out
 
 
 def clear_cache() -> None:

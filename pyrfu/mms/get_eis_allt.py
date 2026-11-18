@@ -194,7 +194,11 @@ def get_eis_allt(
                 logger.info("Loading %s...", cdf_name)
 
             ts = get_ts(file_content, cdf_name, tint)
-            outdict[key] = ts_append(outdict[key], ts) if key in outdict else ts
+
+            if key in outdict:
+                outdict[key] = ts_append(outdict[key], ts)
+            else:
+                outdict[key] = ts
 
     for i in range(6):
         outdict[f"t{i:d}"] = outdict[f"t{i:d}"].rename({"Energy": "energy"})

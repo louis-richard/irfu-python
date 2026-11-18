@@ -51,4 +51,6 @@ def iso86012datetime(
     # datetime), at once (it parsed the ISO 8601 str of each time)
     time_datetime = time_datetime64.astype("datetime64[us]").astype(datetime.datetime)
 
-    return time_datetime.tolist()
+    out = time_datetime.tolist()
+
+    return out

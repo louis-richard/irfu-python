@@ -100,7 +100,8 @@ def _shift(
     f_si = np.nan_to_num(_relativistic_psd(vdf))
     v_frame = _frame_velocity(vdf, v_frame)
     rotations = _rotation_matrices(rotation, len(vdf.time))
-    mass, rng = _mass(vdf), np.random.default_rng(random_state)
+    mass = _mass(vdf)
+    rng = np.random.default_rng(random_state)
 
     bins = _source_bins(vdf, sc_pot)
     d3v = _bins_d3v(bins)
@@ -122,7 +123,9 @@ def _shift(
         np.rad2deg(np.arccos(np.hstack([bins["cos_upper"], bins["cos_lower"][-1]]))),
     )
 
-    out_f, energy_edges, lost = [], [], np.zeros(len(vdf.time))
+    out_f = []
+    energy_edges = []
+    lost = np.zeros(len(vdf.time))
 
     for i_t in range(len(vdf.time)):
         if energy_grid is not None:
@@ -155,7 +158,8 @@ def _shift(
     energy_edges = np.array(energy_edges)
     # Geometric centres of the energy bins (those of FPI, so that the bins of
     # an unshifted skymap are unchanged), arithmetic from 0 eV
-    lower, upper = energy_edges[:, :-1], energy_edges[:, 1:]
+    lower = energy_edges[:, :-1]
+    upper = energy_edges[:, 1:]
     energy = np.where(lower > 0, np.sqrt(lower * upper), (lower + upper) / 2)
     phi_edges = np.array(phi_edges)
     phi = (phi_edges[:, :-1] + phi_edges[:, 1:]) / 2
@@ -285,4 +289,6 @@ def vdf_shift(
     if not _is_skymap(vdf):
         raise ValueError("vdf must be a skymap")
 
-    return _shift(vdf, v_frame, rotation, n_mc, grid, random_state, sc_pot)
+    out = _shift(vdf, v_frame, rotation, n_mc, grid, random_state, sc_pot)
+
+    return out

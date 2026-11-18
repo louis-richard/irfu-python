@@ -237,7 +237,8 @@ def vdf_omni(
         )
         frame_attrs = {"frame_velocity": v_frame, "coverage": coverage, "n_mc": n_mc}
     else:
-        omni, energy = _omni_spacecraft(vdf, method), vdf.energy.data
+        omni = _omni_spacecraft(vdf, method)
+        energy = vdf.energy.data
 
     # Use global and zVariable attributes
     attrs = {**vdf.data.attrs, **vdf.attrs}

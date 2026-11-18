@@ -56,4 +56,6 @@ def vdf_d3v(vdf, sc_pot=None):
     _is_skymap(vdf)
     _, units = _data_and_units(vdf)
     new_units, factor = _VOLUME_UNITS.get(units.lower(), ("m^3/s^3", 1.0))
-    return _output(vdf, _d3v(vdf, sc_pot) * factor, new_units)
+    out = _output(vdf, _d3v(vdf, sc_pot) * factor, new_units)
+
+    return out

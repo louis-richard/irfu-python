@@ -18,7 +18,10 @@ from pyrfu.pyrf.resample import resample
 def _values(inp):
     r"""Values of a distribution (xarray.Dataset, its "data") or of a spectrum
     (xarray.DataArray)."""
-    return inp.data.data if isinstance(inp, xr.Dataset) else inp.data
+
+    if isinstance(inp, xr.Dataset):
+        return inp.data.data
+    return inp.data
 
 
 def _units(inp):
@@ -79,7 +82,10 @@ def _mass(vdf):
 def _charge_sign(vdf):
     r"""Sign of the charge of the species of the distribution."""
     is_electron = str(vdf.attrs["species"]).lower() in ["electrons", "electron", "e"]
-    return -1.0 if is_electron else 1.0
+
+    if is_electron:
+        return -1.0
+    return 1.0
 
 
 def _charge(vdf):
@@ -123,7 +129,8 @@ def _energy_edges(vdf):
     d_plus = vdf.attrs.get("delta_energy_plus")
 
     if d_minus is not None and d_plus is not None:
-        d_minus, d_plus = np.asarray(d_minus), np.asarray(d_plus)
+        d_minus = np.asarray(d_minus)
+        d_plus = np.asarray(d_plus)
         same_table = np.all(energy == energy[:1])
         fits = all(
             d.shape == energy.shape or (d.shape == energy.shape[1:] and same_table)

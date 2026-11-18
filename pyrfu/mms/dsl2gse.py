@@ -164,6 +164,10 @@ def dsl2gse(
 
     out = inp.copy()
     out.data = out_data
-    out.attrs["COORDINATE_SYSTEM"] = "GSE" if direction == 1 else "DSL"
+
+    if direction == 1:
+        out.attrs["COORDINATE_SYSTEM"] = "GSE"
+    else:
+        out.attrs["COORDINATE_SYSTEM"] = "DSL"
 
     return out

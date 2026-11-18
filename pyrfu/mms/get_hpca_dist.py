@@ -23,7 +23,9 @@ def _units_name(inp):
     "df_cm"."""
     units = str(inp.attrs.get("UNITS", "s^3"))
 
-    return "flux" if "sr" in units else "df_cm"
+    if "sr" in units:
+        return "flux"
+    return "df_cm"
 
 
 def get_hpca_dist(

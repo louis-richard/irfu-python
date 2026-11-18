@@ -123,7 +123,10 @@ def _log_edges(energy, half_width):
 def _table_edges(step_table, energy0_edges, energy1_edges):
     r"""Edges of the energy table of the distributions: table 1 if they all
     use it (step table), else table 0."""
-    return energy1_edges if np.all(step_table) else energy0_edges
+
+    if np.all(step_table):
+        return energy1_edges
+    return energy0_edges
 
 
 def _channel_edges(vdf: Dataset, i_t: int, energy_edges):
@@ -265,7 +268,9 @@ def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr, width
     n_sub = 5
 
     for i in range(len(dist)):
-        pol_i, azm_i, dist_i = polar[i, :], azimuthal[i, :], dist[i, ...]
+        pol_i = polar[i, :]
+        azm_i = azimuthal[i, :]
+        dist_i = dist[i, ...]
 
         if widths is not None:
             phi_m, phi_p, theta_m, theta_p = widths
@@ -429,12 +434,18 @@ def vdf_projection(
     if not isinstance(vdf, Dataset):
         raise TypeError("vdf must be a xarray.Dataset")
 
-    mass, is_des = _mass(vdf), _charge_sign(vdf) < 0.0
-    charge = 1.0 if is_des else _charge(vdf)
+    mass = _mass(vdf)
+    is_des = _charge_sign(vdf) < 0.0
+
+    if is_des:
+        charge = 1.0
+    else:
+        charge = _charge(vdf)
 
     # The relativistic phase-space density, projected with the relativistic
     # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)
-    data, units = vdf.data.data, str(vdf.data.attrs.get("UNITS", ""))
+    data = vdf.data.data
+    units = str(vdf.data.attrs.get("UNITS", ""))
 
     if not _is_relativistic(vdf) and units.lower() in _PSD:
         vdf = _output(vdf, data * _relativistic_factor(vdf, data), units)

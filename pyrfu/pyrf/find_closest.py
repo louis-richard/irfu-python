@@ -61,9 +61,11 @@ def find_closest(inp1, inp2):
         keep_2[_nearest(t_2, t_1)] = True
 
         if not keep_1.all():
-            t_1, ind_1 = t_1[keep_1], ind_1[keep_1]
+            t_1 = t_1[keep_1]
+            ind_1 = ind_1[keep_1]
         elif not keep_2.all():
-            t_2, ind_2 = t_2[keep_2], ind_2[keep_2]
+            t_2 = t_2[keep_2]
+            ind_2 = ind_2[keep_2]
         else:
             break
 

@@ -79,7 +79,8 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
         if isinstance(value, bool) or not isinstance(value, numbers.Real):
             raise TypeError(f"{name} must be a real number")
 
-    f_min, f_max = float(f_min), float(f_max)
+    f_min = float(f_min)
+    f_max = float(f_max)
 
     # Check that f_min < f_max
     if f_min >= f_max:

@@ -40,4 +40,6 @@ def calc_fs(inp: Dataset | DataArray) -> float:
 
     # The inverse of the median time step (NaN for one sample, inf for a zero
     # step)
-    return 1 / np.float64(calc_dt(inp))
+    out = 1 / np.float64(calc_dt(inp))
+
+    return out

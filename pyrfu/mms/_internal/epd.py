@@ -48,7 +48,8 @@ def _spin_reduce(data, starts, stops, method: str = "mean"):
     as the complete spins of EIS, FEEPS and HPCA (one array for all of them; it
     was a loop over the spins in each routine)."""
     data = np.asarray(data)
-    starts, stops = np.asarray(starts), np.asarray(stops)
+    starts = np.asarray(starts)
+    stops = np.asarray(stops)
 
     if len(starts) == 0:
         return np.empty((0, *data.shape[1:]), dtype=np.float64)

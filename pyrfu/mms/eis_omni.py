@@ -40,9 +40,10 @@ def _omni_attrs(telescope_attrs, energy_dim, method):
     except (KeyError, TypeError, ValueError):
         pass
     else:
-        attrs["SCALEMAX"] = (
-            scale_max.sum(axis=0) if method == "sum" else scale_max.mean(axis=0)
-        )
+        if method == "sum":
+            attrs["SCALEMAX"] = scale_max.sum(axis=0)
+        else:
+            attrs["SCALEMAX"] = scale_max.mean(axis=0)
 
     return attrs
 

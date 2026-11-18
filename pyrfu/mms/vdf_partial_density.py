@@ -82,4 +82,6 @@ def vdf_partial_density(
 
     velocity = vdf_velocity(vdf, sc_pot, rotation)
     d_j = d_n * velocity[f"v{component}"].data * 1e3  # m^-2 s^-1
-    return _output(vdf, d_j / 1e4, "1/(cm^2 s)")
+    out = _output(vdf, d_j / 1e4, "1/(cm^2 s)")
+
+    return out

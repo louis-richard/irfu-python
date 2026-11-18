@@ -77,7 +77,10 @@ def eb_nrf(e_xyz, b_xyz, v_xyz, flag="a"):
         if flag.lower() not in ["a", "b"]:
             raise ValueError(f'flag must be "a" or "b", not {flag!r}')
 
-        reference = None if flag.lower() == "a" else np.nanmean(b_xyz.data, axis=0)
+        if flag.lower() == "a":
+            reference = None
+        else:
+            reference = np.nanmean(b_xyz.data, axis=0)
     else:
         reference = np.array(flag)
 

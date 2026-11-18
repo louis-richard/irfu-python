@@ -186,7 +186,10 @@ def vdf_rebin(
 
     data, edges, lost = _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state)
     units = vdf.data.attrs["UNITS"]
-    units = units if units.lower() in _PSD else "s^3/m^6"
+
+    if units.lower() not in _PSD:
+        units = "s^3/m^6"
+
     data = data / _PSD[units.lower()]
     centres = [(e[:-1] + e[1:]) / 2e3 for e in edges]
 

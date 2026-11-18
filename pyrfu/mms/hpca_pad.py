@@ -151,7 +151,8 @@ def hpca_pad(
     pitch_a = angle_vec - d_angle / 2
 
     # 3.2. data dimension
-    n_en, n_ti = len(ien), len(vdf)
+    n_en = len(ien)
+    n_ti = len(vdf)
     tt_ = vdf.time.data
 
     # 3.3. particle velocity directions [nt, npo, ner]: each sample has the

@@ -38,7 +38,10 @@ def _midpoint_kernels(phi, theta):
     # degrees, phi (time, phi), theta (theta,).
     phi = np.deg2rad(np.asarray(phi, dtype=np.float64))[:, :, np.newaxis]
     theta = np.deg2rad(np.asarray(theta, dtype=np.float64))[np.newaxis, np.newaxis, :]
-    c_p, s_p, c_t, s_t = np.cos(phi), np.sin(phi), np.cos(theta), np.sin(theta)
+    c_p = np.cos(phi)
+    s_p = np.sin(phi)
+    c_t = np.cos(theta)
+    s_t = np.sin(theta)
     kernels = [
         s_t,
         -c_p * s_t**2,
@@ -110,8 +113,10 @@ def _exact_kernels(
     i_cs = (np.sin(phi_b) ** 2 - np.sin(phi_a) ** 2) / 2
 
     # integrals over theta of sin, sin^2, sin cos, sin^3, sin cos^2, sin^2 cos
-    c_a, c_b = np.cos(theta_a), np.cos(theta_b)
-    s_a, s_b = np.sin(theta_a), np.sin(theta_b)
+    c_a = np.cos(theta_a)
+    c_b = np.cos(theta_b)
+    s_a = np.sin(theta_a)
+    s_b = np.sin(theta_b)
     j_s = c_a - c_b
     j_ss = (theta_b - theta_a) / 2 - (np.sin(2 * theta_b) - np.sin(2 * theta_a)) / 4
     j_sc = (s_b**2 - s_a**2) / 2
@@ -200,7 +205,8 @@ def _energy_mask(vdf, energy, energy_range, en_channels):
         raise ValueError("Use either energy_range or en_channels, not both")
 
     if energy_range is None:
-        en_channels = [0, n_e] if en_channels is None else en_channels
+        if en_channels is None:
+            en_channels = [0, n_e]
 
         if isinstance(en_channels, xr.DataArray):
             return _first_channel_mask(vdf, n_e, en_channels)
@@ -340,7 +346,9 @@ def _pitch_angle_weights(vdf, b_xyz, pitch_angle_range, method):
     theta_sub = np.rad2deg(np.arccos(cos_lower - sub * (cos_lower - cos_upper)))
     theta_sub = theta_sub.ravel()
 
-    n_t, n_ph, n_th = len(vdf.time), vdf.data.shape[2], vdf.data.shape[3]
+    n_t = len(vdf.time)
+    n_ph = vdf.data.shape[2]
+    n_th = vdf.data.shape[3]
     weights = np.zeros((n_t, n_ph, n_th))
 
     # Time chunks: the sub-grid is _N_SUB^2 times the angular grid
@@ -569,8 +577,13 @@ def psd_moments(
     # Mass and charge of the species (ValueError if not supported). All the
     # ions were protons and the species not starting with "e" or "i" raised
     # AssertionError.
-    p_mass, is_electron = _mass(vdf), _charge_sign(vdf) < 0.0
-    charge = 1.0 if is_electron else _charge(vdf)
+    p_mass = _mass(vdf)
+    is_electron = _charge_sign(vdf) < 0.0
+
+    if is_electron:
+        charge = 1.0
+    else:
+        charge = _charge(vdf)
 
     # Relativistic speeds, momentum flux and kinetic energy, for all the
     # species: the relativistic phase-space density in SI units (s^3/m^6)

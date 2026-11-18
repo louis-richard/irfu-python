@@ -30,7 +30,12 @@ def _time_avg(vdf, tint):
         idx = int(np.argmin(np.abs(time - t_0)))
         vdf_data = vdf.data.data[idx, ...]
         vdf_ener = vdf.energy.data[idx, ...]
-        vdf_azim = vdf.phi.data[idx, ...] if vdf.phi.ndim == 2 else vdf.phi.data
+
+        if vdf.phi.ndim == 2:
+            vdf_azim = vdf.phi.data[idx, ...]
+        else:
+            vdf_azim = vdf.phi.data
+
         vdf_thet = vdf.theta.data
 
     elif len(tint) == 2:
@@ -57,7 +62,8 @@ def _time_avg(vdf, tint):
 
 def _energy_avg(vdf, en_range):
     energy = vdf.energy.data
-    e_min, e_max = np.nanmin(energy), np.nanmax(energy)
+    e_min = np.nanmin(energy)
+    e_max = np.nanmax(energy)
 
     if en_range is None:
         en_range = np.array([e_min, e_max])

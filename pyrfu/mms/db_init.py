@@ -71,7 +71,11 @@ def _get_credential(username: str):
     credentials saved by previous versions or without system keyring, from the
     plaintext keyring file."""
     secure = _secure_keyring()
-    credential = secure.get_credential(SDC_SERVICE, username) if secure else None
+
+    if secure:
+        credential = secure.get_credential(SDC_SERVICE, username)
+    else:
+        credential = None
 
     if credential is None:
         credential = PlaintextKeyring().get_credential(SDC_SERVICE, username)
@@ -299,7 +303,11 @@ def db_init(
     >>> mms.db_init(cache=False)
 
     """
-    config = copy.deepcopy(_DEFAULT_CONFIG) if reset else _read_config()
+
+    if reset:
+        config = copy.deepcopy(_DEFAULT_CONFIG)
+    else:
+        config = _read_config()
 
     # Check and set the given settings only
     if default is not None:

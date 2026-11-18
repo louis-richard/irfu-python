@@ -60,7 +60,11 @@ def _to_psd_si(inp, units):
     if units in _DEF:
         data = data / 1e18 * _mass_term(inp) / _energy(inp, data) ** 2
     else:
-        scale = 1e-3 if units == "1/(cm^2 s sr kev)" else 1.0
+        if units == "1/(cm^2 s sr kev)":
+            scale = 1e-3
+        else:
+            scale = 1.0
+
         data = data * scale / 1e18 * _mass_term(inp) / _energy(inp, data)
 
     if _is_relativistic(inp):
@@ -169,10 +173,13 @@ def vdf_convert(vdf, units: str):
 
     """
     _, old_units = _data_and_units(vdf)
-    old_units, new_units = _check(old_units), _check(units)
+    old_units = _check(old_units)
+    new_units = _check(units)
 
     if old_units == new_units:
         return _output(vdf, _data_and_units(vdf)[0].copy(), _NAMES[new_units])
 
     psd = _to_psd_si(vdf, old_units)
-    return _from_psd_si(psd, new_units)
+    out = _from_psd_si(psd, new_units)
+
+    return out

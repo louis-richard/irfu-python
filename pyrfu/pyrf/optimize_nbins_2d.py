@@ -54,8 +54,11 @@ def optimize_nbins_2d(x, y, n_min: list | None = None, n_max: list | None = None
     """
 
     # `n_min or [1, 1]` raised ValueError for an array (truth value)
-    n_min = [1, 1] if n_min is None else n_min
-    n_max = [100, 100] if n_max is None else n_max
+    if n_min is None:
+        n_min = [1, 1]
+
+    if n_max is None:
+        n_max = [100, 100]
 
     x = np.asarray(x, dtype=np.float64).ravel()
     y = np.asarray(y, dtype=np.float64).ravel()
@@ -65,7 +68,8 @@ def optimize_nbins_2d(x, y, n_min: list | None = None, n_max: list | None = None
 
     # Samples where both are finite (NaN made the ranges NaN)
     finite = np.isfinite(x) & np.isfinite(y)
-    x, y = x[finite], y[finite]
+    x = x[finite]
+    y = y[finite]
 
     x_min, x_max = _finite_range(x)
     y_min, y_max = _finite_range(y)

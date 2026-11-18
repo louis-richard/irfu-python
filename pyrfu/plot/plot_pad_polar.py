@@ -62,7 +62,8 @@ def _cells(lower, upper):
 
     lower, upper = (np.array(edge, dtype=np.float64) for edge in [lower, upper])
     order = np.argsort(lower + upper)
-    low, high = lower[order], upper[order]
+    low = lower[order]
+    high = upper[order]
     width = np.minimum((high - low)[:-1], (high - low)[1:])
     join = np.abs(low[1:] - high[:-1]) <= _JOIN * width
     middle = (low[1:] + high[:-1]) / 2

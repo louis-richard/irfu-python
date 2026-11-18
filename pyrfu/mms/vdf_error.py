@@ -72,4 +72,6 @@ def vdf_error(vdf, counts):
 
     f_err = np.where(np.isnan(f_data) | np.isnan(n_counts), np.nan, f_err)
 
-    return _like(vdf, f_err, _units(vdf))
+    out = _like(vdf, f_err, _units(vdf))
+
+    return out

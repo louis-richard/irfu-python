@@ -27,7 +27,11 @@ def _particles_per_bin(weights, n_tot, n_bin, skip_zero, division):
     with np.errstate(invalid="ignore", divide="ignore"):
         n_target = np.nan_to_num(weights / total * n_tot)
 
-    rounding = np.floor if division == "counts" else np.ceil
+    if division == "counts":
+        rounding = np.floor
+    else:
+        rounding = np.ceil
+
     n_part = rounding(n_target).astype(int)
 
     if not skip_zero:
@@ -126,7 +130,12 @@ def vdf_macroparticles(
     units = vdf.data.attrs.get("UNITS", "")
     d3v = vdf_d3v(vdf, sc_pot)
     d_n = np.nan_to_num(vdf_partial_density(vdf, sc_pot=sc_pot).data.data)
-    weights = d_n if division == "dn" else f_data
+
+    if division == "dn":
+        weights = d_n
+    else:
+        weights = f_data
+
     n_part = _particles_per_bin(weights, n_tot, n_bin, skip_zero, division)
 
     if skip_zero:

@@ -50,7 +50,10 @@ def _split_dataset_name(dataset_name: str) -> tuple[str, Mapping[str, str]]:
     var = {"inst": dataset[1], "tmmode": dataset[2], "lev": dataset[3]}
 
     # Data type (empty for datasets without one, e.g., mms1_fgm_srvy_l2)
-    var["dtype"] = dataset[4] if len(dataset) > 4 else ""
+    if len(dataset) > 4:
+        var["dtype"] = dataset[4]
+    else:
+        var["dtype"] = ""
 
     return probe, var
 
@@ -113,7 +116,10 @@ def _db_get_ts_dict(
                 )
                 raise
 
-            out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts
+            if cdf_name in out:
+                out[cdf_name] = ts_append(out[cdf_name], ts)
+            else:
+                out[cdf_name] = ts
 
     return out | support
 

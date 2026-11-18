@@ -30,7 +30,8 @@ def _solid_angles(vdf, n_t):
     r"""Solid angle (sr) of each (phi, theta) bin, (time, phi, theta): from the
     angular widths in the attributes (degrees), or else from the spacing of
     the grids (sin(theta) d_theta d_phi)."""
-    phi, theta = vdf.phi.data, vdf.theta.data
+    phi = vdf.phi.data
+    theta = vdf.theta.data
     attrs = vdf.attrs
     n_phi = phi.shape[-1]
 

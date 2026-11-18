@@ -104,7 +104,10 @@ def psd(
     coords = [freqs, *[inp.coords[dim].data for dim in inp.dims[1:]]]
     # Units squared, per Hz for a density (none)
     units = _power(_units(inp), 2)
-    units = _ratio(units, "Hz") if scaling == "density" else units
+
+    if scaling == "density":
+        units = _ratio(units, "Hz")
+
     out = xr.DataArray(
         p_xx, coords=coords, dims=["f", *inp.dims[1:]], attrs=_attrs({}, units)
     )

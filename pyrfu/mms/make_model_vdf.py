@@ -126,7 +126,8 @@ def make_model_vdf(
 
     # Mass and charge of the species (ValueError for an unknown one): the
     # proton mass and +/-V were taken for every ion
-    p_mass, charge = _mass(vdf), _charge(vdf)
+    p_mass = _mass(vdf)
+    charge = _charge(vdf)
 
     # The moments are used by position: at the times of the VDF, as
     # calculate_epsilon (the times of n_s only had to differ by a constant, so
@@ -217,4 +218,6 @@ def make_model_vdf(
     # The bi-Maxwellian at the relativistic speeds is the relativistic
     # phase-space density: in the convention of vdf (that of the FPI, HPCA and
     # EIS files, divided by 2 gamma^5 / (gamma + 1)), comparable with it
-    return _in_convention(model_vdf, _is_relativistic(vdf))
+    out = _in_convention(model_vdf, _is_relativistic(vdf))
+
+    return out

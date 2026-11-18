@@ -70,7 +70,12 @@ def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
     source and its settings (bucket, SDC rights and user), the spacecraft, the
     instrument, rate, level and data type, and the time interval."""
     config = _read_config()
-    where = config["aws"] if source == "aws" else config["sdc"]
+
+    if source == "aws":
+        where = config["aws"]
+    else:
+        where = config["sdc"]
+
     product = {k: var.get(k) or "" for k in ["inst", "tmmode", "lev", "dtype"]}
 
     return {
@@ -141,7 +146,8 @@ def _list_files_sources(
 
     if source == "local":
         file_names = list_files(tint, mms_id, var, data_path)
-        sdc_session, headers = None, {}
+        sdc_session = None
+        headers = {}
     elif source in ["sdc", "aws"] and _cache.enabled():
         # Files of the cache listing (the SDC login only if a file is read)
         items = _cache.listing(
@@ -149,13 +155,15 @@ def _list_files_sources(
             lambda: _remote_files(source, tint, mms_id, var),
         )
         file_names = [_cache.RemoteFile(**item) for item in items]
-        sdc_session, headers = None, {}
+        sdc_session = None
+        headers = {}
     elif source == "sdc":
         file_names = [file.get("url") for file in list_files_sdc(tint, mms_id, var)]
         sdc_session, headers, _ = _login_lasp()
     elif source == "aws":
         file_names = [file.get("s3_obj") for file in list_files_aws(tint, mms_id, var)]
-        sdc_session, headers = None, {}
+        sdc_session = None
+        headers = {}
     else:
         raise NotImplementedError(f"Resource {source} is not yet implemented!!")
 

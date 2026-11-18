@@ -63,7 +63,11 @@ def colorbar(
         mappable, cax=cax, orientation="vertical" if vertical else "horizontal"
     )
 
-    side = cax.yaxis if vertical else cax.xaxis
+    if vertical:
+        side = cax.yaxis
+    else:
+        side = cax.xaxis
+
     side.set_ticks_position(where)
     side.set_label_position(where)
 

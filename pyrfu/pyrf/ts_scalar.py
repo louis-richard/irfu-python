@@ -56,4 +56,6 @@ def ts_scalar(
     else:
         raise TypeError("attrs must be a dict")
 
-    return xr.DataArray(data, coords=[time[:]], dims="time", attrs=attrs)
+    out = xr.DataArray(data, coords=[time[:]], dims="time", attrs=attrs)
+
+    return out

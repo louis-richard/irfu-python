@@ -31,7 +31,8 @@ def _hpca_complete_spins(start_az, time):
     d_t = np.diff(_ns(time))
     no_gap = d_t <= 1.5 * np.median(d_t)
 
-    starts, stops = spin_starts[:-1], spin_starts[1:]
+    starts = spin_starts[:-1]
+    stops = spin_starts[1:]
     complete = [
         stop - start == _N_AZ
         and np.array_equal(start_az[start:stop], np.arange(_N_AZ))

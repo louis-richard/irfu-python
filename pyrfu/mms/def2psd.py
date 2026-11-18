@@ -56,4 +56,6 @@ def def2psd(inp: DataArray | Dataset) -> DataArray | Dataset:
     if units.lower() not in _DEF:
         raise ValueError("Invalid unit")
 
-    return vdf_convert(inp, "s^3/m^6")
+    out = vdf_convert(inp, "s^3/m^6")
+
+    return out

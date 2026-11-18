@@ -86,7 +86,8 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None):
 
     phi = np.deg2rad(np.broadcast_to(vdf.phi.data, (n_t, vdf.data.shape[2])))
     theta = np.deg2rad(np.asarray(vdf.theta.data, dtype=np.float64))
-    phi, theta = phi[:, np.newaxis, :, np.newaxis], theta[np.newaxis, np.newaxis, :]
+    phi = phi[:, np.newaxis, :, np.newaxis]
+    theta = theta[np.newaxis, np.newaxis, :]
 
     # Particle velocity is minus the look direction
     speed = -speed[..., np.newaxis, np.newaxis]

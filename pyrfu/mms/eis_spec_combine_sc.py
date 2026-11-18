@@ -49,7 +49,8 @@ def _paired_samples(ref, inp):
     if "sector" not in ref.coords or "sector" not in inp.coords:
         return _nearest(t_ref, t_inp, d_t / 2)
 
-    sec_ref, sec_inp = ref.sector.data, inp.sector.data
+    sec_ref = ref.sector.data
+    sec_inp = inp.sector.data
 
     # Half a spin: the samples of a spin have different sectors
     tol = len(np.unique(sec_ref)) * d_t / 2
@@ -97,9 +98,10 @@ def _combined_attrs(omni_vars, method):
     except (KeyError, TypeError, ValueError):
         pass
     else:
-        attrs["SCALEMAX"] = (
-            scale_max.sum(axis=0) if method == "sum" else scale_max.mean(axis=0)
-        )
+        if method == "sum":
+            attrs["SCALEMAX"] = scale_max.sum(axis=0)
+        else:
+            attrs["SCALEMAX"] = scale_max.mean(axis=0)
 
     return attrs
 

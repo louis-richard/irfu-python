@@ -98,9 +98,8 @@ def ts_skymap(
     # provided
     if esteptable is None:
         esteptable = np.zeros(len(time), dtype=np.uint8)
-    else:
-        if not isinstance(esteptable, np.ndarray):
-            raise TypeError("esteptable must be a numpy.ndarray")
+    elif not isinstance(esteptable, np.ndarray):
+        raise TypeError("esteptable must be a numpy.ndarray")
 
     # Default tables: those of the first time of each step (energy[0] and
     # energy[1] were swapped when esteptable starts with 1); without a time
@@ -110,39 +109,36 @@ def ts_skymap(
 
     if energy0 is None:
         energy0 = energy[first_0[0] if first_0.size else 0, :]
-    else:
-        if not isinstance(energy0, np.ndarray):
-            raise TypeError("energy0 must be a numpy.ndarray")
+    elif not isinstance(energy0, np.ndarray):
+        raise TypeError("energy0 must be a numpy.ndarray")
 
     if energy1 is None:
         if first_1.size:
             energy1 = energy[first_1[0], :]
+        elif energy.shape[0] > 1:
+            energy1 = energy[1, :]
         else:
-            energy1 = energy[1, :] if energy.shape[0] > 1 else energy[0, :]
-    else:
-        if not isinstance(energy1, np.ndarray):
-            raise TypeError("energy1 must be a numpy.ndarray")
+            energy1 = energy[0, :]
+    elif not isinstance(energy1, np.ndarray):
+        raise TypeError("energy1 must be a numpy.ndarray")
 
     # Check attributes are dictionaries
     if attrs is None:
         attrs = {}
-    else:
-        if not isinstance(attrs, dict):
-            raise TypeError("attrs must be a dictionary")
+    elif not isinstance(attrs, dict):
+        raise TypeError("attrs must be a dictionary")
 
     # Check coordinates attributes are dictionaries
     if coords_attrs is None:
         coords_attrs = {}
-    else:
-        if not isinstance(coords_attrs, dict):
-            raise TypeError("coords_attrs must be a dictionary")
+    elif not isinstance(coords_attrs, dict):
+        raise TypeError("coords_attrs must be a dictionary")
 
     # Check global attributes are dictionaries
     if glob_attrs is None:
         glob_attrs = {}
-    else:
-        if not isinstance(glob_attrs, dict):
-            raise TypeError("glob_attrs must be a dictionary")
+    elif not isinstance(glob_attrs, dict):
+        raise TypeError("glob_attrs must be a dictionary")
 
     out_dict = {
         "data": (["time", "idx0", "idx1", "idx2"], data),

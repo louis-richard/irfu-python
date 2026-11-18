@@ -40,7 +40,8 @@ def _without_gaps(inp, inp_r):
     i_r = np.searchsorted(time, ref)
     i_l = np.clip(i_r - 1, 0, len(time) - 1)
     i_rc = np.clip(i_r, 0, len(time) - 1)
-    dist_l, dist_r = np.abs(ref - time[i_l]), np.abs(time[i_rc] - ref)
+    dist_l = np.abs(ref - time[i_l])
+    dist_r = np.abs(time[i_rc] - ref)
     i_near = np.where(dist_l <= dist_r, i_l, i_rc)
 
     covered = np.minimum(dist_l, dist_r) <= d_t / 2.0

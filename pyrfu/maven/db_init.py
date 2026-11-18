@@ -17,7 +17,9 @@ def config_path() -> str:
     r"""Path of the MAVEN configuration file, in the user configuration
     directory (created from the package configuration the first time)."""
 
-    return user_config_path("maven_config.json", _PACKAGE_CFG_PATH)
+    out = user_config_path("maven_config.json", _PACKAGE_CFG_PATH)
+
+    return out
 
 
 def db_init(local_data_dir):

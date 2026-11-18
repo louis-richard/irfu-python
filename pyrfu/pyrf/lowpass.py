@@ -14,7 +14,9 @@ from .calc_fs import calc_fs
 
 # Elliptic filter of irfu-matlab irf_lowpass: order, passband ripple (dB) and
 # stopband attenuation (dB)
-_ORDER, _R_PASS, _R_STOP = 4, 0.1, 60
+_ORDER = 4
+_R_PASS = 0.1
+_R_STOP = 60
 
 
 @deprecated_kwarg("fhz", "2.5.7", "3.0.0", reason="Use f_s instead.")

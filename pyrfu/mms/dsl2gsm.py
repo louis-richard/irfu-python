@@ -95,6 +95,10 @@ def dsl2gsm(
 
     out = inp.copy()
     out.data = out_data
-    out.attrs["COORDINATE_SYSTEM"] = "GSM" if direction == 1 else "DSL"
+
+    if direction == 1:
+        out.attrs["COORDINATE_SYSTEM"] = "GSM"
+    else:
+        out.attrs["COORDINATE_SYSTEM"] = "DSL"
 
     return out

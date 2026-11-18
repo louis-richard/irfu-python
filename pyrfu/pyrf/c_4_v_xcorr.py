@@ -129,7 +129,9 @@ class _BandLimited:
 
         out += self.line[0] + self.line[1] * (pos / (self.m - 1))[..., None]
 
-        return out[..., 0] if self.scalar else out
+        if self.scalar:
+            return out[..., 0]
+        return out
 
 
 def _msd_ts(taus, s_sc, p_pat, grid, fit="none"):
@@ -153,7 +155,12 @@ def _msd_ts(taus, s_sc, p_pat, grid, fit="none"):
     units of the pattern, h / a (eq. 48)."""
     n_t = grid[2]
     centred = fit == "scale_offset"
-    p_c = p_pat - np.mean(p_pat, axis=0) if centred else p_pat
+
+    if centred:
+        p_c = p_pat - np.mean(p_pat, axis=0)
+    else:
+        p_c = p_pat
+
     p_var = np.sum(p_c**2)
     n_chunk = max(1, _CHUNK // (s_sc.m * p_pat.size // n_t))
     misfit = np.empty(len(taus))
@@ -168,7 +175,11 @@ def _msd_ts(taus, s_sc, p_pat, grid, fit="none"):
             )
             continue
 
-        s_mean = np.mean(s_tau, axis=1, keepdims=True) if centred else 0.0
+        if centred:
+            s_mean = np.mean(s_tau, axis=1, keepdims=True)
+        else:
+            s_mean = 0.0
+
         s_c = (s_tau - s_mean).reshape(s_tau.shape[0], -1)
         s_var = np.sum(s_c**2, axis=1)
         sp_cov = s_c @ p_c.ravel()
@@ -180,11 +191,12 @@ def _msd_ts(taus, s_sc, p_pat, grid, fit="none"):
         return misfit, (1.0, np.zeros(p_pat.shape[1:]), h_res[-1])
 
     scale = sp_cov[-1] / p_var if p_var > 0 else 0.0
-    offset = (
-        s_mean[-1, 0] - scale * np.mean(p_pat, axis=0)
-        if centred
-        else np.zeros(p_pat.shape[1:])
-    )
+
+    if centred:
+        offset = s_mean[-1, 0] - scale * np.mean(p_pat, axis=0)
+    else:
+        offset = np.zeros(p_pat.shape[1:])
+
     h_res = (s_c[-1].reshape(p_pat.shape) - scale * p_c) / scale if scale else None
 
     return misfit, (scale, offset, h_res)
@@ -222,7 +234,8 @@ def _get_tau(s_sc, p_pat, grid, start_tau, max_lag, fit):
 
 def _corr(x, y):
     r"""Correlation coefficient of two signals (0 if one is constant)."""
-    x, y = x.ravel() - np.mean(x), y.ravel() - np.mean(y)
+    x = x.ravel() - np.mean(x)
+    y = y.ravel() - np.mean(y)
     norm = np.sqrt(np.sum(x**2) * np.sum(y**2))
 
     return float(np.sum(x * y) / norm) if norm > 0 else 0.0
@@ -233,7 +246,8 @@ def _lagged_mean(x, y):
     shifts Delta = k t_samp, k = -(N - 1), ..., N - 1 (dot product over the
     components; MATLAB: the mean over the non-zero values)."""
     n_pts = x.shape[0]
-    x, y = x.reshape(n_pts, -1), y.reshape(n_pts, -1)
+    x = x.reshape(n_pts, -1)
+    y = y.reshape(n_pts, -1)
     xy_sum = sum(
         signal.correlate(y[:, i], x[:, i], mode="full") for i in range(x.shape[1])
     )
@@ -311,7 +325,9 @@ def _positions(r_mms, t_center, offsets=None):
     r"""Positions of the four spacecraft at t_center plus their offsets (s)
     (linear interpolation; MATLAB: R?.resample(T), at t_center)."""
     r_xyz = np.zeros((4, 3))
-    offsets = np.zeros(4) if offsets is None else offsets
+
+    if offsets is None:
+        offsets = np.zeros(4)
 
     for i, (r_sc, offset) in enumerate(zip(r_mms, offsets)):
         time = _seconds(r_sc.time.data, t_center) - offset
@@ -624,7 +640,10 @@ def c_4_v_xcorr(
     if frame not in ("spacecraft", "positions"):
         raise ValueError(f'frame must be "spacecraft" or "positions", not {frame!r}')
 
-    start_tau = np.zeros(4) if tau is None else np.asarray(tau, dtype=np.float64)
+    if tau is None:
+        start_tau = np.zeros(4)
+    else:
+        start_tau = np.asarray(tau, dtype=np.float64)
 
     if start_tau.shape != (4,):
         raise ValueError("tau must have the 4 delays")
@@ -685,12 +704,14 @@ def c_4_v_xcorr(
         # offset of MMS1: the least-squares pattern of S = a P + b + noise,
         # sum(a (S - b)) / sum(a^2), which weights down the noise of the
         # spacecraft that see the structure weaker
-        p_sum, a2_sum = p_pat.copy(), 1.0
+        p_sum = p_pat.copy()
+        a2_sum = 1.0
 
         for s_sc, tau_1a in zip([s_2, s_3, s_4], [tau_12, tau_13, tau_14]):
             if np.isfinite(tau_1a):
                 fit_1a = _msd_ts(np.array([tau_1a]), s_sc, p_pat, grid, fit)[1]
-                scale, offset = fit_1a[0], fit_1a[1]
+                scale = fit_1a[0]
+                offset = fit_1a[1]
 
                 if scale > 0:
                     p_sum += scale * (s_sc(grid, tau_1a)[0] - offset)
@@ -728,7 +749,8 @@ def c_4_v_xcorr(
     # mean squares Imin, and correlation with the pattern
     h_res: list[Any] = [None] * 4  # ndarray or None
     i_min = np.full(4, np.nan)
-    scales, offsets = np.full(4, np.nan), np.full((4, *p_pat.shape[1:]), np.nan)
+    scales = np.full(4, np.nan)
+    offsets = np.full((4, *p_pat.shape[1:]), np.nan)
     corr = np.full(4, np.nan)
 
     for i, (s_sc, tau_a) in enumerate(zip([s_1, s_2, s_3, s_4], tau_p)):
@@ -792,8 +814,13 @@ def c_4_v_xcorr(
 
     # %% Get propagation velocity from time lags
     if np.any(flags):
-        v_n, n, m = np.nan, np.full(3, np.nan), np.full(3, np.nan)
-        rms_v, d_th, e_th, dm2 = None, None, None, None
+        v_n = np.nan
+        n = np.full(3, np.nan)
+        m = np.full(3, np.nan)
+        rms_v = None
+        d_th = None
+        e_th = None
+        dm2 = None
     else:
         # Time in center of interval (MMS1), and the positions there or at the
         # crossing time of each spacecraft (that of MMS1 plus its delay)

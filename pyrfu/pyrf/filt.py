@@ -21,7 +21,9 @@ def _ellip_coefficients(f_min, f_max, order):
     sos1, sos2 = [None] * 2
 
     # fact defines the width between stopband and passband
-    r_p, r_s, fact = 0.5, 60, 1.1
+    r_p = 0.5
+    r_s = 60
+    fact = 1.1
 
     if f_min == 0:
         if order == -1:

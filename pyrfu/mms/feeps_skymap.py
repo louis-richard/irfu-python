@@ -40,7 +40,12 @@ def _look_direction(eye):
     r"""Polar angle and azimuth (degrees) of the look direction of an eye
     ("top-1", ...) in BCS."""
     s_type, sensor_id = eye.split("-")
-    rotation = t_top if s_type == "top" else t_bot
+
+    if s_type == "top":
+        rotation = t_top
+    else:
+        rotation = t_bot
+
     look = rotation @ np.array(v_fcs[int(sensor_id)])
     look /= np.linalg.norm(look)
     theta = np.rad2deg(np.arccos(look[2]))
@@ -64,7 +69,8 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     where it is defined (checked against the sectors). Returns the phases and
     the name of their source."""
     attrs = inp_dataset.attrs
-    tmmode, mms_id = attrs["tmmode"], attrs["mmsId"]
+    tmmode = attrs["tmmode"]
+    mms_id = attrs["mmsId"]
     psi = _sector_phase(inp_dataset.spinsectnum.data, tmmode, mms_id)
 
     if b_bcs is None or b_dmpa is None:
@@ -72,7 +78,8 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
 
     t_fgm = _ns(b_bcs.time.data)
     b_dmpa = b_dmpa.interp(time=b_bcs.time.data)
-    b_xyz, d_xyz = b_bcs.data[:, :3], b_dmpa.data[:, :3]
+    b_xyz = b_bcs.data[:, :3]
+    d_xyz = b_dmpa.data[:, :3]
 
     # B close to the spin axis gives an undefined rotation
     b_perp = np.linalg.norm(b_xyz[:, :2], axis=1) / np.linalg.norm(b_xyz, axis=1)
@@ -112,7 +119,9 @@ def _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges):
     r"""Sums and numbers of the finite samples of the eyes in each (spin,
     energy, phi, theta) bin."""
     n_t, n_e, n_eyes = dalleyes.shape
-    n_spins, n_phi, n_theta = len(bounds) - 1, len(phi_edges) - 1, len(rings)
+    n_spins = len(bounds) - 1
+    n_phi = len(phi_edges) - 1
+    n_theta = len(rings)
 
     # spin of each sample
     i_spin = np.repeat(np.arange(n_spins), np.diff(bounds))
@@ -144,7 +153,8 @@ def _energy_widths(inp_dataset, eyes, energies):
     r"""Lower and upper widths (keV) of the channels around the omni-directional
     energies, from the channel bounds of the eyes (mean over the eyes), or None
     if the eyes have no bounds."""
-    lower, upper = [], []
+    lower = []
+    upper = []
 
     for eye in eyes:
         names = [f"energy_{b}_bound_{eye}" for b in ["lower", "upper"]]
@@ -158,7 +168,8 @@ def _energy_widths(inp_dataset, eyes, energies):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        lower, upper = np.nanmean(lower, axis=0), np.nanmean(upper, axis=0)
+        lower = np.nanmean(lower, axis=0)
+        upper = np.nanmean(upper, axis=0)
 
     return energies - lower, upper - energies
 
@@ -313,7 +324,9 @@ def feeps_skymap(
     """
     eyes, dalleyes, energies, g_fact = _eyes_on_omni_energies(inp_dataset)
     attrs = inp_dataset.attrs
-    tmmode, d_type, mms_id = attrs["tmmode"], attrs["dtype"], attrs["mmsId"]
+    tmmode = attrs["tmmode"]
+    d_type = attrs["dtype"]
+    mms_id = attrs["mmsId"]
     # Units of the eyes, none without (they were taken as intensities)
     units = inp_dataset[eyes[0]].attrs.get("UNITS")
 
@@ -332,7 +345,10 @@ def feeps_skymap(
         raise ValueError(f"fill_empty needs the mean, not the {combine}")
 
     if n_phi is None:
-        n_phi = 32 if tmmode == "brst" else 8
+        if tmmode == "brst":
+            n_phi = 32
+        else:
+            n_phi = 8
 
     psi, phase_source = _spin_phase(inp_dataset, b_bcs, b_dmpa)
     spin_sectors = np.asarray(inp_dataset.spinsectnum.data)
@@ -341,14 +357,19 @@ def feeps_skymap(
     phi_edges = np.linspace(0.0, 360.0, n_phi + 1)
 
     # Sums (of the squares for the errors) and numbers of samples per bin
-    values = dalleyes**2 if combine == "quadrature" else dalleyes
+    if combine == "quadrature":
+        values = dalleyes**2
+    else:
+        values = dalleyes
+
     sums, n_samples = _bin_spins(values, eyes, psi, bounds, rings, phi_edges)
 
     # The complete spins only
     complete = np.isin(
         bounds[:-1], _feeps_complete_spins(spin_sectors, inp_dataset.time.data)[0]
     )
-    sums, n_samples = sums[complete], n_samples[complete]
+    sums = sums[complete]
+    n_samples = n_samples[complete]
 
     with np.errstate(invalid="ignore", divide="ignore"):
         if combine == "mean":

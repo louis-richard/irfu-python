@@ -180,7 +180,11 @@ def _parse_omni(text, n_codes):
     if i_header is None:
         raise ValueError(f"OMNIWeb returned no data: {' '.join(table.split())[:200]}")
 
-    n_time = 4 if lines[i_header].split()[0] == "YYYY" else 3
+    if lines[i_header].split()[0] == "YYYY":
+        n_time = 4
+    else:
+        n_time = 3
+
     rows = [line.split() for line in lines[i_header + 1 :] if line.strip()]
     rows = np.array([row for row in rows if len(row) == n_time + n_codes], dtype=float)
     rows = rows.reshape(-1, n_time + n_codes)

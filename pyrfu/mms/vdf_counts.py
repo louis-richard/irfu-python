@@ -76,4 +76,6 @@ def vdf_counts(vdf, vdf_err):
     counts = np.where(f_data == 0.0, 0.0, counts)
     counts = np.where(np.isfinite(counts), counts, np.nan)
 
-    return _like(vdf, counts, "counts")
+    out = _like(vdf, counts, "counts")
+
+    return out

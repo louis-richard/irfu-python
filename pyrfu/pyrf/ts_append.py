@@ -37,7 +37,9 @@ def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
 
 def _n_times(inp: DataArray | Dataset) -> int:
     # Number of times: the first dimension of a DataArray, "time" of a Dataset
-    return inp.sizes["time"] if isinstance(inp, Dataset) else inp.shape[0]
+    if isinstance(inp, Dataset):
+        return inp.sizes["time"]
+    return inp.shape[0]
 
 
 def _spectrum(inp: DataArray | Dataset):
@@ -68,7 +70,8 @@ def _is_spectra(inp0: DataArray | Dataset, inp1: DataArray | Dataset) -> bool:
     if inp0.ndim != 2 or inp1.ndim != 2 or inp0.dims != inp1.dims:
         return False
 
-    axis0, axis1 = inp0[inp0.dims[1]].data, inp1[inp1.dims[1]].data
+    axis0 = inp0[inp0.dims[1]].data
+    axis1 = inp1[inp1.dims[1]].data
 
     if axis0.dtype.kind not in "iuf" or axis1.dtype.kind not in "iuf":
         return False
@@ -81,7 +84,8 @@ def _append_spectra(inp0: DataArray | Dataset, inp1: DataArray | Dataset):
     axis is the same at all times, else a Dataset as ``ts_spectr``."""
     data0, table0, name, axis_attrs, attrs0 = _spectrum(inp0)
     data1, table1, _, _, attrs1 = _spectrum(inp1)
-    n_0, n_1 = len(data0), len(data1)
+    n_0 = len(data0)
+    n_1 = len(data1)
 
     time = np.hstack([inp0.time.data, inp1.time.data])
     time_attrs = _append_attrs(inp0.time.attrs, inp1.time.attrs, n_0, n_1)
@@ -151,7 +155,8 @@ def ts_append(
         out = _append_spectra(inp0, inp1)
     else:
         # Both with time samples, DataArrays (_is_spectra for any Dataset)
-        inp0, inp1 = cast(DataArray, inp0), cast(DataArray, inp1)
+        inp0 = cast(DataArray, inp0)
+        inp1 = cast(DataArray, inp1)
         out_data: dict[str, Any] = {}
 
         if inp0.data.ndim != 1:
@@ -160,7 +165,8 @@ def ts_append(
         else:
             out_data["data"] = np.hstack([inp0.data, inp1.data])
 
-        n_0, n_1 = inp0.shape[0], inp1.shape[0]
+        n_0 = inp0.shape[0]
+        n_1 = inp1.shape[0]
         out_data["attrs"] = _append_attrs(inp0.attrs, inp1.attrs, n_0, n_1)
 
         depends: list[dict[str, Any]] = [{} for _ in range(len(inp0.dims))]

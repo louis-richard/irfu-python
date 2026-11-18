@@ -34,7 +34,8 @@ def _unwrap_spin_phase(z_phase, time):
     r"""Spin phase (deg) unwrapped and interpolated at the times, as
     irfu-matlab mms.fk_powerspectrum: 360 deg added after each decrease
     (between increasing times), repeated times dropped."""
-    t_z, data = z_phase.time.data, z_phase.data.astype(np.float64)
+    t_z = z_phase.time.data
+    data = z_phase.data.astype(np.float64)
     step = np.diff(t_z) > np.timedelta64(0, "ns")
     data = data + 360.0 * np.r_[0, np.cumsum(step & (np.diff(data) < 0))]
     keep = np.r_[True, step]
@@ -180,22 +181,28 @@ def fk_power_spectrum(
 
     # Single-probe fields, or the probe potentials, and their separation
     if field:
-        signals, separation = fields.e_probe.data, _SEPARATIONS[probe]
+        signals = fields.e_probe.data
+        separation = _SEPARATIONS[probe]
     else:
-        signals, separation = fields.v.data, 2 * _SEPARATIONS[probe]
+        signals = fields.v.data
+        separation = 2 * _SEPARATIONS[probe]
 
     # Magnetic field and directions of the two probes at the times of the
     # fields; cosines of their angles to B
     b_data = resample(time_clip(b_xyz, tint_long), fields.v[:, 0]).data[:, :3]
     b_mag = np.linalg.norm(b_data, axis=1)
-    phase = (
-        None if probe == 5 else _unwrap_spin_phase(time_clip(z_phase, tint_long), time)
-    )
+
+    if probe == 5:
+        phase = None
+    else:
+        phase = _unwrap_spin_phase(time_clip(z_phase, tint_long), time)
+
     r_hat = _probe_directions(probe, phase, len(time))
     cos_pb = [np.sum(r * b_data, axis=1) / b_mag for r in r_hat]
 
     # Samples in tint (an even number, as irfu-matlab)
-    t_0, t_1 = np.datetime64(tint[0], "ns"), np.datetime64(tint[1], "ns")
+    t_0 = np.datetime64(tint[0], "ns")
+    t_1 = np.datetime64(tint[1], "ns")
     idx = np.where((time >= t_0) & (time <= t_1))[0]
     idx = idx[: len(idx) - len(idx) % 2]
     n_av = len(idx) // cav
@@ -222,7 +229,8 @@ def fk_power_spectrum(
 
     w_1, w_2 = [wavelet(e_i, **options) for e_i in [e_1, e_2]]
     freq = w_1.frequency.data
-    w_1, w_2 = w_1.data[idx], w_2.data[idx]
+    w_1 = w_1.data[idx]
+    w_2 = w_2.data[idx]
     power = 0.5 * (np.abs(w_1) ** 2 + np.abs(w_2) ** 2)
 
     # Cross-spectrum and power over windows of cav samples
@@ -240,7 +248,8 @@ def fk_power_spectrum(
     # Wave number of each window and frequency, and the power binned in wave
     # number (left edges of the bins, the last one closed on its right)
     k_val = np.arctan2(cross.imag, cross.real) / r_cos[:, None]
-    k_min, k_max = -np.pi / np.min(r_cos), np.pi / np.min(r_cos)
+    k_min = -np.pi / np.min(r_cos)
+    k_max = np.pi / np.min(r_cos)
     d_k = (k_max - k_min) / n_k
     k_vec = k_min + np.arange(n_k) * d_k
     finite = np.isfinite(k_val)

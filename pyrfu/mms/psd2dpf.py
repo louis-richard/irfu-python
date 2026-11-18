@@ -51,4 +51,6 @@ def psd2dpf(inp):
     if units.lower() not in _PSD:
         raise ValueError("Invalid unit")
 
-    return vdf_convert(inp, "1/(cm^2 s sr keV)")
+    out = vdf_convert(inp, "1/(cm^2 s sr keV)")
+
+    return out

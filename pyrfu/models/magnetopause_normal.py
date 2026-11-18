@@ -27,7 +27,8 @@ def _magnetopause(theta, *args):
 
 
 def _bow_shock(r_xy, *args):
-    x, y = r_xy[:, 0], r_xy[:, 1]
+    x = r_xy[:, 0]
+    y = r_xy[:, 1]
     x0, y0 = args
     out = (x - x0) ** 2 + (y - y0) ** 2
     return out

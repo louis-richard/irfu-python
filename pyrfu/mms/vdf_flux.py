@@ -64,4 +64,6 @@ def vdf_flux(vdf, sc_pot=None, per_sr: bool = True):
         return _output(vdf, flux, "1/(cm^2 s sr)")
 
     flux = flux * _broadcast_angles(_band_solid_angles(vdf), f_si)
-    return _output(vdf, flux, "1/(cm^2 s)")
+    out = _output(vdf, flux, "1/(cm^2 s)")
+
+    return out

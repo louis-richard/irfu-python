@@ -324,7 +324,9 @@ def tokenize(var_str: str) -> Mapping[str, str]:
     """
     _warn_deprecated_key(var_str)
 
-    return _tokenize(var_str)
+    out = _tokenize(var_str)
+
+    return out
 
 
 def _tokenize(var_str: str) -> Mapping[str, str]:
