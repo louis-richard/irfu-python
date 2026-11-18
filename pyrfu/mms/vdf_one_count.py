@@ -53,6 +53,15 @@ def vdf_one_count(vdf, counts):
     the DIS ``avgf1counts`` of the FPI L2 files and 0.75 of the DES one
     (v3.4.0, 2023-04-24, at every energy).
 
+    The FPI fast survey distributions are lossy compressed (attribute
+    ``compressionloss`` of `get_dist`): their counts are not Poisson where
+    they are low, and do not go below a floor of about 2 per bin (Barrie et
+    al., 2017; see `get_dist`). The one-count levels of the bins with fewer
+    true counts are then wrong; those of the burst distributions, mostly
+    lossless, are not.
+    A fast survey spectrum whose true counts are below about 2 per bin and
+    sample stays at about twice its one-count level per bin and sample.
+
     Examples
     --------
     >>> from pyrfu import mms, pyrf

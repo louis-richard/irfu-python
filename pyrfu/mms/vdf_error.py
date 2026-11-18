@@ -42,6 +42,15 @@ def vdf_error(vdf, counts):
     --------
     pyrfu.mms.vdf_counts, pyrfu.mms.vdf_one_count, pyrfu.pyrf.average_vdf
 
+    Notes
+    -----
+    The FPI fast survey distributions are lossy compressed (attribute
+    ``compressionloss`` of `get_dist`): their counts are not Poisson where
+    they are low, and do not go below a floor of about 2 per bin (Barrie et
+    al., 2017; see `get_dist`). The errors of the bins with fewer true counts
+    are then wrong; those of the burst distributions, mostly lossless, are
+    not.
+
     Examples
     --------
     >>> from pyrfu import mms, pyrf

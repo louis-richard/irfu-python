@@ -75,7 +75,8 @@ Documentation
   the fast survey spectrum is up to 2.8 times the burst one above 20 keV,
   where the true counts are below 2 per bin and 4.5 s. The counts, errors and
   one-count levels of the low-count bins are those of the burst
-  distributions.
+  distributions (also noted in ``mms.vdf_counts``, ``mms.vdf_one_count``,
+  ``mms.vdf_error`` and ``mms.psd_moments_err``).
 - ``mms.feeps_flat_field_corrections``: the gains multiply every unit, the
   counts and the intensity errors included, as IDL SPEDAS (unchanged): the
   intensity per count and the relative errors are unchanged.

@@ -49,6 +49,13 @@ def vdf_counts(vdf, vdf_err):
     (f / delta f)^2 is 1.0005 for a single count of DES and 1.0001 of DIS
     (2017-07-11), and grows slightly faster than N for more counts.
 
+    The FPI fast survey distributions are lossy compressed (attribute
+    ``compressionloss`` of `get_dist`): their counts are not Poisson where
+    they are low, and do not go below a floor of about 2 per bin (Barrie et
+    al., 2017; see `get_dist`). The counts of the bins with fewer true counts
+    are then wrong; those of the burst distributions, mostly lossless, are
+    not.
+
     Examples
     --------
     >>> from pyrfu import mms

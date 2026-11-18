@@ -429,6 +429,13 @@ def psd_moments_err(vdf, vdf_err, sc_pot):
     resamplings through `psd_moments` (10 % with 4000 counts, within the
     resampling noise with 40000 and for FPI-DES distributions of 20000).
 
+    The FPI fast survey distributions are lossy compressed (attribute
+    ``compressionloss`` of `get_dist`): their counts are not Poisson where
+    they are low, and do not go below a floor of about 2 per bin (Barrie et
+    al., 2017; see `get_dist`). The variances of the bins with fewer true
+    counts are then wrong; those of the burst distributions, mostly lossless,
+    are not.
+
     See Also
     --------
     pyrfu.mms.psd_moments : the moments.
