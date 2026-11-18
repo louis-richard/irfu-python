@@ -104,6 +104,9 @@ New features
 Documentation
 ^^^^^^^^^^^^^
 
+- ``mms.psd_moments``: the fourth output, ``p2_psd``, is the momentum
+  flux tensor, the pressure tensor plus m n V V (it was described as the
+  pressure tensor), and the units of the outputs.
 - A new example notebook, the electron energy spectrum with its errors and
   one-count levels: FPI (burst) and FEEPS (survey) averaged over 9 s (MMS3,
   2017-07-11, spectrum 2 of Fig. 3 of Oka et al., 2022), with the counting

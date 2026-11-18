@@ -390,18 +390,20 @@ def psd_moments(
     Returns
     -------
     n_psd : xarray.DataArray
-        Time series of the number density (1rst moment).
+        Time series of the number density (cm^-3).
     v_psd : xarray.DataArray
-        Time series of the bulk velocity (2nd moment). NaN where the density
+        Time series of the bulk velocity (km/s). NaN where the density
         is zero, as the pressure, temperature and heat flux.
     p_psd : xarray.DataArray
-        Time series of the pressure tensor (3rd moment).
+        Time series of the pressure tensor (nPa), in the frame of the bulk
+        velocity.
     p2_psd : xarray.DataArray
-        Time series of the pressure tensor.
+        Time series of the momentum flux tensor (nPa), the pressure tensor
+        plus m n V V.
     t_psd : xarray.DataArray
-        Time series of the temperature tensor.
+        Time series of the temperature tensor (eV).
     h_psd : xarray.DataArray
-        Time series of the heat flux vector
+        Time series of the heat flux vector (mW/m^2).
 
     Other Parameters
     ----------------
