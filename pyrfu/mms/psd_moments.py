@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
-
 # Built-in imports
+import logging
 from typing import Literal
 
 # 3rd party imports
@@ -65,8 +64,8 @@ def _moments(angular_sums, energy_correct, delta_v, used, p_mass):
     energy, 10, see _midpoint_kernels) and the energy sums over the `used`
     channels with the relativistic speeds, the Lorentz factor (momentum flux
     gamma m v v) and the kinetic energy over m v^2 / 2 (energy flux), which
-    depend on (time, energy) only (a numba kernel, three times, on energies
-    whose non-relativistic speed was the relativistic one)."""
+    depend on (time, energy) only."""
+
     eps = constants.elementary_charge * energy_correct / (p_mass * constants.c**2)
 
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -181,6 +180,7 @@ def _first_channel_mask(vdf, n_e, first_channel):
     r"""Channels from a time series of first channels (e.g. the recommended
     energy index of the FPI partial moments) to the last, as a boolean (time,
     energy) array."""
+
     if not np.array_equal(first_channel.time.data, vdf.time.data):
         # Nearest sample: the indices are integers, not to be interpolated
         first_channel = first_channel.sel(time=vdf.time.data, method="nearest")
@@ -199,6 +199,7 @@ def _first_channel_mask(vdf, n_e, first_channel):
 def _energy_mask(vdf, energy, energy_range, en_channels):
     r"""Energy channels to integrate over at each time step, as a boolean
     (time, energy) array, from the energy_range or en_channels options."""
+
     n_t, n_e = energy.shape
 
     if energy_range is not None and en_channels is not None:
@@ -268,6 +269,7 @@ def _psd_si(vdf):
     in place), from the units of `vdf` (``UNITS``, s^3/cm^6 if
     missing; differential fluxes as irfu-matlab PDist.convertto): that of the
     FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)."""
+
     if "UNITS" not in vdf.data.attrs:
         vdf = vdf.copy()
         vdf["data"] = vdf.data.copy()
@@ -279,8 +281,9 @@ def _psd_si(vdf):
 def _partial_moments_mask(vdf, mask, shape):
     r"""The 0/1 (or boolean) array `partial_moments` of the bins used, of the
     shape of the data and, for a DataArray, at the times of `vdf`. A wrong
-    mask raises ValueError: it was only logged (INFO) and the full moments
-    were returned, as irfu-matlab."""
+    mask raises ValueError (irfu-matlab logs it and returns the full
+    moments)."""
+
     if isinstance(mask, xr.DataArray):
         if "time" in mask.coords and not np.array_equal(mask.time.data, vdf.time.data):
             raise ValueError("partial_moments must be at the times of vdf")
@@ -574,9 +577,7 @@ def psd_moments(
 
     theta = vdf.theta.data
 
-    # Mass and charge of the species (ValueError if not supported). All the
-    # ions were protons and the species not starting with "e" or "i" raised
-    # AssertionError.
+    # Mass and charge of the species (ValueError if not supported)
     p_mass = _mass(vdf)
     is_electron = _charge_sign(vdf) < 0.0
 
@@ -606,7 +607,7 @@ def psd_moments(
 
     use_energy = _energy_mask(vdf, energy, energy_range, en_channels)
 
-    # The bins of partial_moments (a wrong mask gave the full moments)
+    # The bins of partial_moments
     if partial_moments is not None:
         mask = _partial_moments_mask(vdf, partial_moments, vdf_data.shape)
         vdf_data = vdf_data * mask
@@ -814,7 +815,7 @@ def psd_moments(
     t_psd *= k_b / q_e
     h_psd *= 1e3
 
-    # Time series, with their units (they had none)
+    # Time series, with their units
     time = vdf.time.data
     return (
         ts_scalar(time, n_psd, {"UNITS": "cm^-3"}),

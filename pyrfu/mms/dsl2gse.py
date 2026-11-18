@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 from xarray import DataArray, Dataset
@@ -38,6 +39,7 @@ def _transformation_matrix(spin_axis: np.ndarray, direction: int) -> np.ndarray:
         If direction is not -1 or 1.
 
     """
+
     # The rotation assumes a unit spin axis
     spin_axis = spin_axis / np.linalg.norm(spin_axis, axis=1, keepdims=True)
     r_x, r_y, r_z = [spin_axis[:, i] for i in range(3)]
@@ -74,6 +76,7 @@ def _spin_axis_gei(defatt: Dataset, axis: str) -> DataArray:
     r"""Time series of the spin axis in GEI from the right ascension and
     declination of DEFATT: the body z axis (z_ra, z_dec) or the angular
     momentum (l_ra, l_dec). Shared by dsl2gse and dsl2gsm."""
+
     if axis not in ("z", "l"):
         raise ValueError(f'axis must be "z" or "l", not {axis!r}')
 
@@ -146,6 +149,7 @@ def dsl2gse(
     >>> b_gse = dsl2gse(b_xyz, defatt)
 
     """
+
     if isinstance(defatt, xr.Dataset):
         sax_gse = cotrans(_spin_axis_gei(defatt, axis), "gei>gse")
         spin_ax_gse = resample(sax_gse, inp, f_s=calc_fs(inp))
@@ -157,7 +161,7 @@ def dsl2gse(
     else:
         raise TypeError("DEFATT/SAX input must be xarray.Dataset or vector")
 
-    # Compute transformation natrix
+    # Compute transformation matrix
     transf_mat = _transformation_matrix(spin_axis, direction)
 
     out_data = np.einsum("kji,ki->kj", transf_mat, inp.data)

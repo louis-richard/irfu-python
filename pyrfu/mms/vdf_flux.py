@@ -52,10 +52,10 @@ def vdf_flux(vdf, sc_pot=None, per_sr: bool = True):
     >>> flux_e = mms.vdf_flux(vdf_e)
 
     """
+
     _is_skymap(vdf)
 
-    # Relativistic speeds and phase-space density (they were non-relativistic
-    # without the relativistic attribute)
+    # Relativistic speeds and phase-space density
     f_si = _relativistic_psd(vdf)
     v_lower, v_upper = _speed_edges(vdf, sc_pot)
     flux = f_si * _broadcast_energy((v_upper**4 - v_lower**4) / 4, f_si) / 1e4

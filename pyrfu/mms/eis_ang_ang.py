@@ -23,6 +23,7 @@ _POL_EDGES = 10.0 + 160.0 * np.arange(7) / 6
 def _look_angles(look):
     r"""Azimuth in [0, 360) and polar angle (colatitude) in [0, 180] of the
     look directions, in degrees."""
+
     look = look / np.linalg.norm(look, axis=-1, keepdims=True)
     phi = np.mod(np.rad2deg(np.arctan2(look[..., 1], look[..., 0])), 360.0)
     theta = np.rad2deg(np.arccos(np.clip(look[..., 2], -1.0, 1.0)))
@@ -157,7 +158,7 @@ def eis_ang_ang(
         out_data = sums / counts
 
     # Attributes: those of all the telescopes, the energy widths of the
-    # channels used (they were those of all the channels) and the species
+    # channels used and the species
     attrs = {
         "species": inp_allt.attrs["species"],
         **{

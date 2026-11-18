@@ -75,7 +75,7 @@ def list_files_ancillary(
 
     mms_id = str(mms_id)
 
-    # Time interval, in the forms of time_clip (only a list of str was accepted)
+    # Time interval, in the forms of time_clip
     t_start, t_end = iso86012datetime(np.array(_time_interval(tint)))
 
     # PAD time interval to handle ancillary file start after midnight
@@ -97,12 +97,12 @@ def list_files_ancillary(
     stem = f"{sc_name.upper()}_{product.upper()}"
     directory = os.path.join(root_path, "ancillary", sc_name, product)
 
-    # find all files in the directory (escaped: a data path with glob
-    # characters, e.g. mms_data[2], found no file)
+    # find all files in the directory (escaped: the data path may have glob
+    # characters, e.g. mms_data[2])
     files = glob.glob(os.path.join(glob.escape(directory), f"{stem}_*.V??"))
 
     # Latest version of each file in the time interval, the file names matched
-    # without the directory (the version was picked by fnmatch on the paths)
+    # without the directory
     file_regex = re.compile(
         rf"{re.escape(stem)}_([0-9]{{7}})_([0-9]{{7}})\.V([0-9]{{2}})"
     )

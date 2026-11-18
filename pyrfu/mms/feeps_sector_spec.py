@@ -66,7 +66,7 @@ def feeps_sector_spec(inp_alle):
     out_dict = {}
 
     for sensors_eye in sensors_eyes:
-        # average over energy, quiet for the samples without data
+        # Average over energy, quiet for the samples without data
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             sensor_data = np.nanmean(inp_alle[sensors_eye].data, axis=1)
@@ -80,7 +80,7 @@ def feeps_sector_spec(inp_alle):
             sector_spec,
             coords=[sector_time[spin_starts], np.arange(64)],
             dims=["time", "sectornum"],
-            attrs=dict(inp_alle[sensors_eye].attrs),  # the units (lost)
+            attrs=dict(inp_alle[sensors_eye].attrs),  # with the units
         )
 
     out = xr.Dataset(out_dict, attrs={**inp_alle.attrs})

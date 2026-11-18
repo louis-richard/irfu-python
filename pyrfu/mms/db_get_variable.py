@@ -62,6 +62,7 @@ def db_get_variable(
         If the source is not supported.
 
     """
+
     mms_id, var = _split_dataset_name(dataset_name)
     resource = _resolve_source(source)
 

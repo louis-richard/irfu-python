@@ -39,6 +39,7 @@ _MIN_B_PERP = 0.1
 def _look_direction(eye):
     r"""Polar angle and azimuth (degrees) of the look direction of an eye
     ("top-1", ...) in BCS."""
+
     s_type, sensor_id = eye.split("-")
 
     if s_type == "top":
@@ -56,6 +57,7 @@ def _look_direction(eye):
 def _sector_phase(spin_sectors, tmmode, mms_id):
     r"""Spin phase (degrees) at the centre of the accumulation of each sample.
     Survey samples accumulate the 8 sectors up to the labelled one."""
+
     sectors = np.asarray(spin_sectors, dtype=float)
 
     if tmmode == "srvy":
@@ -68,6 +70,7 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     r"""Spin phase (degrees) of each sample: from the spin sectors, or from FGM
     where it is defined (checked against the sectors). Returns the phases and
     the name of their source."""
+
     attrs = inp_dataset.attrs
     tmmode = attrs["tmmode"]
     mms_id = attrs["mmsId"]
@@ -99,7 +102,7 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     psi_fgm = np.interp(t_feeps, t_fgm[good], psi_fgm, left=np.nan, right=np.nan)
 
     if tmmode == "srvy":
-        # time tag at the centre of the labelled sector, 3.5 sectors after the
+        # Time tag at the centre of the labelled sector, 3.5 sectors after the
         # centre of the accumulation
         psi_fgm -= _SRVY_CENTRE_SHIFT * _SECTOR_WIDTH
 
@@ -118,15 +121,16 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
 def _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges):
     r"""Sums and numbers of the finite samples of the eyes in each (spin,
     energy, phi, theta) bin."""
+
     n_t, n_e, n_eyes = dalleyes.shape
     n_spins = len(bounds) - 1
     n_phi = len(phi_edges) - 1
     n_theta = len(rings)
 
-    # spin of each sample
+    # Spin of each sample
     i_spin = np.repeat(np.arange(n_spins), np.diff(bounds))
 
-    # despun azimuth and ring of each sample and eye
+    # Despun azimuth and ring of each sample and eye
     look = np.array([_look_direction(eye) for eye in eyes])
     i_theta = np.array([np.argmin(np.abs(np.array(rings) - t)) for t in look[:, 0]])
     phi = (look[np.newaxis, :, 1] + psi[:, np.newaxis]) % 360.0
@@ -153,6 +157,7 @@ def _energy_widths(inp_dataset, eyes, energies):
     r"""Lower and upper widths (keV) of the channels around the omni-directional
     energies, from the channel bounds of the eyes (mean over the eyes), or None
     if the eyes have no bounds."""
+
     lower = []
     upper = []
 
@@ -186,6 +191,7 @@ def _coverage(data, phi_edges, theta_edges):
 def _fill_empty(data, sums, counts, how):
     r"""Fills the empty bins: with the mean of their ring ("ring"), then the
     empty rings with the mean of all the samples of the spin ("omni")."""
+
     with np.errstate(invalid="ignore"):
         ring = sums.sum(axis=2, keepdims=True) / counts.sum(axis=2, keepdims=True)
         spin = sums.sum(axis=(2, 3), keepdims=True) / counts.sum(
@@ -322,12 +328,13 @@ def feeps_skymap(
     >>> vdf_e = mms.feeps_skymap(feeps_e, b_bcs, b_dmpa)
 
     """
+
     eyes, dalleyes, energies, g_fact = _eyes_on_omni_energies(inp_dataset)
     attrs = inp_dataset.attrs
     tmmode = attrs["tmmode"]
     d_type = attrs["dtype"]
     mms_id = attrs["mmsId"]
-    # Units of the eyes, none without (they were taken as intensities)
+    # Units of the eyes, None without
     units = inp_dataset[eyes[0]].attrs.get("UNITS")
 
     if to_psd and str(units).lower() != "1/(cm^2 s sr kev)":

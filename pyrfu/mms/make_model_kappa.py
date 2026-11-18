@@ -5,10 +5,10 @@
 import numpy as np
 from scipy import constants, special
 
+# Local imports
 from pyrfu.mms._internal.psd_units import _attrs, _is_relativistic
 from pyrfu.mms._internal.vdf_bins import _charge, _mass, _speed
 
-# Local imports
 from ..pyrf.resample import resample
 from .vdf_convert import _in_convention
 
@@ -68,6 +68,7 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     to bi-kappa distributions.
 
     """
+
     if kappa <= 1.5:
         raise ValueError("kappa must be larger than 3/2")
 
@@ -81,7 +82,7 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
     w_2 = (kappa - 1.5) * 2 * q_e * resample(t_s, vdf.time).data / mass
 
     # Speeds of the channels (time, energy, 1, 1) at infinity, of the
-    # energies E + q V as make_model_vdf (the charge was ignored); NaN below 0
+    # energies E + q V as make_model_vdf; NaN below 0
     energy = np.broadcast_to(vdf.energy.data, (len(vdf.time), vdf.data.shape[1]))
     energy = energy.astype(np.float64)
 
@@ -89,7 +90,7 @@ def make_model_kappa(vdf, n_s, v_xyz_s, t_s, kappa: float = 7.0, sc_pot=None):
         energy = energy + _charge(vdf) * resample(sc_pot, vdf.time).data[:, None]
 
     below = energy < 0
-    # Relativistic speeds (they were non-relativistic)
+    # Relativistic speeds
     speed = _speed(np.clip(energy, 0.0, None), mass)
     speed = speed[..., None, None]
 

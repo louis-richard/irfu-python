@@ -74,7 +74,7 @@ def remove_imoms_background(n_i, v_gse_i, p_gse_i, n_bg_i, p_bg_i):
     v_gse_i_new = v_gse_i.copy()
     v_gse_i_new.data *= n_i.data[:, None] / n_i_new.data[:, None]
 
-    # Mask the ion bulk velocity where the corrected ion number density is negative
+    # Mask the ion bulk velocity where the corrected density is negative
     v_gse_i_new.data[mask, :] = np.nan
 
     # Correct the ion pressure tensor

@@ -98,7 +98,7 @@ def _calc_pas(d_type, b_bcs):
 
         v_dot_b = np.sum(v_bcs * b_bcs, axis=1)
         v_dot_b /= np.linalg.norm(v_bcs) * np.linalg.norm(b_bcs.data, axis=1)
-        # clip the rounding errors of B along an eye (|cos| slightly above 1)
+        # Clip the rounding errors of B along an eye (|cos| slightly above 1)
         pas[:, i] = np.rad2deg(np.arccos(np.clip(v_dot_b, -1.0, 1.0)))
 
     return pas
@@ -106,7 +106,7 @@ def _calc_pas(d_type, b_bcs):
 
 def _calc_new_pas(pas, eyes):
     # The columns of the active top eyes, then bottom eyes; their indices in
-    # the result are ranges (they were built in a loop)
+    # the result are ranges
     top = [top_tele_idx_map[eye] for eye in eyes["top"]]
     bot = [bot_tele_idx_map[eye] for eye in eyes["bottom"]]
     n_top = len(top)
@@ -177,10 +177,10 @@ def feeps_pitch_angles(inp_dataset, b_bcs):
         new_pas,
         coords=[b_bcs.time.data, np.arange(new_pas.shape[1])],
         dims=["time", "idx"],
-        attrs={"UNITS": "deg"},  # they had none
+        attrs={"UNITS": "deg"},
     )
 
-    # interpolate the instantaneous angles (not averaged over the accumulation)
+    # Interpolate the instantaneous angles (not averaged over the accumulation)
     out = out.interp(time=times)
 
     return out, idx_maps

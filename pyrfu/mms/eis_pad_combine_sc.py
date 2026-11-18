@@ -54,12 +54,13 @@ def eis_pad_combine_sc(pads):
     pyrfu.mms.get_eis_allt, pyrfu.mms.eis_pad, pyrfu.mms.eis_spec_combine_sc
 
     """
+
     # Spacecraft with the fewest time steps (reference times) and with the
     # fewest energy channels (reference energies)
     ref_probe = pads[np.argmin([len(probe.time.data) for probe in pads])]
     ener_probe = pads[np.argmin([len(probe.energy.data) for probe in pads])]
 
-    # The units (and species, method) of the reference spacecraft were taken
+    # Same units, species and method for all the spacecraft
     _check_same_units(pads, "PADs")
     _check_same_attrs(pads, ["species", "method"], "PADs")
 
@@ -75,7 +76,7 @@ def eis_pad_combine_sc(pads):
         np.nan,
     )
 
-    # Nearest times and closest channels (they were paired by index)
+    # Nearest times and closest channels
     for i_pad, pad_ in enumerate(pads):
         t_pad = _ns(pad_.time.data)
         idx_time = _nearest(t_ref, t_pad, d_t / 2)
@@ -95,8 +96,7 @@ def eis_pad_combine_sc(pads):
     )
 
     # The energy widths and the attributes of the energies of the output:
-    # those of the spacecraft of the energies (they were those of the
-    # spacecraft of the times, 7 widths for 6 energies on MMS2-4 survey)
+    # those of the spacecraft of the energies
     for key in ["delta_energy_minus", "delta_energy_plus"]:
         if key in ener_probe.attrs:
             allmms_pad_avg.attrs[key] = ener_probe.attrs[key]

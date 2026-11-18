@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Local imports
+# Built-in imports
 from typing import Literal
 
+# Local imports
 from pyrfu.mms._internal.psd_units import _output
 from pyrfu.mms._internal.vdf_bins import _d3v, _is_skymap
 
@@ -66,14 +67,14 @@ def vdf_partial_density(
     >>> n_i = dn_i.data.sum(dim=["idx0", "idx1", "idx2"])
 
     """
+
     if component not in [None, "x", "y", "z"]:
         raise ValueError(f"Invalid component {component}: None, x, y or z")
 
     if component is not None and not _is_skymap(vdf):
         raise ValueError("The particle flux needs a skymap")
 
-    # Relativistic speeds and phase-space density (they were non-relativistic
-    # without the relativistic attribute)
+    # Relativistic speeds and phase-space density
     f_si = _relativistic_psd(vdf)
     d_n = f_si * _d3v(vdf, sc_pot)  # m^-3
 

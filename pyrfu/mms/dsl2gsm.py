@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
-
-# 3rd party imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 from xarray import DataArray, Dataset
@@ -77,6 +76,7 @@ def dsl2gsm(
     >>> b_gsm = dsl2gsm(b_xyz, defatt)
 
     """
+
     if isinstance(defatt, xr.Dataset):
         sax_gsm = cotrans(_spin_axis_gei(defatt, axis), "gei>gsm")
         spin_ax_gsm = resample(sax_gsm, inp, f_s=calc_fs(inp))

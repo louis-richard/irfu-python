@@ -65,6 +65,7 @@ def vdf_counts(vdf, vdf_err):
     >>> counts_i = mms.vdf_counts(vdf_i, err_i)
 
     """
+
     _check_same_bins(vdf, vdf_err, "vdf_err", units=True)
 
     f_data = np.asarray(_values(vdf), dtype=np.float64)

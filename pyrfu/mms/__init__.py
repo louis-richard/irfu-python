@@ -241,8 +241,8 @@ __all__ = [
 
 
 def __getattr__(name):
-    # MMS_CFG_PATH computed on first use (PEP 562), as in pyrfu.mms.db_init:
-    # import pyrfu created the user configuration file
+    # MMS_CFG_PATH computed on first use (PEP 562), as in pyrfu.mms.db_init,
+    # so that import pyrfu does not create the user configuration file
     if name == "MMS_CFG_PATH":
         return _mms_cfg_path()
 

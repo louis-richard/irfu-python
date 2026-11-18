@@ -30,7 +30,8 @@ def _angle(u_vec, v_vec):
 
 def _rotate_perp(tensor, thetas):
     r"""Rotates the tensors about the first axis by the angles thetas, all at
-    once (it was a loop over the times)."""
+    once."""
+
     cos_t = np.cos(thetas)
     sin_t = np.sin(thetas)
     rot_mat = np.zeros((len(thetas), 3, 3), dtype=np.float64)
@@ -135,6 +136,7 @@ def rotate_tensor(
     >>> t_xyzfac_i = mms.rotate_tensor(t_xyz_i, "fac", b_xyz, "pp")
 
     """
+
     # Check input
     if not isinstance(inp, xr.DataArray):
         raise TypeError("inp must be a xarray.DataArray")
@@ -178,15 +180,15 @@ def rotate_tensor(
     rot_mat: NDArray[np.float64] = np.zeros((n_t, 3, 3), dtype=np.float64)
 
     if rot_flag.lower() == "fac":
-        # If field-aligned coordinates vec must be the background magnetic field,
-        # i.e., vector time series DataArray
+        # If field-aligned coordinates vec must be the background magnetic
+        # field, i.e., vector time series DataArray
         if not isinstance(vec, xr.DataArray):
             raise TypeError("vec must be a xarray.DataArray when rot_flag is 'fac'")
 
         # Resample magnetic field to the same time as the tensor
         b_back: DataArray = resample(vec, inp, f_s=calc_fs(inp))
 
-        # Unit vector of the background magnetic field gives the parallel direction
+        # Unit vector of the background field gives the parallel direction
         b_vec: NDArray[np.float64] = b_back.data.astype(np.float64)
         b_vec /= np.linalg.norm(b_vec, axis=1, keepdims=True)
 
@@ -197,7 +199,7 @@ def rotate_tensor(
         r_y: FloatArray = np.array([1.0, 0.0, 0.0], dtype=np.float64)
         # Perp2 with correction
         r_z: FloatArray = np.cross(r_x, r_y)
-        # B exactly along x (B x x = 0 gave NaN): y as the reference instead,
+        # B exactly along x (B x x = 0 would give NaN): y as the reference,
         # the perpendicular directions being arbitrary
         along_x = np.linalg.norm(r_z, axis=1) < 1e-12
         if np.any(along_x):
@@ -240,7 +242,7 @@ def rotate_tensor(
             r_z = np.cross(r_x, r_y) / np.linalg.norm(np.cross(r_x, r_y))
             r_y = np.cross(r_z, r_x) / np.linalg.norm(np.cross(r_z, r_x))
 
-            # Check if the coordinate system has been changed and issue a warning
+            # Check if the coordinate system has changed and issue a warning
             if _angle(r_y, vec[:, 1]) > 1.0 or _angle(r_z, vec[:, 2]) > 1.0:
                 logger.warning(
                     "The new coordinate system has been changed to be right handed "
@@ -265,8 +267,8 @@ def rotate_tensor(
         z_ra: NDArray[np.float64] = np.deg2rad(vec.z_ra.data.astype(np.float64))
         z_dec: NDArray[np.float64] = np.deg2rad(vec.z_dec.data.astype(np.float64))
 
-        # Compute the spin axis direction in Geocentric equatorial inertial (GEI)
-        # coordinates
+        # Compute the spin axis direction in Geocentric equatorial inertial
+        # (GEI) coordinates
         x: NDArray[np.float64] = np.cos(z_dec) * np.cos(z_ra)
         y: NDArray[np.float64] = np.cos(z_dec) * np.sin(z_ra)
         z: NDArray[np.float64] = np.sin(z_dec)
@@ -284,7 +286,7 @@ def rotate_tensor(
     else:
         raise NotImplementedError(f"{rot_flag} method is not implemented.")
 
-    # R P R^T at all times at once (it was a loop over the times)
+    # R P R^T at all times at once
     rot_mat = rot_mat.astype(precision)
     p_tensor_p: FloatArray = (rot_mat @ inp_data) @ np.transpose(rot_mat, [0, 2, 1])
 
@@ -323,8 +325,7 @@ def rotate_tensor(
     else:
         raise NotImplementedError(f"{perp} method is not implemented.")
 
-    # Construct output, in the coordinates of rot_flag (the attributes of the
-    # input kept its COORDINATE_SYSTEM, e.g. "GSE" on a FAC tensor)
+    # Construct output, with the COORDINATE_SYSTEM of rot_flag, none for "rot"
     attrs = dict(inp.attrs)
     attrs.pop("COORDINATE_SYSTEM", None)
 

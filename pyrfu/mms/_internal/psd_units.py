@@ -17,13 +17,14 @@ _O_ATOM = 15.99491461957 * constants.atomic_mass
 def _ion_mass(atom, charge):
     r"""Mass (proton masses) of the ion of charge `charge` of an atom of mass
     `atom` (kg)."""
+
     return (atom - charge * constants.electron_mass) / constants.proton_mass
 
 
-# Masses in proton masses; the alphas (helium) are He2+ ions, 3.9726 (they
-# were 4, 0.7 % heavier). Oxygen (EIS) is O+ (that of O2+ is 0.003 % lower),
-# and the HPCA species are named as get_hpca_dist. "i" and "e" are the species
-# of the FEEPS data (get_feeps_alleyes, feeps_omni).
+# Masses in proton masses; the alphas (helium) are He2+ ions, 3.9726. Oxygen
+# (EIS) is O+ (that of O2+ is 0.003 % lower), and the HPCA species are named
+# as get_hpca_dist. "i" and "e" are the species of the FEEPS data
+# (get_feeps_alleyes, feeps_omni).
 _MASS_RATIOS = {
     **dict.fromkeys(["ions", "ion", "i", "protons", "proton", "hydrogen+"], 1.0),
     **dict.fromkeys(
@@ -39,8 +40,8 @@ _MASS_RATIOS = {
 }
 
 # m_p^2 / (2 e^2) in the units of the conversions, 0.54494: the masses are in
-# proton masses, as the FPI products. The constant was 0.53707, with the atomic
-# mass unit as irfu-matlab: the fluxes were 1.46 % too large.
+# proton masses, as the FPI products (0.53707 with the atomic mass unit, as
+# irfu-matlab)
 _MASS_FACTOR = 1e16 * constants.proton_mass**2 / (2 * constants.elementary_charge**2)
 
 
@@ -57,6 +58,7 @@ def _mass_ratio(inp):
 def _data_and_units(inp):
     r"""Data and units of a distribution (Dataset with a data variable) or of
     a spectrum (DataArray)."""
+
     if isinstance(inp, Dataset):
         return inp.data.data, inp.data.attrs["UNITS"]
 
@@ -70,6 +72,7 @@ def _energy(inp, data):
     r"""Energies of the distribution, shaped to broadcast against its data:
     (energy,) or (time, energy) energies, with any number of angle dimensions
     after the energy dimension."""
+
     energy = np.asarray(inp.energy.data, dtype=np.float64)
 
     if energy.ndim == 1:
@@ -84,6 +87,7 @@ def _is_relativistic(inp):
     r"""True if the phase-space density of `inp` is the relativistic one
     (``relativistic`` attribute, the FEEPS skymaps), False for the
     non-relativistic one (the FPI, HPCA and EIS files)."""
+
     return bool(inp.attrs.get("relativistic", False))
 
 
@@ -95,6 +99,7 @@ def _factor(energy, mass_ratio):
     The non-relativistic conversions use f = m J / v^2 with v^2 = 2 E / m. In
     velocity space, the phase-space density whose integral over d^3v is the
     density is f = gamma^3 m J / v^2 with the relativistic speed v."""
+
     rest_energy = mass_ratio * constants.proton_mass * constants.c**2
     energy = np.asarray(energy, dtype=np.float64)
     gamma = 1.0 + constants.elementary_charge * energy / rest_energy
@@ -109,6 +114,7 @@ def _relativistic_factor(inp, data):
 def _attrs(attrs, units):
     r"""Attributes with the new units, without the label of the old ones
     (LABLAXIS, e.g. "Intensity" for a phase-space density) if they changed."""
+
     if attrs.get("UNITS") != units:
         attrs = {k: v for k, v in attrs.items() if k != "LABLAXIS"}
 
@@ -118,6 +124,7 @@ def _attrs(attrs, units):
 def _output(inp, data, units):
     r"""Copy of the input with the converted data and units, without changing
     the input or its attributes."""
+
     if isinstance(inp, Dataset):
         out = inp.copy()
         out["data"] = inp.data.copy(data=data)

@@ -17,6 +17,7 @@ from ..pyrf.time_clip import time_clip
 def _gyrophase_edges(angles):
     r"""Edges of the gyrophase bins (degrees) from a number of bins or the
     edges."""
+
     if isinstance(angles, (int, np.integer)):
         return np.linspace(0.0, 360.0, int(angles) + 1)
 
@@ -30,6 +31,7 @@ def _solid_angles(vdf, n_t):
     r"""Solid angle (sr) of each (phi, theta) bin, (time, phi, theta): from the
     angular widths in the attributes (degrees), or else from the spacing of
     the grids (sin(theta) d_theta d_phi)."""
+
     phi = vdf.phi.data
     theta = vdf.theta.data
     attrs = vdf.attrs
@@ -159,14 +161,14 @@ def get_gyrophase_dist(
     >>> gpd_i = mms.get_gyrophase_dist(vdf_i, b_dmpa, **options)
 
     """
+
     edges = _gyrophase_edges(angles)
 
     if pitch_angle_range is not None and len(pitch_angle_range) != 2:
         raise ValueError("pitch_angle_range must be [min, max] in degrees")
 
     # The distribution of tint, with its per-time attributes (step table,
-    # energy and azimuthal widths: they were kept at full length, so that the
-    # energy edges of vdf_flux of the output fell back to midpoints)
+    # energy and azimuthal widths)
     if tint is not None:
         b_xyz = time_clip(b_xyz, tint)
         vdf = time_clip(vdf, tint)
@@ -264,7 +266,7 @@ def get_gyrophase_dist(
 
     gpd.time.attrs = dict(vdf.time.attrs)
     gpd.energy.attrs = dict(vdf.energy.attrs)
-    # The attributes of the data (only UNITS, "" without), gyrophases in deg
+    # The attributes of the data, gyrophases in deg
     gpd.data.attrs = dict(vdf.data.attrs)
     gpd.gyrophase.attrs["UNITS"] = "deg"
 

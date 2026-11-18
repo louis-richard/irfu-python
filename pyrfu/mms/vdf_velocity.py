@@ -77,6 +77,7 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None):
     >>> v_i = mms.vdf_velocity(vdf_i)
 
     """
+
     n_t = len(vdf.time)
     energy = np.broadcast_to(
         np.asarray(vdf.energy.data, dtype=np.float64), vdf.data.shape[:2]

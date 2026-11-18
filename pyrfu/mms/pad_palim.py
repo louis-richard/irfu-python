@@ -52,6 +52,7 @@ def pad_palim(pad, pitch_angles, average: bool = True):
     >>> pad_perp = mms.pad_palim(pad_e, 90.0)
 
     """
+
     if _is_skymap(pad):
         raise ValueError("pad must be a pitch-angle distribution")
 

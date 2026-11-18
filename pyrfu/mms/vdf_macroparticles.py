@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -117,6 +118,7 @@ def vdf_macroparticles(
     >>> n_i = particles.dn.groupby("time").sum()
 
     """
+
     if not _is_skymap(vdf):
         raise ValueError("vdf must be a skymap")
 

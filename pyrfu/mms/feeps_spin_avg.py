@@ -18,10 +18,11 @@ def _spin_bounds(spin_sectors, time):
     r"""Start indices of the spins [s_k, s_k+1), from the decreases of the spin
     sector and the data gaps (two samples more than 1.5 median sampling
     periods apart), with the partial spins at both ends."""
+
     spin_starts = np.where(spin_sectors[:-1] >= spin_sectors[1:])[0] + 1
 
-    # A gap of a whole number of spins starting mid-spin left the sectors
-    # increasing: the two partial spins around it made one complete spin
+    # Data gaps start spins too: a gap of a whole number of spins can leave
+    # the sectors increasing
     if len(time) > 2:
         d_t = np.diff(_ns(time))
         gaps = np.where(d_t > 1.5 * np.median(d_t))[0] + 1
@@ -34,11 +35,11 @@ def _feeps_complete_spins(spin_sectors, time):
     r"""Start and stop indices of the complete spins: the spins of
     `_spin_bounds` with all the sectors, i.e., as many samples as there are
     different sector numbers."""
+
     bounds = _spin_bounds(spin_sectors, time)
     lengths = np.diff(bounds)
 
-    # The partial first and last spins and the spins cut by data gaps are left
-    # out (they were kept)
+    # The partial spins at the ends and those cut by data gaps are left out
     complete = lengths == len(np.unique(spin_sectors))
 
     if not np.any(complete):

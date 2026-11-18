@@ -32,8 +32,7 @@ def feeps_corrections(feeps_alle):
 
     """
 
-    # Each step returns a new Dataset, without changing its input (a deep copy
-    # of the input was made first)
+    # Each step returns a new Dataset, without changing its input
     feeps_alle_clean = feeps_correct_energies(feeps_alle)
     feeps_alle_clean = feeps_flat_field_corrections(feeps_alle_clean)
     feeps_alle_clean = feeps_remove_bad_data(feeps_alle_clean)

@@ -5,9 +5,8 @@
 import numpy as np
 import xarray as xr
 
-from .db_get_ts import _db_get_ts_dict
-
 # Local imports
+from .db_get_ts import _db_get_ts_dict
 from .feeps_active_eyes import feeps_active_eyes
 
 data_units_keys = {
@@ -31,6 +30,7 @@ def _counts(percent_error, count_rate):
     is 0 (percent_error 100 or a negative fill value there), NaN where the
     count rate is NaN (no data: percent_error 100 there, 1 count) or
     percent_error is not valid with counts (quality indicator 3)."""
+
     valid = np.isfinite(percent_error) & (percent_error > 0)
     counts = np.full(percent_error.shape, np.nan)
     np.divide(100.0, percent_error, out=counts, where=valid)
@@ -45,6 +45,7 @@ def _derived_eye(name, data, e_id, cdf_name):
     r"""Counts (name "counts") or intensity errors ("intensity_error") of the
     eye e_id from its L2 variables in data, with the coordinates and
     attributes of its count rate (intensity)."""
+
     percent_error = np.asarray(data[cdf_name(e_id, "percent_error")].data, float)
     count_rate = data[cdf_name(e_id, "count_rate")]
     counts = _counts(percent_error, np.asarray(count_rate.data, float))
@@ -275,7 +276,7 @@ def get_feeps_alleyes(
         eye = out_dict[e_id]
 
         if quality_cut:
-            # samples not to be used for science set to NaN
+            # Samples not to be used for science set to NaN
             bad = out_dict.pop(f"quality_{e_id}").data >= quality_flag
             eye_data = eye.data.astype(np.promote_types(eye.dtype, np.float32))
             eye = eye.copy(data=np.where(bad[:, None], np.nan, eye_data))
@@ -285,13 +286,13 @@ def get_feeps_alleyes(
         eye.attrs["mms_id"] = mms_id
         eye.attrs["dtype"] = var["dtype"]
         eye.attrs["species"] = f"{var['dtype']}s"
-        # spin sectors (masks) are the same for all eyes, energies are not
+        # Spin sectors (masks) are the same for all eyes, energies are not
         if data_units == "sector_mask":
             out_dict[e_id] = eye.rename({eye.dims[1]: "sectornum"})
         else:
             eye = eye.rename({eye.dims[1]: f"energy_{e_id}"})
 
-            # channel bounds along the energies, when the files have them
+            # Channel bounds along the energies, when the files have them
             for bound in ["lower", "upper"]:
                 name = f"energy_{bound}_bound_{e_id}"
                 if bounds[name] in data:

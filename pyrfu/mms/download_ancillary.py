@@ -13,9 +13,6 @@ from pyrfu.mms.list_files_ancillary import _sc_name
 from pyrfu.mms.list_files_ancillary_sdc import list_files_ancillary_sdc
 from pyrfu.mms.list_files_sdc import _login_lasp
 
-# 3rd party imports
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -50,6 +47,7 @@ def _make_path_local(
         If the local data directory doesn't exist.
 
     """
+
     data_path = os.path.normpath(data_path or _read_config()["local"])
 
     if not os.path.exists(data_path):
@@ -92,6 +90,7 @@ def download_ancillary(
         (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     """
+
     # List files in MMS SDC that match the request
     files_in_interval = list_files_ancillary_sdc(tint, mms_id, product)
 

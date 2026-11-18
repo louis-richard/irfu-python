@@ -5,6 +5,7 @@
 import numpy as np
 import xarray as xr
 
+# Local imports
 from pyrfu.mms._internal.psd_units import _attrs, _is_relativistic
 from pyrfu.mms._internal.vdf_bins import (
     _bins_d3v,
@@ -15,7 +16,6 @@ from pyrfu.mms._internal.vdf_bins import (
 )
 from pyrfu.mms._internal.vdf_mc import _sample, _speed_to_energy
 
-# Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_skymap import ts_skymap
 from .vdf_convert import _in_convention, _relativistic_psd, vdf_convert
@@ -94,8 +94,7 @@ def _shift(
 ):
     # Monte-Carlo rebinning of the skymap in the frame moving with v_frame and
     # the rotated coordinates (vdf_shift and vdf_rebin)
-    # The particles of the bins with the relativistic phase-space density and
-    # speeds (they were non-relativistic without the relativistic attribute)
+    # Bin particles with the relativistic phase-space density and speeds
     units = vdf.data.attrs["UNITS"]
     f_si = np.nan_to_num(_relativistic_psd(vdf))
     v_frame = _frame_velocity(vdf, v_frame)
@@ -196,8 +195,7 @@ def _shift(
             "lost": lost,
         },
     )
-    # Back in the convention and the units of vdf, with the attributes of its
-    # data (LABLAXIS was dropped through s^3/m^6)
+    # Back in the convention and units of vdf, with the attributes of its data
     out = vdf_convert(_in_convention(out, _is_relativistic(vdf)), units)
     out.data.attrs = _attrs(vdf.data.attrs, out.data.attrs["UNITS"])
 
@@ -286,6 +284,7 @@ def vdf_shift(
     >>> vdf_i_plasma = mms.vdf_shift(vdf_i, v_i, random_state=0)
 
     """
+
     if not _is_skymap(vdf):
         raise ValueError("vdf must be a skymap")
 

@@ -62,6 +62,7 @@ def vdf_error(vdf, counts):
     >>> err_avg = mms.vdf_error(vdf_avg, pyrf.average_vdf(counts_i, 5, method="sum"))
 
     """
+
     _check_same_bins(vdf, counts, "counts")
 
     f_data = np.asarray(_values(vdf), dtype=np.float64)

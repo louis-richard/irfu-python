@@ -21,6 +21,7 @@ def _nan_reduce(data, axis, method: str = "mean"):
     number of values, the error of the mean of independent errors) of `data`
     along `axis`, NaN-aware: the NaN are left out, and the result is NaN
     without any value (also for the sum)."""
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
 
@@ -43,10 +44,10 @@ def _spin_reduce(data, starts, stops, method: str = "mean"):
     r"""Mean, sum or quadrature (sqrt of the sum of the squares over the
     number of samples, the error of the mean of independent errors) of `data`
     along its first axis (time) over each spin [starts[i], stops[i]),
-    NaN-aware: NaN for a spin without data (also for the sum, which was 0, as
-    data). The spins have the same number of samples,
-    as the complete spins of EIS, FEEPS and HPCA (one array for all of them; it
-    was a loop over the spins in each routine)."""
+    NaN-aware: NaN for a spin without data (also for the sum). The spins have
+    the same number of samples, as the complete spins of EIS, FEEPS and
+    HPCA."""
+
     data = np.asarray(data)
     starts = np.asarray(starts)
     stops = np.asarray(stops)
@@ -68,14 +69,13 @@ def _spin_reduce(data, starts, stops, method: str = "mean"):
     return _nan_reduce(spins, 1, method)
 
 
-# Shared by get_hpca_dist and hpca_pad (hpca_pad imported it from
-# get_hpca_dist, which imports hpca_pad: a cyclic import; get_hpca_dist
-# imported _hpca_elevations from hpca_pad)
+# Shared by get_hpca_dist and hpca_pad (here to avoid a cyclic import)
 
 
 def _half_spins(inp, azimuth):
     r"""First sample of inp of each half-spin of azimuth, and whether the
     half-spin is complete in inp with non-zero azimuths."""
+
     t_inp = inp.time.data.astype("datetime64[ns]")
     t_azi = (azimuth.time.data.astype("datetime64[ns]") - t_inp[0]).astype(np.int64)
     t_inp = (t_inp - t_inp[0]).astype(np.int64)
@@ -107,6 +107,7 @@ def _half_spins(inp, azimuth):
 def _hpca_elevations(vdf, source: str = "default", data_path: str = ""):
     r"""Polar angles (colatitudes) of the 16 HPCA anodes, read from
     mms?_hpca_centroid_elevation_angle in the file of `vdf`."""
+
     try:
         dataset = vdf.attrs["GLOBAL"]["Logical_source"]  # e.g., mms1_hpca_brst_l2_ion
     except (KeyError, TypeError) as err:
@@ -134,8 +135,9 @@ def _is_nan(attr):
 
 def _equal(attr0, attr1):
     r"""True if the attribute values are equal, arrays (and dicts or lists of
-    them) included: == compares arrays element by element, which raised
-    ValueError in a condition. NaN and NaT (fill values) equal themselves."""
+    them) included (== compares arrays element by element). NaN and NaT (fill
+    values) equal themselves."""
+
     if isinstance(attr0, dict) and isinstance(attr1, dict):
         return attr0.keys() == attr1.keys() and all(
             _equal(attr0[k], attr1[k]) for k in attr0
@@ -158,6 +160,7 @@ def _equal(attr0, attr1):
 def _common_attrs(attrs_list, skip=()):
     r"""Attributes of the first dict of `attrs_list`, except those in `skip`,
     with the same value in all the others."""
+
     return {
         k: v
         for k, v in attrs_list[0].items()
@@ -175,6 +178,7 @@ def _check_flux(*inps):
     differential particle flux, as the flux of the EIS files,
     1/(cm^2 s sr keV) (counts are ' ', cps 1/s). Inputs without UNITS (built
     by hand) are not checked."""
+
     units = sorted({inp.attrs["UNITS"] for inp in inps if "UNITS" in inp.attrs})
 
     if len(units) > 1:
@@ -188,8 +192,8 @@ def _check_flux(*inps):
 
 def _check_same_attrs(inps, keys, name):
     r"""ValueError unless the inputs (DataArrays) have the same attributes
-    `keys` (e.g. the species, the method of the PADs), or none of them (they
-    were combined whatever they were)."""
+    `keys` (e.g. the species, the method of the PADs), or none of them."""
+
     for key in keys:
         values = sorted({str(inp.attrs.get(key)) for inp in inps})
 

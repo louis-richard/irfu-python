@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 # Built-in imports
 import functools
 import json
@@ -21,7 +20,7 @@ _DEPRECATED_KEYS = {
 }
 
 # Parameters with keys in mms_keys.json, or kept for keys to come (irfu-matlab
-# names: energyi/e, es12/34, adcoff, flux-amb-pm2). Removed for want of data:
+# names: energyi/e, es12/34, adcoff, flux-amb-pm2). Left out for want of data:
 # nbge, pbge, defbge (the FPI background is DIS only), tsi, tse (computed in
 # irfu-matlab: the trace of ti_dbcs or te_dbcs / 3) and epar (the e_par keys)
 ALL_PARAMS_SCALARS = [
@@ -244,6 +243,7 @@ def _tensor_order(splitted_key: list[str]) -> int:
         Tensor order of the variable.
 
     """
+
     param = splitted_key[0].lower()
 
     if param in PARAMS_SCALARS:
@@ -268,6 +268,7 @@ def _mms_keys() -> dict:
 def _warn_deprecated_key(var_str: str, stacklevel: int = 2) -> None:
     r"""Warn (FutureWarning) if `var_str` is a deprecated key, pointing at the
     caller of the function that calls this one (`stacklevel` 2)."""
+
     var_key = var_str.lower()
 
     if var_key in _DEPRECATED_KEYS:
@@ -322,6 +323,7 @@ def tokenize(var_str: str) -> Mapping[str, str]:
         DBCS velocities (``v{s}_dbcs_hpca_*``) with `pyrfu.mms.dsl2gsm`.
 
     """
+
     _warn_deprecated_key(var_str)
 
     out = _tokenize(var_str)
@@ -332,6 +334,7 @@ def tokenize(var_str: str) -> Mapping[str, str]:
 def _tokenize(var_str: str) -> Mapping[str, str]:
     r"""Parse the variable key `var_str`, without the deprecation warnings
     (`tokenize`)."""
+
     # Case-insensitive, as the irfu-matlab names ("B_gse_fgm_srvy_l2")
     var_key = var_str.lower()
     splitted_key = var_key.split("_")
@@ -347,7 +350,7 @@ def _tokenize(var_str: str) -> Mapping[str, str]:
 
     tensor_order = _tensor_order(splitted_key)
 
-    # A scalar has no coordinate system ("too many values to unpack")
+    # A scalar has no coordinate system
     if len(splitted_key) == 5 and tensor_order == 0:
         raise ValueError(
             f"{splitted_key[0]!r} is a scalar: no coordinate system in {var_str!r}"

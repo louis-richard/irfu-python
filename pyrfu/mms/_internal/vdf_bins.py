@@ -6,9 +6,8 @@ import numpy as np
 import xarray as xr
 from scipy import constants
 
-from pyrfu.mms._internal.psd_units import _mass_ratio
-
 # Local imports
+from pyrfu.mms._internal.psd_units import _mass_ratio
 from pyrfu.pyrf.resample import resample
 
 # Bins of skymaps and pitch-angle distributions, shared by the vdf_* and pad_*
@@ -33,6 +32,7 @@ def _check_same_bins(vdf, other, name, units=False):
     r"""Raises if `vdf` and `other` are not both distributions (xarray.Dataset)
     or both spectra (xarray.DataArray, e.g. the FEEPS omni-directional
     intensity) with the same times and shape (and units, if `units`)."""
+
     both = [
         all(isinstance(x, kind) for x in (vdf, other))
         for kind in (xr.Dataset, xr.DataArray)
@@ -63,6 +63,7 @@ def _check_same_bins(vdf, other, name, units=False):
 def _like(vdf, data, units):
     r"""Distribution (or spectrum) with the coordinates and attributes of
     `vdf`, the values `data` and the units `units`."""
+
     if isinstance(vdf, xr.DataArray):
         out = vdf.copy(data=data)
         out.attrs["UNITS"] = units
@@ -92,6 +93,7 @@ def _charge(vdf):
     r"""Charge of the species of the distribution in elementary charges: -1
     for the electrons, else the ``charge`` attribute (1 by default, 2 for the
     HPCA He++), as psd_moments and vdf_projection."""
+
     if _charge_sign(vdf) < 0:
         return -1.0
 
@@ -123,6 +125,7 @@ def _energy_edges(vdf):
     r"""Lower and upper energy edges (eV) of the channels (time, energy): the
     delta_energy_minus/plus attributes when they match the energies, else the
     midpoints between the channels (extrapolated at both ends)."""
+
     energy = np.atleast_2d(np.asarray(vdf.energy.data, dtype=np.float64))
     energy = np.broadcast_to(energy, (len(vdf.time), energy.shape[-1]))
     d_minus = vdf.attrs.get("delta_energy_minus")
@@ -154,16 +157,16 @@ def _energy_edges(vdf):
 
 def _kinetic_energy(vdf, energy, sc_pot):
     r"""Energy (eV) at infinity, corrected for the spacecraft potential (V):
-    the ions of charge q gain q V and the electrons lose e V (as irfu-matlab
-    PDist.v for q = 1; it was V whatever the charge, unlike psd_moments), at
-    least 0."""
+    the ions of charge q gain q V and the electrons lose e V (as psd_moments,
+    and irfu-matlab PDist.v for q = 1), at least 0."""
+
     sc_pot = sc_pot.reshape((-1,) + (1,) * (np.ndim(energy) - 1))
     return np.clip(energy + _charge(vdf) * sc_pot, 0.0, None)
 
 
 def _speed(energy, mass):
-    r"""Relativistic speed (m/s) of particles of kinetic energy (eV); it was
-    non-relativistic without the ``relativistic`` attribute."""
+    r"""Relativistic speed (m/s) of particles of kinetic energy (eV)."""
+
     # beta^2 = 1 - 1 / gamma^2 without cancellation, gamma = 1 + eps
     eps = constants.elementary_charge * np.asarray(energy, dtype=np.float64)
     eps = eps / (mass * constants.c**2)
@@ -173,6 +176,7 @@ def _speed(energy, mass):
 def _phi_edges(vdf):
     r"""Lower and upper azimuth edges (degrees) of the bins (time, phi): the
     delta_phi_minus/plus attributes, else half the azimuth spacing."""
+
     phi = np.asarray(vdf.phi.data, dtype=np.float64)
     phi = np.broadcast_to(phi, (len(vdf.time), phi.shape[-1]))
 
@@ -188,6 +192,7 @@ def _phi_edges(vdf):
 def _polar_edges(angles, attrs, name):
     r"""Lower and upper edges (degrees) of polar bins (theta or pitch angle):
     the delta_{name}_minus/plus attributes, else half the spacing."""
+
     angles = np.asarray(angles, dtype=np.float64)
 
     if f"delta_{name}_minus" in attrs and f"delta_{name}_plus" in attrs:
@@ -202,6 +207,7 @@ def _polar_edges(angles, attrs, name):
 def _theta_edges(vdf):
     r"""Lower and upper polar edges (degrees) of the bins of a skymap
     (theta,)."""
+
     return _polar_edges(vdf.theta.data, vdf.attrs, "theta")
 
 
@@ -215,6 +221,7 @@ def _bin_pitch_angles(phi, theta, b_hat):
     r"""Pitch angles (degrees) of the particle velocities (minus the look
     directions phi (time, phi) and theta (theta,), degrees) with respect to
     b_hat (time, 3): (time, phi, theta), independent of energy."""
+
     phi = np.deg2rad(phi)[:, :, None]
     theta = np.deg2rad(theta)
     cos_pa = -np.cos(phi) * np.sin(theta) * b_hat[:, 0, None, None]
@@ -226,6 +233,7 @@ def _bin_pitch_angles(phi, theta, b_hat):
 def _is_skymap(vdf):
     r"""Skymap (time, energy, phi, theta), else pitch-angle distribution
     (time, energy, pitch angle)."""
+
     if vdf.data.ndim == 4:
         return True
 
@@ -238,6 +246,7 @@ def _is_skymap(vdf):
 def _band_solid_angles(vdf):
     r"""Solid angle (sr) of each angular bin: (time, phi, theta) for a skymap,
     (pitch angle,) for a pitch-angle distribution (bands of 2 pi)."""
+
     if _is_skymap(vdf):
         phi_lower, phi_upper = _phi_edges(vdf)
         theta_lower, theta_upper = _theta_edges(vdf)
@@ -252,6 +261,7 @@ def _band_solid_angles(vdf):
 def _speed_edges(vdf, sc_pot):
     r"""Lower and upper relativistic speeds (m/s) of the energy channels
     (time, energy), corrected for the spacecraft potential."""
+
     sc_pot = _sc_pot(vdf, sc_pot)
     mass = _mass(vdf)
     return [
@@ -267,6 +277,7 @@ def _broadcast_energy(values, data):
 def _broadcast_angles(values, data):
     r"""Solid angles of `_band_solid_angles` shaped to broadcast against the
     data."""
+
     if data.ndim == 4:
         return values[:, np.newaxis, :, :]
 
@@ -276,6 +287,7 @@ def _broadcast_angles(values, data):
 def _source_bins(vdf, sc_pot=None):
     r"""Edges of the bins of a skymap: speeds (m/s, time x energy), azimuths
     (degrees, time x phi) and cosines of the polar angles (theta,)."""
+
     v_lower, v_upper = _speed_edges(vdf, sc_pot)
     phi_lower, phi_upper = _phi_edges(vdf)
     theta_lower, theta_upper = _theta_edges(vdf)
@@ -292,6 +304,7 @@ def _source_bins(vdf, sc_pot=None):
 def _bins_d3v(bins):
     r"""Velocity-space volume (m^3/s^3) of the bins of `_source_bins` (time,
     energy, phi, theta): the speed shell times the solid angle, as `_d3v`."""
+
     d_v3 = (bins["v_upper"] ** 3 - bins["v_lower"] ** 3) / 3
     d_phi = np.deg2rad(bins["phi_upper"] - bins["phi_lower"])
     d_cos = bins["cos_upper"] - bins["cos_lower"]
@@ -302,6 +315,7 @@ def _bins_d3v(bins):
 def _d3v(vdf, sc_pot):
     r"""Velocity-space volume (m^3/s^3) of each bin with the relativistic
     speeds, shaped as the data (that of `_bins_d3v` for a skymap)."""
+
     data = vdf.data.data
 
     if _is_skymap(vdf):

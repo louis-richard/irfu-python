@@ -1,18 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 from scipy import constants
 
+# Local imports
 from pyrfu._core.deprecation import deprecated_kwarg
 from pyrfu.mms._internal.epd import _check_flux
 from pyrfu.mms._internal.psd_units import _MASS_RATIOS
 
-# Local imports
 from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
 
@@ -137,7 +138,7 @@ def eis_moments(
         )
 
     # Masses of the PSD/flux conversions, 3.9726 (He2+) and 15.879 (O+) proton
-    # masses (they were 4 and 16)
+    # masses
     mass = constants.proton_mass * _MASS_RATIOS[specie]
 
     _check_flux(inp)
@@ -161,15 +162,14 @@ def eis_moments(
     )
     intensity = 1e4 * inp.data.copy() / (1e3 * constants.electron_volt)
 
-    # Relativistic speeds and momenta of the channels (they were
-    # non-relativistic), without cancellation: eps = E / (m c^2)
+    # Relativistic speeds and momenta of the channels, without cancellation:
+    # eps = E / (m c^2)
     eps = energy / (mass * constants.c**2)
     speed = constants.c * np.sqrt(eps * (2.0 + eps)) / (1.0 + eps)
     momentum = mass * constants.c * np.sqrt(eps * (2.0 + eps))
 
-    # Sums over the channels, each over its width (Simpson's rule from the
-    # first to the last channel centre left out the half channels at both
-    # ends): the particles of a channel are 4 pi J / v dE
+    # Sums over the channels, each over its width: the particles of a channel
+    # are 4 pi J / v dE
     def _sum(weight):
         return 4 * np.pi * np.sum(intensity * weight * delta_energy, axis=1)
 
@@ -199,8 +199,7 @@ def eis_moments(
         n_bg = resample(n_bg, n_i)
         p_bg = resample(p_bg, p_i)
 
-        # Remove the background density and pressure (the pressure was reduced
-        # by 3 p_bg, plus a term in m_p n v^2 of about 1e-27 nPa)
+        # Remove the background density and pressure
         n_i.data -= n_bg.data
         p_i.data -= p_bg.data
 

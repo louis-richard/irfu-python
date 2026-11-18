@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
-# 3rd party
+# 3rd party imports
 import numpy as np
 from numpy.typing import NDArray
 from xarray import Dataset
@@ -81,6 +79,7 @@ def psd_rebin(
     (checked on MMS3 DIS and DES burst data, 2015-10-30).
 
     """
+
     if not isinstance(vdf, Dataset):
         raise TypeError("vdf must be a xarray.Dataset")
 
@@ -100,8 +99,7 @@ def psd_rebin(
     vdf_time: TimeArray = vdf.time.data
     vdf_data: NDArray[np.float64] = vdf.data.data.astype(np.float64)
 
-    # Channels of each table (32 for FPI; 64 were assumed, so that the channels
-    # kept by vdf_elim could not be rebinned)
+    # Channels of each table (32 for FPI, fewer after vdf_elim)
     n_e: int = vdf_data.shape[1]
 
     if len(energy0) != n_e or len(energy1) != n_e:

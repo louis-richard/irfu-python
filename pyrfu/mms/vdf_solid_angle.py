@@ -51,6 +51,7 @@ def vdf_solid_angle(vdf):
     >>> d_omega = mms.vdf_solid_angle(vdf_e)
 
     """
+
     _is_skymap(vdf)
     data = vdf.data.data
     solid_angle = _broadcast_angles(_band_solid_angles(vdf), data)

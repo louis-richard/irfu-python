@@ -47,6 +47,7 @@ def _make_path_local(
         If the local data directory doesn't exist.
 
     """
+
     file_date = datetime.fromisoformat(file["timetag"])
 
     data_path = os.path.normpath(data_path or _read_config()["local"])
@@ -75,8 +76,9 @@ def _download_file(
 ):
     r"""Download url to out_file, through a temporary file next to it so that a
     failed or interrupted download never leaves a partial file. The temporary
-    file is the download's own: concurrent downloads of a file shared
-    out_file.part, and the second one raised FileNotFoundError."""
+    file is the download's own, so that concurrent downloads of a file do not
+    collide."""
+
     os.makedirs(os.path.dirname(out_file), exist_ok=True)
     part_file = f"{out_file}.{uuid.uuid4().hex}.part"
 
@@ -121,6 +123,7 @@ def download_data(var_str: str, tint: list, mms_id: str | int, data_path: str = 
         (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     """
+
     var, _ = _var_and_cdf_name(var_str, mms_id)
 
     files_in_interval = list_files_sdc(tint, mms_id, var)

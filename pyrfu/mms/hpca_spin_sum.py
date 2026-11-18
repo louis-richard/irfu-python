@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -20,6 +21,7 @@ def _hpca_complete_spins(start_az, time):
     azimuth index 0) to the next, with one sample per start azimuth (0, 1,
     ..., 15, in order) and no data gap (two samples more than 1.5 median
     sampling periods apart)."""
+
     spin_starts = np.flatnonzero(start_az == 0)
 
     if len(spin_starts) < 2:
@@ -92,7 +94,7 @@ def hpca_spin_sum(inp, saz, method: Literal["mean", "sum"] = "mean"):
 
     starts, stops = _hpca_complete_spins(np.asarray(saz.data), inp.time.data)
 
-    # NaN for a spin without data (the sum was 0, as data)
+    # NaN for a spin without data
     out_data = _spin_reduce(inp.data, starts, stops, method)
     out_time = inp.time.data[starts]
     coords = [inp.coords[k].data for k in inp.dims[1:]]

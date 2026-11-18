@@ -102,7 +102,6 @@ def estimate_phase_speed(f_k_power, freq, k, f_min: float = 100.0):
 
     # Weighted least squares, sum(w (f - a k)^2), as irfu-matlab's fit(...,
     # "Weight", w): scipy's sigma is an uncertainty, so sigma = 1 / sqrt(w)
-    # (sigma=w weighted the points by 1 / w^2, the weakest the most)
     res = curve_fit(fun, k_power2, f_power2, p0=vph_guess, sigma=1 / np.sqrt(weights))
     vph = res[0][0] * 2 * np.pi
 

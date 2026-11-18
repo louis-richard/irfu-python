@@ -102,8 +102,7 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
             "Couldn't get the particle species from file name!!",
         )
 
-    # Time interval, in the forms of time_clip (a tuple, datetime.datetime
-    # and a time series raised TypeError), checked before reading the file
+    # Time interval (forms of time_clip), checked before reading the file
     if tint is None:
         tint = ["1995-10-06T18:50:00.000000000", "2200-10-06T18:50:00.000000000"]
 
@@ -139,8 +138,8 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
     dist = np.transpose(file[cdf_name].values, [0, 3, 1, 2])
     _, n_energy, n_phi, n_theta = dist.shape
 
-    # Tables of one record (non-record-varying) or of all records; reshaped
-    # rather than squeezed, which made those of a single record 1-D
+    # Tables of one record (non-record-varying) or of all records, reshaped
+    # (squeeze would make those of a single record 1-D)
     phi = file[depends_keys[1]].values.reshape(-1, n_phi)
     theta = file[depends_keys[2]].values.reshape(n_theta)
     energy = file[depends_keys[3]].values.reshape(-1, n_energy)
@@ -189,16 +188,15 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
 
     d_en_name = _fpi_name(cdf_name, "energy_delta")
 
-    # Energy widths, left out of the files without them (they were None, which
-    # the routines that check for the attribute, e.g. reduce, took as given)
+    # Energy widths, left out (not None) for the files without them, as the
+    # routines, e.g. reduce, check for the attribute
     if d_en_name in z_vars:
         glob_attrs["delta_energy_plus"] = file[d_en_name].values
         glob_attrs["delta_energy_minus"] = file[d_en_name].values
 
     # Compression indicator of each distribution: 0 lossless, 1 lossy; one
     # per record in burst, one per file (non-record-varying, "at survey-start
-    # time") in fast survey, then for all its distributions (it was reshaped
-    # to one per record, which raised ValueError)
+    # time") in fast survey, then for all its distributions
     compression_name = _fpi_name(cdf_name, "compressionloss")
 
     if compression_name in z_vars and times.size:

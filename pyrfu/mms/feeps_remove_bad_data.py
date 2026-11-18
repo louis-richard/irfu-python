@@ -11,7 +11,7 @@ import numpy as np
 
 
 def _bad_vars(bad_data):
-    # electron (1-5, 9-12) and ion (6-8) eyes, only those in the data are used
+    # Electron (1-5, 9-12) and ion (6-8) eyes, only those in the data are used
     bad_vars = [
         *[f"top-{x}" for x in bad_data["top"]],
         *[f"bottom-{x}" for x in bad_data["bottom"]],
@@ -22,8 +22,7 @@ def _bad_vars(bad_data):
 
 @functools.lru_cache(maxsize=1)
 def _bad_data_tables():
-    r"""Tables of feeps_bad_data.json, read once (on every call before); not
-    to be changed."""
+    r"""Tables of feeps_bad_data.json, read once; not to be changed."""
     root_path = os.path.dirname(os.path.abspath(__file__))
 
     with open(
@@ -33,7 +32,7 @@ def _bad_data_tables():
 
 
 def _bad_eyes(inp_dataset, bad_vars):
-    # The bad eyes set to NaN, in place (the shallow copy shared the data)
+    # The bad eyes set to NaN, in place
     for bad_var in bad_vars:
         if bad_var in inp_dataset:
             inp_dataset[bad_var].data[:] = np.nan

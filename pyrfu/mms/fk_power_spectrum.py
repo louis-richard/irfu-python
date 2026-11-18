@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 from collections.abc import Sequence
 from typing import Any, Literal
 
@@ -18,9 +19,6 @@ from ..pyrf.ts_scalar import ts_scalar
 from ..pyrf.wavelet import wavelet
 from .probe_fields import probe_fields
 
-# Built-in imports
-
-
 # Separation along the boom of the two single-probe fields of a pair (m):
 # half of the tip-to-tip lengths 120 m and 29.2 m (each field is between its
 # probe and the centre); the two probe potentials are twice as far apart
@@ -34,6 +32,7 @@ def _unwrap_spin_phase(z_phase, time):
     r"""Spin phase (deg) unwrapped and interpolated at the times, as
     irfu-matlab mms.fk_powerspectrum: 360 deg added after each decrease
     (between increasing times), repeated times dropped."""
+
     t_z = z_phase.time.data
     data = z_phase.data.astype(np.float64)
     step = np.diff(t_z) > np.timedelta64(0, "ns")
@@ -47,6 +46,7 @@ def _probe_directions(probe, z_phase, n_t):
     r"""Directions of the two probes of the pair (unit vectors, (n_t, 3)) in
     the frame of the magnetic field (DMPA): in the spin plane from the spin
     phase (deg) for probes 1-4, along the spin axis for probes 5 and 6."""
+
     if probe == 5:
         return np.tile([0.0, 0.0, 1.0], (n_t, 1)), np.tile([0.0, 0.0, -1.0], (n_t, 1))
 

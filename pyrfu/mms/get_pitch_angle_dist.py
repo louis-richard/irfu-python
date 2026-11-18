@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import logging
 import warnings
-
-# Built-in imports
 from typing import Literal
 
 # 3rd party imports
@@ -23,6 +22,7 @@ logger = logging.getLogger(__name__)
 def _bin_reduce(data0, finite, in_bin, method, weights):
     r"""Mean (over theta, then phi, as irfu-matlab), sum, or solid-angle
     weighted mean of the samples in one pitch-angle bin, (time, energy)."""
+
     in_bin = in_bin.astype(np.float64)
 
     with warnings.catch_warnings():
@@ -153,8 +153,7 @@ def get_pitch_angle_dist(
     pitch_angles = angles_v - d_angles / 2
 
     # The distribution of tint, with its per-time attributes (step table,
-    # energy widths: they were kept at full length, so that the energy edges
-    # of vdf_d3v and vdf_flux of the output fell back to midpoints)
+    # energy widths)
     if tint is not None:
         b_xyz = time_clip(b_xyz, tint)
         vdf = time_clip(vdf, tint)
@@ -220,8 +219,7 @@ def get_pitch_angle_dist(
 
     pad.time.attrs = dict(vdf.time.attrs)
     pad.energy.attrs = dict(vdf.energy.attrs)
-    # The attributes of the data (only UNITS, KeyError without), pitch angles
-    # in deg
+    # The attributes of the data, pitch angles in deg
     pad.data.attrs = dict(vdf.data.attrs)
     pad.theta.attrs["UNITS"] = "deg"
 

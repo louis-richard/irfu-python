@@ -5,7 +5,7 @@
 import csv
 import io
 
-# Third party imports
+# 3rd party imports
 import numpy as np
 import pycdfpp
 import requests
@@ -71,7 +71,7 @@ def load_brst_segments(
         as ISO 8601 str, datetime64 or datetime.datetime, or a time series
         (its first and last times), as `pyrfu.pyrf.time_clip`.
     data_path : str, Optional
-        Ignored: the segments are not cached any more.
+        Ignored: the segments are not cached.
 
         .. deprecated:: 2.5.0
             `data_path` will be removed in pyrfu 3.0.0.
@@ -99,7 +99,7 @@ def load_brst_segments(
     # Deprecated and ignored (deprecated_kwarg warns)
     del data_path, download
 
-    # In the forms of time_clip (a time series failed)
+    # Time interval, in the forms of time_clip
     l_bound, r_bound = _time_interval(tint)
 
     # Segments overlapping tint (with the end offset)

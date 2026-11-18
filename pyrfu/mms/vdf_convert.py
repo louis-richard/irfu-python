@@ -12,13 +12,12 @@ from pyrfu.mms._internal.psd_units import (
     _relativistic_factor,
 )
 
-# The units of the distributions, in one place (each of psd2def, psd2dpf,
-# def2psd and dpf2psd had its own conversion, two of them the same copy).
+# The units of the distributions, in one place.
 # Phase-space densities: factor to s^3/m^6
 _PSD = {"s^3/cm^6": 1e12, "s^3/m^6": 1.0, "s^3/km^6": 1e-18}
 
 # Differential energy fluxes (all the same quantity; "1/(cm^2 s sr)" is the
-# name def2psd accepted)
+# name def2psd accepts)
 _DEF = {
     "kev/(cm^2 s sr kev)": "keV/(cm^2 s sr keV)",
     "ev/(cm^2 s sr ev)": "eV/(cm^2 s sr eV)",
@@ -102,6 +101,7 @@ def _relativistic_psd(vdf):
     its data in s^3/m^6, times 2 gamma^5 / (gamma + 1) at the energies of its
     bins if they are the non-relativistic one (FPI, HPCA, EIS), for the
     integrals over the velocities with the relativistic speeds."""
+
     data = _data_and_units(vdf_convert(vdf, "s^3/m^6"))[0]
 
     if _is_relativistic(vdf):
@@ -114,6 +114,7 @@ def _in_convention(out, relativistic: bool):
     r"""Distribution `out` whose data are a relativistic phase-space density,
     in the convention `relativistic` (divided by 2 gamma^5 / (gamma + 1) at
     its energies for the non-relativistic one), with the attribute."""
+
     data, units = _data_and_units(out)
     out = out.copy()
 
@@ -172,6 +173,7 @@ def vdf_convert(vdf, units: str):
     >>> def_e = mms.vdf_convert(vdf_e, "keV/(cm^2 s sr keV)")
 
     """
+
     _, old_units = _data_and_units(vdf)
     old_units = _check(old_units)
     new_units = _check(units)

@@ -13,8 +13,8 @@ def _spin_segments(spin):
     r"""Start and stop indices of the complete spins: the runs of samples with
     the same spin number, in time order, with the full number of samples (that
     of the longest spin between two spin boundaries)."""
-    # Runs in time order (np.unique ordered the spins by number, which the
-    # wrap of the uint16 spin counter reorders)
+
+    # Runs in time order (the uint16 spin counter wraps)
     spin = np.asarray(spin).astype(np.int64)
     bounds = np.r_[0, np.flatnonzero(np.diff(spin) != 0) + 1, len(spin)]
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import logging
 
 # 3rd party imports
@@ -145,8 +146,9 @@ def _moments_cov(vdf, vdf_err, sc_pot):
     derived moments, so that the covariance is summed bin by bin: it is
     :math:`J \Sigma J^T` with :math:`\Sigma` the covariance of the raw
     moments, but without its cancellation of large terms (for a cold beam,
-    :math:`J \Sigma J^T` gave negative variances).
+    :math:`J \Sigma J^T` can give negative variances).
     """
+
     p_mass = _mass(vdf)
 
     # Phase-space density and its error in s^3/m^6, (time, energy, phi,
@@ -264,6 +266,7 @@ def _derived_moments(moments, p_mass):
     and trace of psd_moments substituted), which is what the derivatives
     use.
     """
+
     k_b = constants.Boltzmann
 
     n_t = moments.shape[0]
@@ -467,6 +470,7 @@ def psd_moments_err(vdf, vdf_err, sc_pot):
     >>> moments_e = mms.psd_moments(vdf_e, scpot)
     >>> errors_e = mms.psd_moments_err(vdf_e, vdf_e_err, scpot)
     """
+
     _check_error_skymap(vdf, vdf_err)
 
     sc_pot = _sc_pot_energy(vdf, sc_pot)

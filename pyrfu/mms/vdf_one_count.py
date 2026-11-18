@@ -96,6 +96,7 @@ def vdf_one_count(vdf, counts, *, n: float = 1.0):
     >>> one_count_feeps = mms.vdf_one_count(flux, counts)
 
     """
+
     if not np.isfinite(n) or n <= 0:
         raise ValueError(f"n must be positive and finite, not {n}")
 

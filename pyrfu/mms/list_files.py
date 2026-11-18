@@ -51,6 +51,7 @@ def list_files(
         If the data path doesn't exist.
 
     """
+
     # Check path
     root_path = os.path.normpath(data_path or _read_config()["local"])
 
@@ -58,7 +59,7 @@ def list_files(
     if not os.path.exists(root_path):
         raise FileNotFoundError(f"{root_path} doesn't exist")
 
-    # Time interval, in the forms of time_clip (only a list of str was accepted)
+    # Time interval, in the forms of time_clip
     t_start, t_end = _tint_bounds(_time_interval(tint))
 
     mms_id = str(mms_id)
@@ -79,10 +80,10 @@ def list_files(
     else:
         level_and_dtype = [var["lev"], var["dtype"]]
 
-    # Latest version of each file, by time tag, from the day before the start of
-    # the time interval (a file starting then can cover it, e.g. a burst segment
-    # across midnight) to its end, as list_files_aws; each directory is walked
-    # once (the month directory of survey data was walked for every day)
+    # Latest version of each file, by time tag, from the day before the start
+    # of the time interval (a file starting then can cover it, e.g. a burst
+    # segment across midnight) to its end, as list_files_aws; each directory
+    # is walked once
     files: dict[str, tuple[tuple[int, ...], str]] = {}
     walked = set()
     day = datetime.datetime.combine(t_start.date(), datetime.time())

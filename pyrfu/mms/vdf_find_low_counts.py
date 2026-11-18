@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -78,6 +79,7 @@ def vdf_find_low_counts(
     >>> vdf_i = mms.vdf_mask(vdf_i, below=e_low)
 
     """
+
     if output not in ["energy", "mat"]:
         raise ValueError(f"Invalid output {output}: energy or mat")
 

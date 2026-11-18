@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -23,8 +24,7 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
     shape = tuple(len(e) - 1 for e in edges)
     volume = np.einsum("i,j,k->ijk", *(np.diff(e) for e in edges))
 
-    # Relativistic phase-space density and speeds (they were non-relativistic
-    # without the relativistic attribute)
+    # Relativistic phase-space density and speeds
     f_si = np.nan_to_num(_relativistic_psd(vdf))
     bins = _source_bins(vdf, sc_pot)
     d3v = _bins_d3v(bins)
@@ -159,6 +159,7 @@ def vdf_rebin(
     >>> vdf_e_cart = mms.vdf_rebin(vdf_e, [v_edges] * 3, base="cart")
 
     """
+
     if not _is_skymap(vdf):
         raise ValueError("vdf must be a skymap")
 
@@ -198,7 +199,7 @@ def vdf_rebin(
             "data": (
                 ["time", "vx", "vy", "vz"],
                 data,
-                _attrs(vdf.data.attrs, units),  # the other attributes were lost
+                _attrs(vdf.data.attrs, units),  # with the other attributes
             )
         },
         coords={

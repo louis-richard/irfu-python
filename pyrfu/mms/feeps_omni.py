@@ -88,6 +88,7 @@ def _eyes_on_omni_energies(inp_dataset):
         If the integral channel of the eyes is not split (16 channels).
 
     """
+
     d_type = inp_dataset.attrs["dtype"]
     mms_id = inp_dataset.attrs["mmsId"]
     energies = copy(energies_[d_type])
@@ -100,7 +101,7 @@ def _eyes_on_omni_energies(inp_dataset):
     dalleyes = np.empty((len(inp_dataset.time), len(energies), len(eyes)))
     dalleyes[:] = np.nan
 
-    # percent error around the energy bin centres to accept data for averaging
+    # Percent error around the energy bin centres to accept data for averaging
     en_chk = 0.10
 
     for idx, sensor in enumerate(eyes):
@@ -116,7 +117,7 @@ def _eyes_on_omni_energies(inp_dataset):
         if inp_dataset.attrs.get("lev") == "sitl":
             continue
 
-        # channels outside energies +/- en_chk * energies are not averaged
+        # Channels outside energies +/- en_chk * energies are not averaged
         eye_energies = inp_dataset[inp_dataset[sensor].dims[1]].data
         bad_energies = np.abs(energies - eye_energies) > en_chk * energies
         dalleyes[:, bad_energies, idx] = np.nan
@@ -179,6 +180,7 @@ def feeps_omni(
     IDL SPEDAS and pyspedas average every unit, also the counts.
 
     """
+
     combine = method or _DEFAULT_METHODS.get(
         inp_dataset.attrs.get("units_name"), "mean"
     )
@@ -204,7 +206,7 @@ def feeps_omni(
         attrs=attrs,
     )
 
-    # Units of the eyes, none without (KeyError); energies in keV (none)
+    # Units of the eyes, if any; energies in keV
     if "UNITS" in inp_dataset[eyes[0]].attrs:
         flux_omni.attrs["UNITS"] = inp_dataset[eyes[0]].attrs["UNITS"]
 

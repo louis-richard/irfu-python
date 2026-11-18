@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -14,6 +12,7 @@ def _pycdfpp_attributes_to_dict(attributes):
     r"""Attributes of a CDF file or variable as a dictionary: the value of the
     attributes of one entry (as a list for several values, datetime64 for
     times), the list of the entries of the others (global attributes)."""
+
     attributes_dict = {}
 
     for k in attributes:
@@ -25,7 +24,7 @@ def _pycdfpp_attributes_to_dict(attributes):
 
         value = entries[0]
 
-        # (an attribute of several values was a list of one list)
+        # TT2000 times as datetime64, a scalar for one value
         if isinstance(value, (list, np.ndarray)) and isinstance(
             value[0], _pycdfpp.tt2000_t
         ):
@@ -52,6 +51,7 @@ def get_variable(file_path: str | bytes, cdf_name: str) -> DataArray:
         Target variable.
 
     """
+
     # Load file
     file = load(file_path)
 

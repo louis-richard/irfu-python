@@ -24,8 +24,9 @@ HELIOCLOUD_MMS = "gov-nasa-hdrl-data1/spdf/cdaweb/data/mms"
 def _s3_resource():
     r"""S3 resource, with unsigned (anonymous) requests if no AWS credentials
     are available, which is enough for public buckets such as HelioCloud's."""
-    # boto3 imported here (about 0.45 s, it was imported by import pyrfu); the
-    # botocore exceptions, light, are imported with the module
+
+    # boto3 imported here, as it takes about 0.45 s; the botocore exceptions,
+    # light, are imported with the module
     # pylint: disable=import-outside-toplevel
     import boto3
     from botocore import UNSIGNED
@@ -42,6 +43,7 @@ def _s3_resource():
 def _bucket_and_prefix(bucket_prefix: str = "") -> tuple[str, str]:
     r"""Bucket name and key prefix from "bucket/prefix" (or "s3://bucket/prefix"),
     by default from the configuration file, else HelioCloud."""
+
     if not bucket_prefix:
         bucket_prefix = _read_config()["aws"] or HELIOCLOUD_MMS
 
@@ -59,9 +61,8 @@ def _file_time(time_tag: str) -> datetime.datetime:
 def _tint_bounds(tint) -> tuple[datetime.datetime, datetime.datetime]:
     r"""Start of the time interval `tint` to the second below and end to the
     second above. The files start at whole seconds: those starting at or before
-    the start, and before the end, are the same as with the exact times (the
-    end was cut to the second below, which left out a file starting in its last
-    fraction of a second)."""
+    the start, and before the end, are the same as with the exact times."""
+
     t_start, t_end = np.array(tint).astype("datetime64[ns]")
     t_start = t_start.astype("datetime64[s]")
     t_end = (t_end + np.timedelta64(999_999_999, "ns")).astype("datetime64[s]")
@@ -124,7 +125,8 @@ def list_files_aws(
     SDC.
 
     """
-    # Time interval, in the forms of time_clip (only a list of str was accepted)
+
+    # Time interval, in the forms of time_clip
     t_start, t_end = _tint_bounds(_time_interval(tint))
 
     if not isinstance(mms_id, str):
@@ -134,8 +136,9 @@ def list_files_aws(
     bucket = _s3_resource().Bucket(bucket_name)
 
     # Directories and file names (SDC convention):
-    # - spacecraft/instrument/rate/level[/datatype]/year/month/ (HelioCloud keeps
-    #   burst files there too; the SDC adds a day/ directory for burst files)
+    # - spacecraft/instrument/rate/level[/datatype]/year/month/ (HelioCloud
+    #   keeps burst files there too; the SDC adds a day/ directory for burst
+    #   files)
     # - spacecraft_instrument_rate_level[_datatype]_YYYYMMDD[hhmmss]_vX.Y.Z.cdf
     dtype = var.get("dtype") or ""
     directory = [prefix, f"mms{mms_id}", var["inst"], var["tmmode"], var["lev"]]

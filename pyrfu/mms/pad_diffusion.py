@@ -55,6 +55,7 @@ def pad_diffusion(pad, d_aa):
     >>> df_dt = mms.pad_diffusion(pad_e, 1e-2)
 
     """
+
     if _is_skymap(pad):
         raise ValueError("pad must be a pitch-angle distribution")
 
@@ -66,7 +67,7 @@ def pad_diffusion(pad, d_aa):
     flux = d_aa * np.sin(alpha) * df_da
     df_dt = np.gradient(flux, alpha, axis=2, edge_order=1) / np.sin(alpha)
 
-    # Units of the PAD per s (they were "s^3/cm^6/s", and "1/s" without)
+    # Units of the PAD per s, none if the PAD has none
     units = _ratio(_units(pad), "s")
     out = _output(pad, df_dt, "" if units is None else units)
 

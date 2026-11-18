@@ -8,6 +8,7 @@ import warnings
 import numpy as np
 import xarray as xr
 
+# Local imports
 from pyrfu.mms._internal.psd_units import (
     _factor,
     _is_relativistic,
@@ -23,7 +24,6 @@ from pyrfu.mms._internal.vdf_bins import (
     _theta_edges,
 )
 
-# Local imports
 from ..pyrf.ts_spectr import ts_spectr
 from .vdf_convert import _PSD
 from .vdf_shift import _frame_velocity

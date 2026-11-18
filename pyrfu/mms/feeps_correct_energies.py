@@ -57,7 +57,7 @@ def feeps_correct_energies(feeps_alle):
                 "feeps_split_integral_ch"
             )
 
-        # each eye has its own energy table, so its own dimension, named as in
+        # Each eye has its own energy table, so its own dimension, named as in
         # get_feeps_alleyes
         out_dict[sensors_eye] = (
             feeps_alle[sensors_eye]
@@ -65,7 +65,7 @@ def feeps_correct_energies(feeps_alle):
             .rename({dim: f"energy_{sensors_eye}"})
         )
 
-        # The attributes of the energies (UNITS keV, lost)
+        # Keep the attributes of the energies (UNITS keV)
         out_dict[sensors_eye][f"energy_{sensors_eye}"].attrs = dict(
             feeps_alle[sensors_eye][dim].attrs
         )

@@ -3,12 +3,12 @@
 
 """Contributed by Apostolos Kolokotronis."""
 
+# Built-in imports
 from collections.abc import Sequence
-
-# 3rd party imports
 from copy import deepcopy
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 from xarray import DataArray
@@ -90,6 +90,7 @@ def feeps_avg_4sc(
     errors are those of the interpolated values only approximately.
 
     """
+
     # Check input type
     if not isinstance(b_list, (list, tuple)):
         raise TypeError("b_list must be a list or a tuple")
@@ -102,14 +103,13 @@ def feeps_avg_4sc(
     for b in b_list:
         if isinstance(b, xr.DataArray):
             # On the times of the first spacecraft, NaN where a spacecraft has
-            # no data (the resampling filled its gaps and extrapolated past its
-            # ends, averaged as data)
+            # no data (resample fills the gaps and extrapolates past the ends)
             b_r = resample(b, b_list[0], f_s=calc_fs(b_list[0]))
             b_list_r.append(_without_gaps(b, b_r))
         else:
             raise TypeError("elements of b_list must be DataArray")
 
-    # The units of the first spacecraft were taken
+    # Same units on all the spacecraft
     _check_same_units(b_list, "spacecraft")
 
     combine = method or _DEFAULT_METHODS.get(
@@ -119,7 +119,7 @@ def feeps_avg_4sc(
     if combine not in ["mean", "sum", "quadrature"]:
         raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
 
-    # The PADs were averaged by bin index, whatever their pitch angles
+    # Same pitch-angle bins, as the PADs are averaged by bin index
     if flag == "pad" and not all(
         np.array_equal(b.theta.data, b_list[0].theta.data) for b in b_list
     ):
@@ -129,7 +129,7 @@ def feeps_avg_4sc(
     b_list_r = [xr.where(np.isnan(b), 0, b) for b in b_list_r]
 
     if combine == "quadrature":
-        # the squares are summed
+        # The squares are summed
         b_list_r = [b**2 for b in b_list_r]
     b_avg_data = np.zeros(b_list_r[0].shape)
     b_nan_denom = np.zeros(b_list_r[0].shape)

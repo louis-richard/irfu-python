@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 from xarray import DataArray, Dataset
@@ -49,6 +47,7 @@ def _same_bins(values_1, values_2) -> bool:
     r"""True if the two arrays of bins are equal, a table of each time, e.g.
     phi as (time, phi), being equal to the same table for all times
     (phi,)."""
+
     try:
         values_1, values_2 = np.broadcast_arrays(values_1, values_2)
     except ValueError:
@@ -128,6 +127,7 @@ def calculate_epsilon(
     >>> eps = mms.calculate_epsilon(vdf, model_vdf, n_s, sc_pot, **options)
 
     """
+
     # Resample sc_pot
     sc_pot = resample(sc_pot, n_s)
 
@@ -141,8 +141,7 @@ def calculate_epsilon(
     energy_corrected = energy_corrected + _charge(vdf) * sc_pot.data[:, None]
     energy_corrected = np.clip(energy_corrected, 0.0, None)
 
-    # The model is compared bin by bin: on exactly the corrected grid of the
-    # data (a model on other bins was paired by position, without error)
+    # Compared bin by bin: the model must be on the corrected grid of the data
     for name in ["time", "phi", "theta"]:
         if not _same_bins(vdf[name].data, model_vdf[name].data):
             raise ValueError(f"vdf and model_vdf have different {name}")
@@ -167,11 +166,10 @@ def calculate_epsilon(
     # NaNs (e.g., fill values) don't contribute to the integral
     vdf_diff = np.nan_to_num(np.abs(vdf_data - model_vdf_data), nan=0.0)
 
-    # Mass of the species of the table of the vdf routines (the species was
-    # taken from its first letter: "protons" and "hydrogen+" raised)
+    # Mass of the species, from the table of the vdf routines
     m_s = _mass(vdf)
     # Potential energy q V (eV) at the spacecraft: the ions of charge q gain
-    # q V, the electrons lose e V (it was V whatever the charge)
+    # q V, the electrons lose e V
     v_sc = -_charge(vdf) * sc_pot.data.astype(np.float64)
 
     # Default energy channels used to compute epsilon.
@@ -214,8 +212,7 @@ def calculate_epsilon(
     def _speed_corrected(energy_):
         # Relativistic speed after correction for the spacecraft potential;
         # zero below it (as MATLAB's real(sqrt(...)); numpy's sqrt would give
-        # NaN and drop the whole channel from the integral). It was
-        # non-relativistic.
+        # NaN and drop the whole channel from the integral)
         energy_corr = np.clip(energy_ - v_sc[:, None], 0.0, None)
         return _speed(energy_corr, m_s)
 
@@ -223,8 +220,7 @@ def calculate_epsilon(
     delta_v = _speed_corrected(energy_upper) - _speed_corrected(energy_lower)
 
     # Weights of the integral over velocity space: v^2 dv (time, energy) and
-    # sin(theta) dphi dtheta (theta), broadcast instead of tiled; phi as
-    # (time, phi) or (phi,)
+    # sin(theta) dphi dtheta (theta); phi as (time, phi) or (phi,)
     delta_ang = np.deg2rad(np.median(np.diff(np.atleast_2d(phi)[0, :])))
     delta_ang *= np.deg2rad(np.median(np.diff(theta)))
     w_v = (velocity**2 * delta_v)[:, int_energies]

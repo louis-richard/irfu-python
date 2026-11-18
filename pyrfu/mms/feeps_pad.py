@@ -249,7 +249,7 @@ def feeps_pad(
     pa_labels = [pa_bin + bin_size / 2.0 for pa_bin in pa_bins[:-1]]
 
     if d_rate == "brst" and not angles_from_bfield and "pitch_angle" in inp_dataset:
-        # pitch angles of the CDF, fill values (inactive eyes) to NaN
+        # Pitch angles of the CDF, fill values (inactive eyes) to NaN
         pitch_angles = inp_dataset["pitch_angle"].astype(float)
         pitch_angles = pitch_angles.where(
             (pitch_angles >= 0.0) & (pitch_angles <= 180.0)
@@ -287,8 +287,7 @@ def feeps_pad(
         attrs=attrs,
     )
 
-    # Units of the eyes (intensity, count rate, ...), none without (it was set
-    # to an intensity); pitch angles in deg
+    # Units of the eyes (intensity, count rate, ...), if any; angles in deg
     if "UNITS" in inp_dataset[eye_names[0]].attrs:
         pad.attrs["UNITS"] = inp_dataset[eye_names[0]].attrs["UNITS"]
 

@@ -20,6 +20,7 @@ from .vdf_convert import _in_convention
 def _perp_direction(v_perp, b_hat):
     r"""Unit vectors along v_perp, or any direction perpendicular to b_hat
     where v_perp is zero (the model is gyrotropic)."""
+
     v_perp_mag = np.linalg.norm(v_perp, axis=1, keepdims=True)
 
     # Perpendicular to B from x (or y if B is along x)
@@ -124,15 +125,12 @@ def make_model_vdf(
 
     """
 
-    # Mass and charge of the species (ValueError for an unknown one): the
-    # proton mass and +/-V were taken for every ion
+    # Mass and charge of the species (ValueError for an unknown one)
     p_mass = _mass(vdf)
     charge = _charge(vdf)
 
     # The moments are used by position: at the times of the VDF, as
-    # calculate_epsilon (the times of n_s only had to differ by a constant, so
-    # that moments 1 h away were accepted, and those of v_xyz and t_xyz were
-    # not checked)
+    # calculate_epsilon
     for name, moment in zip(["n_s", "v_xyz", "t_xyz"], [n_s, v_xyz, t_xyz]):
         if not np.array_equal(moment.time.data, vdf.time.data):
             raise ValueError(f"VDF and moments have different times ({name}).")
@@ -190,7 +188,7 @@ def make_model_vdf(
     # Speeds at infinity, of the energies E + q V, (time, energy, 1, 1)
     energy = vdf.energy.data.astype(np.float64) + charge * sc_pot.data[:, None]
     below = energy < 0
-    # Relativistic speeds (they were non-relativistic)
+    # Relativistic speeds
     speed = _speed(np.clip(energy, 0.0, None), p_mass)[..., None, None]
 
     # Bi-Maxwellian distribution function
@@ -207,8 +205,7 @@ def make_model_vdf(
     bi_max_dist[below] = np.nan
 
     # Make modelPDist file for output, in s^3/km^6, on the corrected grid: the
-    # energies at infinity at which the model is evaluated (they were the
-    # measured energies of vdf)
+    # energies at infinity at which the model is evaluated
     model_vdf = vdf.copy()
     model_vdf["data"] = vdf.data.copy(data=bi_max_dist * 1e18)
     model_vdf["energy"] = vdf.energy.copy(data=np.clip(energy, 0.0, None))

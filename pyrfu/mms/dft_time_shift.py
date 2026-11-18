@@ -60,6 +60,7 @@ def dft_time_shift(inp, tau, f_s: float | None = None):
     >>> e_dsl_shifted = mms.dft_time_shift(e_dsl, 0.5 / 8192)
 
     """
+
     # Shift in samples (a fraction of a sample is allowed)
     if f_s is None:
         d_t = _seconds(inp.time.data[-1], inp.time.data[0])

@@ -60,6 +60,7 @@ def _var_and_cdf_name(var_str: str, mms_id: str | int) -> tuple[Mapping[str, str
         Corresponding cdf name.
 
     """
+
     var = _tokenize(var_str)
     cdf_name = f"mms{mms_id}_{var['cdf_name']}"
     return var, cdf_name
@@ -69,6 +70,7 @@ def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
     r"""Key of the listing of the files of `var` in `tint` in the cache: the
     source and its settings (bucket, SDC rights and user), the spacecraft, the
     instrument, rate, level and data type, and the time interval."""
+
     config = _read_config()
 
     if source == "aws":
@@ -90,6 +92,7 @@ def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
 def _remote_files(source: str, tint: list, mms_id: str, var: Mapping) -> list:
     r"""Files of `var` in `tint` on the SDC or AWS, as items of a listing of the
     cache (see :class:`pyrfu.mms._internal.cache.RemoteFile`)."""
+
     if source == "aws":
         return [
             {
@@ -119,6 +122,7 @@ def _resolve_source(source: str | None = "default") -> str:
     r"""Resource to fetch the data from: `source` ("local", "sdc" or "aws", in any
     case), or the default resource of the MMS configuration
     (`pyrfu.mms.MMS_CFG_PATH`) if it is empty or "default"."""
+
     if not source or source.lower() == "default":
         return _read_config()["default"]
 
@@ -135,9 +139,8 @@ def _list_files_sources(
     var: Mapping[str, str],
     data_path: str = "",
 ):
-    # Time interval in the forms of time_clip (only a list of str was
-    # listed), as datetime64; the cache key of the listing is then the same
-    # for all the forms
+    # Time interval in the forms of time_clip, as datetime64; the cache key
+    # of the listing is then the same for all the forms
     tint = _time_interval(tint)
 
     # Paths, cache files (RemoteFile), URLs or S3 objects, by source
@@ -195,6 +198,7 @@ def _get_file_content_sources(
         File content.
 
     """
+
     if isinstance(file_name, _cache.RemoteFile):
         return _cache.read(
             file_name, lambda: _download(file_name, sdc_session, headers)
@@ -244,6 +248,7 @@ def _get_s3_body(s3_object, label: str) -> bytes:
 def _read_s3_object(s3_object) -> bytes:
     r"""Content of an S3 object, the request made again (after 1 s, then 2 s)
     if the connection is reset or times out while the file is received."""
+
     label = getattr(s3_object, "key", s3_object)
 
     for attempt in range(1, _AWS_READ_ATTEMPTS):
@@ -268,8 +273,9 @@ def _read_s3_object(s3_object) -> bytes:
 
 def _file_label(file_name) -> str:
     r"""Name of a file of the listings, for the messages: the base name of a
-    local path, of the key of an S3 object (the messages printed the object),
-    of a file of the cache, or the file of an SDC download URL."""
+    local path, of the key of an S3 object, of a file of the cache, or the
+    file of an SDC download URL."""
+
     if isinstance(file_name, _cache.RemoteFile):
         return str(file_name)
 
@@ -284,6 +290,7 @@ def _file_label(file_name) -> str:
 def _download(remote, sdc_session=None, headers=None) -> bytes:
     r"""Content of a file of the cache listing, from AWS or the SDC (logged in
     if no session is given)."""
+
     if remote.source == "aws":
         return _get_file_content_sources(
             "aws", _s3_resource().Object(remote.bucket, remote.key)
@@ -519,6 +526,7 @@ def get_data(
     >>> b_xyz = mms.get_data("b_gse_fgm_brst_l2", tint_brst, ic)
 
     """
+
     # Convert mms_id to string
     mms_id = str(mms_id)
 
@@ -529,8 +537,7 @@ def get_data(
 
     # The source in any case, or the default of the MMS configuration if empty
     # or "default"; ValueError for an unknown one, as db_get_ts,
-    # db_get_variable, get_eis_allt and load_ancillary (it was
-    # NotImplementedError)
+    # db_get_variable, get_eis_allt and load_ancillary
     source = _resolve_source(source)
 
     file_names, sdc_session, headers = _list_files_sources(

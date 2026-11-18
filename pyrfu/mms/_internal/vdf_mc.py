@@ -13,6 +13,7 @@ def _sample(rng, bins, i_t, i_e, i_p, i_q):
     r"""Particle velocities (m/s, n x 3) drawn uniformly in the volume of the
     bins (i_t, i_e, i_p, i_q) of `_source_bins`: v^3, cos(theta) and phi
     uniform. The particle moves opposite to the look direction."""
+
     v_3 = bins["v_lower"][i_t, i_e] ** 3
     d_v3 = bins["v_upper"][i_t, i_e] ** 3 - v_3
     speed = np.cbrt(v_3 + rng.random(len(i_t)) * d_v3)
@@ -31,8 +32,8 @@ def _sample(rng, bins, i_t, i_e, i_p, i_q):
 
 
 def _speed_to_energy(speed, mass):
-    r"""Kinetic energy (eV) of particles of relativistic speed (m/s); it was
-    non-relativistic without the ``relativistic`` attribute."""
+    r"""Kinetic energy (eV) of particles of relativistic speed (m/s)."""
+
     # gamma - 1 = beta^2 / (s (1 + s)), s = sqrt(1 - beta^2), without
     # cancellation
     beta2 = (np.asarray(speed) / constants.c) ** 2
