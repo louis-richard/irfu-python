@@ -40,6 +40,18 @@ np.random.seed(0)
 
 
 @pytest.fixture(autouse=True)
+def _mms_config(monkeypatch, tmp_path):
+    # The tests never read nor write the MMS configuration of the user: a
+    # configuration file in the temporary directory of the test, the default
+    # settings until a test writes it (default resource "local"; with the
+    # user's "aws", the tests without source read the AWS archive instead of
+    # their mocked local files). The tests of db_init patch MMS_CFG_PATH too.
+    db_init = importlib.import_module("pyrfu.mms.db_init")
+    path = str(tmp_path / "mms_config.json")
+    monkeypatch.setattr(db_init, "MMS_CFG_PATH", path, raising=False)
+
+
+@pytest.fixture(autouse=True)
 def _no_mms_cache(monkeypatch, tmp_path_factory):
     # The tests never use the MMS file cache of the user: off, in a temporary
     # directory (the cache tests turn it on there)

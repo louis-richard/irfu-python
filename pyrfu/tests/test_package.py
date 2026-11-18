@@ -266,9 +266,18 @@ class ImportSideEffectsTestCase(unittest.TestCase):
         """MMS_CFG_PATH is not a module constant any more: the module
         __getattr__ of pyrfu.mms and pyrfu.mms.db_init computes it."""
         db_init = importlib.import_module("pyrfu.mms.db_init")
-        self.assertNotIn("MMS_CFG_PATH", vars(db_init))
-        self.assertEqual(pyrfu.mms.MMS_CFG_PATH, db_init.MMS_CFG_PATH)
-        self.assertTrue(os.path.isfile(pyrfu.mms.MMS_CFG_PATH))
+
+        # Without the test configuration of conftest (MMS_CFG_PATH set on the
+        # module, so that the tests do not use the user's)
+        test_path = vars(db_init).pop("MMS_CFG_PATH", None)
+
+        try:
+            self.assertNotIn("MMS_CFG_PATH", vars(db_init))
+            self.assertEqual(pyrfu.mms.MMS_CFG_PATH, db_init.MMS_CFG_PATH)
+            self.assertTrue(os.path.isfile(pyrfu.mms.MMS_CFG_PATH))
+        finally:
+            if test_path is not None:
+                setattr(db_init, "MMS_CFG_PATH", test_path)
 
         for module in [pyrfu.mms, db_init]:
             with self.assertRaises(AttributeError):
