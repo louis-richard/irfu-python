@@ -14,6 +14,9 @@ and four-spacecraft averages, and the one-count level of spectra.
 Deprecations
 ^^^^^^^^^^^^
 
+- ``pyrf.waverage(f_sampl=)`` and ``pyrf.wave_fft(f_sampling=)``: renamed
+  ``f_s``, as the other routines (``resample``, ``lowpass``, ...); the old
+  names still work, with a ``FutureWarning``.
 - ``plot.plot_magnetosphere``: plot the magnetopause and the bow shock of
   ``pyrf.magnetosphere`` with matplotlib instead.
 - The keys of the HPCA velocities in GSM, ``v{s}_gsm_hpca_{srvy,brst}_l2``

@@ -6,6 +6,7 @@ import numpy as np
 from scipy import ndimage
 
 # Local imports
+from pyrfu._core.deprecation import deprecated_kwarg
 from pyrfu._core.time import _seconds
 
 WEIGHTS = {
@@ -14,7 +15,8 @@ WEIGHTS = {
 }
 
 
-def waverage(inp, f_sampl: float | None = None, n_pts: int = 7):
+@deprecated_kwarg("f_sampl", "2.6.0", "3.0.0", new="f_s")
+def waverage(inp, f_s: float | None = None, n_pts: int = 7):
     r"""Computes weighted average.
 
     Port of irf_waverage.m: the data are put on a regular time grid at the
@@ -27,8 +29,11 @@ def waverage(inp, f_sampl: float | None = None, n_pts: int = 7):
     ----------
     inp : xarray.DataArray
         Time series of the input data.
-    f_sampl : float, Optional
+    f_s : float, Optional
         Sampling frequency. Default is from the first two time steps.
+
+        .. deprecated:: 2.6.0
+            Its former name `f_sampl` will be removed in pyrfu 3.0.0.
     n_pts : int, Optional
         Number of point to average over 5 ot 7. Default is 7
 
@@ -47,10 +52,10 @@ def waverage(inp, f_sampl: float | None = None, n_pts: int = 7):
 
     t_sec = _seconds(inp.time.data, inp.time.data[0])
 
-    if f_sampl is None:
-        f_sampl = 1 / t_sec[1]
+    if f_s is None:
+        f_s = 1 / t_sec[1]
 
-    n_data = int(np.round(t_sec[-1] * f_sampl))
+    n_data = int(np.round(t_sec[-1] * f_s))
     delta_t = t_sec[-1] / n_data
 
     # Data on the regular time grid, missing points set to zero

@@ -7270,13 +7270,29 @@ class PsdTestCase(unittest.TestCase):
 
         xr.testing.assert_identical(result, pyrf.psd(inp, n_fft=256))
 
-    def test_wave_fft_f_sampling(self):
+    def test_wave_fft_f_s(self):
         inp = generate_ts(64.0, 1024)
-        result = pyrf.wave_fft(inp, "hann", 0.5, 1.0, f_sampling=64.0)
+        result = pyrf.wave_fft(inp, "hann", 0.5, 1.0, f_s=64.0)
         reference = pyrf.wave_fft(inp, "hann", 0.5, 1.0)
 
         for value, ref in zip(result, reference):
             np.testing.assert_allclose(value, ref, rtol=1e-6, atol=1e-7)
+
+        # Its former name f_sampling, deprecated since 2.6.0: the same result
+        with self.assertWarnsRegex(
+            FutureWarning,
+            r"^argument 'f_sampling' of wave_fft is deprecated since pyrfu 2\.6\.0 "
+            r"and will be removed in pyrfu 3\.0\.0; use 'f_s' instead\.$",
+        ) as context:
+            old = pyrf.wave_fft(inp, "hann", 0.5, 1.0, f_sampling=64.0)
+
+        self.assertEqual(context.filename, __file__)
+        for value, ref in zip(old, result):
+            np.testing.assert_array_equal(value, ref)
+
+        with self.assertWarns(FutureWarning):
+            with self.assertRaisesRegex(TypeError, "give 'f_s' only"):
+                pyrf.wave_fft(inp, "hann", 0.5, 1.0, f_s=64.0, f_sampling=64.0)
 
     def test_wave_fft_no_detrend(self):
         # Each frame transformed as it is, as irf_wavefft: the FFT of the
@@ -9259,6 +9275,22 @@ class WaverageTestCase(unittest.TestCase):
         result = pyrf.waverage(inp, 32.0, 5)
         np.testing.assert_allclose(result.data, 2.5)
         self.assertTupleEqual(result.dims, ("time",))
+
+    def test_waverage_f_s(self):
+        # f_s by keyword; its former name f_sampl, deprecated since 2.6.0
+        inp = generate_ts(32.0, 50)
+        expected = pyrf.waverage(inp, 32.0, 5)
+        xr.testing.assert_identical(pyrf.waverage(inp, f_s=32.0, n_pts=5), expected)
+
+        with self.assertWarnsRegex(
+            FutureWarning,
+            r"^argument 'f_sampl' of waverage is deprecated since pyrfu 2\.6\.0 "
+            r"and will be removed in pyrfu 3\.0\.0; use 'f_s' instead\.$",
+        ) as context:
+            result = pyrf.waverage(inp, f_sampl=32.0, n_pts=5)
+
+        self.assertEqual(context.filename, __file__)
+        xr.testing.assert_identical(result, expected)
 
     def test_waverage_input(self):
         inp = generate_ts(32.0, 50)

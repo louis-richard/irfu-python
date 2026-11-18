@@ -6,15 +6,18 @@ import numpy as np
 from scipy import signal
 
 # Local imports
+from pyrfu._core.deprecation import deprecated_kwarg
+
 from .calc_fs import calc_fs
 
 
+@deprecated_kwarg("f_sampling", "2.6.0", "3.0.0", new="f_s")
 def wave_fft(
     inp,
     window,
     frame_overlap: float = 10.0,
     frame_length: float = 20.0,
-    f_sampling: float | None = None,
+    f_s: float | None = None,
     scaled: bool = True,
 ):
     r"""Short-Time Fourier Transform.
@@ -30,8 +33,11 @@ def wave_fft(
         Overlap of consecutive frames, in seconds. Default is 10.
     frame_length : float, Optional
         Length of each frame, in seconds. Default is 20.
-    f_sampling : float, Optional
+    f_s : float, Optional
         Sampling frequency, in Hz. Default is that of inp.
+
+        .. deprecated:: 2.6.0
+            Its former name `f_sampling` will be removed in pyrfu 3.0.0.
     scaled : bool, Optional
         True for the convention of ``scipy.signal.spectrogram``: the transform
         scaled by sqrt(1 / (fs sum(w^2))), a periodic window when given by
@@ -63,20 +69,20 @@ def wave_fft(
 
     """
 
-    if f_sampling is None:
+    if f_s is None:
         # From the times in ns (they were taken as ns in any unit)
-        f_sampling = calc_fs(inp)
+        f_s = calc_fs(inp)
 
     # Frame length and overlap in samples
-    n_per_seg = np.round(frame_length * f_sampling).astype(np.int64)
-    n_overlap = np.round(frame_overlap * f_sampling).astype(np.int64)
+    n_per_seg = np.round(frame_length * f_s).astype(np.int64)
+    n_overlap = np.round(frame_overlap * f_s).astype(np.int64)
 
     if not scaled and isinstance(window, (str, tuple)):
         # irf_wavefft: the symmetric window, e.g. hamming(n)
         window = signal.get_window(window, n_per_seg, fftbins=False)
 
     options = {
-        "fs": f_sampling,
+        "fs": f_s,
         "window": window,
         "nperseg": n_per_seg,
         "noverlap": n_overlap,
@@ -92,9 +98,9 @@ def wave_fft(
         # round(n / 2) samples after their start
         n_rows = (n_per_seg + 1) // 2
         spectrogram = spectrogram[:n_rows] * np.sqrt(
-            f_sampling * np.sum(np.square(window, dtype=np.float64))
+            f_s * np.sum(np.square(window, dtype=np.float64))
         )
         frequencies = frequencies[:n_rows]
-        time = (n_rows + np.arange(len(time)) * (n_per_seg - n_overlap)) / f_sampling
+        time = (n_rows + np.arange(len(time)) * (n_per_seg - n_overlap)) / f_s
 
     return frequencies, time, spectrogram
