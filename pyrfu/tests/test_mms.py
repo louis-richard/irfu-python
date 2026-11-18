@@ -2152,7 +2152,24 @@ class EisMomentsTestCase(unittest.TestCase):
         n_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.2))
         p_bg = pyrf.ts_scalar(flux.time.data, np.full(len(flux.time), 0.4))
         n_0, _, p_0, _ = mms.eis_moments(flux)
-        n_i, _, p_i, t_i = mms.eis_moments(flux, n_bg=n_bg, p_bg=p_bg)
+
+        # Deprecated since 2.6.0 (no EIS background product), both warn
+        with warnings.catch_warnings(record=True) as record:
+            warnings.simplefilter("always")
+            n_i, _, p_i, t_i = mms.eis_moments(flux, n_bg=n_bg, p_bg=p_bg)
+
+        self.assertListEqual(
+            sorted(str(w.message).split(" of ")[0] for w in record),
+            ["argument 'n_bg'", "argument 'p_bg'"],
+        )
+        for w in record:
+            self.assertIs(w.category, FutureWarning)
+            self.assertRegex(
+                str(w.message),
+                r"of eis_moments is deprecated since pyrfu 2\.6\.0 and will be "
+                r"removed in pyrfu 3\.0\.0\. The EIS files have no background",
+            )
+            self.assertEqual(w.filename, __file__)
 
         np.testing.assert_allclose(n_i.data, n_0.data - 0.2)
         np.testing.assert_allclose(p_i.data, p_0.data - 0.4)
@@ -2167,7 +2184,10 @@ class EisMomentsTestCase(unittest.TestCase):
         units = ["cm^-3", "km/s", "nPa", "eV"]
 
         for kwargs in [{}, {"n_bg": n_bg, "p_bg": 2 * n_bg}]:
-            result = mms.eis_moments(flux, **kwargs)
+            with warnings.catch_warnings():
+                # n_bg and p_bg are deprecated
+                warnings.simplefilter("ignore", FutureWarning)
+                result = mms.eis_moments(flux, **kwargs)
 
             with self.subTest(background=bool(kwargs)):
                 self.assertListEqual([r.attrs["UNITS"] for r in result], units)

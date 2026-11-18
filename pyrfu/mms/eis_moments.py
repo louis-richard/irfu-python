@@ -8,6 +8,7 @@ import numpy as np
 import xarray as xr
 from scipy import constants
 
+from pyrfu._core.deprecation import deprecated_kwarg
 from pyrfu.mms._internal.epd import _check_flux
 from pyrfu.mms._internal.psd_units import _MASS_RATIOS
 
@@ -16,6 +17,20 @@ from ..pyrf.resample import resample
 from ..pyrf.ts_scalar import ts_scalar
 
 
+@deprecated_kwarg(
+    "n_bg",
+    "2.6.0",
+    "3.0.0",
+    reason="The EIS files have no background product: subtract a background "
+    "from the moments instead.",
+)
+@deprecated_kwarg(
+    "p_bg",
+    "2.6.0",
+    "3.0.0",
+    reason="The EIS files have no background product: subtract a background "
+    "from the moments instead.",
+)
 def eis_moments(
     inp,
     specie: Literal["proton", "helium", "alpha", "oxygen"] = "proton",
@@ -56,9 +71,17 @@ def eis_moments(
     n_bg : xarray.DataArray, Optional
         Time series of the background density of EIS in cm^-3, to subtract.
         If None (default), no background is removed.
+
+        .. deprecated:: 2.6.0
+            `n_bg` will be removed in pyrfu 3.0.0: subtract the background
+            from the returned density instead.
     p_bg : xarray.DataArray, Optional
         Time series of the background pressure of EIS in nPa, to subtract.
         If None (default), no background is removed.
+
+        .. deprecated:: 2.6.0
+            `p_bg` will be removed in pyrfu 3.0.0: subtract the background
+            from the returned pressure instead.
 
     Returns
     -------
@@ -93,7 +116,9 @@ def eis_moments(
     speed is not corrected. They must be the background of EIS, in the same
     partial moments: not the FPI-DIS background (``nbgi``, ``pbgi``), the
     penetrating radiation in FPI below 30 keV. The EIS files have no
-    background product; `n_bg` and `p_bg` will be deprecated.
+    background product, and `n_bg` and `p_bg` are deprecated: subtract the
+    background from the returned density and pressure, and compute the
+    temperature from the differences, :math:`T = P / (n k_B)`.
 
     References
     ----------

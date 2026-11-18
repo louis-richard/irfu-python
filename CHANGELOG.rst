@@ -14,6 +14,9 @@ and four-spacecraft averages, and the one-count level of spectra.
 Deprecations
 ^^^^^^^^^^^^
 
+- ``mms.eis_moments(n_bg=, p_bg=)``: the EIS files have no background
+  product; subtract a background from the returned density and pressure
+  instead (the temperature from the differences).
 - The deprecation warnings of ``mms.vdf_reduce``,
   ``mms.vdf_frame_transformation``, ``mms.load_brst_segments(data_path=,
   download=)``, ``mms.feeps_pad_spinavg(bin_size=)``, ``pyrf.lowpass(fhz=)``
