@@ -1720,6 +1720,102 @@
     }
   },
   "mec": {
+    "bfnt89d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bfn_gsm",
+      "dtype": "epht89d"
+    },
+    "bfnt89d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bfn_gsm",
+      "dtype": "epht89d"
+    },
+    "bfnt89q_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bfn_gsm",
+      "dtype": "epht89q"
+    },
+    "bfnt89q_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bfn_gsm",
+      "dtype": "epht89q"
+    },
+    "bfnts04d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bfn_gsm",
+      "dtype": "ephts04d"
+    },
+    "bfnts04d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bfn_gsm",
+      "dtype": "ephts04d"
+    },
+    "bfst89d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bfs_gsm",
+      "dtype": "epht89d"
+    },
+    "bfst89d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bfs_gsm",
+      "dtype": "epht89d"
+    },
+    "bfst89q_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bfs_gsm",
+      "dtype": "epht89q"
+    },
+    "bfst89q_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bfs_gsm",
+      "dtype": "epht89q"
+    },
+    "bfsts04d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bfs_gsm",
+      "dtype": "ephts04d"
+    },
+    "bfsts04d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bfs_gsm",
+      "dtype": "ephts04d"
+    },
+    "bmint89d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bmin_gsm",
+      "dtype": "epht89d"
+    },
+    "bmint89d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bmin_gsm",
+      "dtype": "epht89d"
+    },
+    "bmint89q_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bmin_gsm",
+      "dtype": "epht89q"
+    },
+    "bmint89q_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bmin_gsm",
+      "dtype": "epht89q"
+    },
+    "bmints04d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bmin_gsm",
+      "dtype": "ephts04d"
+    },
+    "bmints04d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bmin_gsm",
+      "dtype": "ephts04d"
+    },
+    "bmodt89d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bsc_gsm",
+      "dtype": "epht89d"
+    },
+    "bmodt89d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bsc_gsm",
+      "dtype": "epht89d"
+    },
+    "bmodt89q_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bsc_gsm",
+      "dtype": "epht89q"
+    },
+    "bmodt89q_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bsc_gsm",
+      "dtype": "epht89q"
+    },
+    "bmodts04d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_bsc_gsm",
+      "dtype": "ephts04d"
+    },
+    "bmodts04d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_bsc_gsm",
+      "dtype": "ephts04d"
+    },
     "dst_mec_brst_l2": {
       "cdf_name": "mec_dst",
       "dtype": "epht89d"
@@ -1744,6 +1840,62 @@
       "cdf_name": "mec_moon_eclipse_flag",
       "dtype": "epht89d"
     },
+    "fltypet89d_mec_brst_l2": {
+      "cdf_name": "mec_fieldline_type",
+      "dtype": "epht89d"
+    },
+    "fltypet89d_mec_srvy_l2": {
+      "cdf_name": "mec_fieldline_type",
+      "dtype": "epht89d"
+    },
+    "fltypet89q_mec_brst_l2": {
+      "cdf_name": "mec_fieldline_type",
+      "dtype": "epht89q"
+    },
+    "fltypet89q_mec_srvy_l2": {
+      "cdf_name": "mec_fieldline_type",
+      "dtype": "epht89q"
+    },
+    "fltypets04d_mec_brst_l2": {
+      "cdf_name": "mec_fieldline_type",
+      "dtype": "ephts04d"
+    },
+    "fltypets04d_mec_srvy_l2": {
+      "cdf_name": "mec_fieldline_type",
+      "dtype": "ephts04d"
+    },
+    "geodh_mec_brst_l2": {
+      "cdf_name": "mec_geod_height",
+      "dtype": "epht89d"
+    },
+    "geodh_mec_srvy_l2": {
+      "cdf_name": "mec_geod_height",
+      "dtype": "epht89d"
+    },
+    "geodlat_mec_brst_l2": {
+      "cdf_name": "mec_geod_lat",
+      "dtype": "epht89d"
+    },
+    "geodlat_mec_srvy_l2": {
+      "cdf_name": "mec_geod_lat",
+      "dtype": "epht89d"
+    },
+    "geodlon_mec_brst_l2": {
+      "cdf_name": "mec_geod_lon",
+      "dtype": "epht89d"
+    },
+    "geodlon_mec_srvy_l2": {
+      "cdf_name": "mec_geod_lon",
+      "dtype": "epht89d"
+    },
+    "gmst_mec_brst_l2": {
+      "cdf_name": "mec_gmst",
+      "dtype": "epht89d"
+    },
+    "gmst_mec_srvy_l2": {
+      "cdf_name": "mec_gmst",
+      "dtype": "epht89d"
+    },
     "kp_mec_brst_l2": {
       "cdf_name": "mec_kp",
       "dtype": "epht89d"
@@ -1752,12 +1904,124 @@
       "cdf_name": "mec_kp",
       "dtype": "epht89d"
     },
+    "latlonfnt89d_mec_brst_l2": {
+      "cdf_name": "mec_pfn_geod_latlon",
+      "dtype": "epht89d"
+    },
+    "latlonfnt89d_mec_srvy_l2": {
+      "cdf_name": "mec_pfn_geod_latlon",
+      "dtype": "epht89d"
+    },
+    "latlonfnt89q_mec_brst_l2": {
+      "cdf_name": "mec_pfn_geod_latlon",
+      "dtype": "epht89q"
+    },
+    "latlonfnt89q_mec_srvy_l2": {
+      "cdf_name": "mec_pfn_geod_latlon",
+      "dtype": "epht89q"
+    },
+    "latlonfnts04d_mec_brst_l2": {
+      "cdf_name": "mec_pfn_geod_latlon",
+      "dtype": "ephts04d"
+    },
+    "latlonfnts04d_mec_srvy_l2": {
+      "cdf_name": "mec_pfn_geod_latlon",
+      "dtype": "ephts04d"
+    },
+    "latlonfst89d_mec_brst_l2": {
+      "cdf_name": "mec_pfs_geod_latlon",
+      "dtype": "epht89d"
+    },
+    "latlonfst89d_mec_srvy_l2": {
+      "cdf_name": "mec_pfs_geod_latlon",
+      "dtype": "epht89d"
+    },
+    "latlonfst89q_mec_brst_l2": {
+      "cdf_name": "mec_pfs_geod_latlon",
+      "dtype": "epht89q"
+    },
+    "latlonfst89q_mec_srvy_l2": {
+      "cdf_name": "mec_pfs_geod_latlon",
+      "dtype": "epht89q"
+    },
+    "latlonfsts04d_mec_brst_l2": {
+      "cdf_name": "mec_pfs_geod_latlon",
+      "dtype": "ephts04d"
+    },
+    "latlonfsts04d_mec_srvy_l2": {
+      "cdf_name": "mec_pfs_geod_latlon",
+      "dtype": "ephts04d"
+    },
     "ldip_mec_brst_l2": {
       "cdf_name": "mec_l_dipole",
       "dtype": "epht89d"
     },
     "ldip_mec_srvy_l2": {
       "cdf_name": "mec_l_dipole",
+      "dtype": "epht89d"
+    },
+    "losscnt89d_mec_brst_l2": {
+      "cdf_name": "mec_loss_cone_angle_n",
+      "dtype": "epht89d"
+    },
+    "losscnt89d_mec_srvy_l2": {
+      "cdf_name": "mec_loss_cone_angle_n",
+      "dtype": "epht89d"
+    },
+    "losscnt89q_mec_brst_l2": {
+      "cdf_name": "mec_loss_cone_angle_n",
+      "dtype": "epht89q"
+    },
+    "losscnt89q_mec_srvy_l2": {
+      "cdf_name": "mec_loss_cone_angle_n",
+      "dtype": "epht89q"
+    },
+    "losscnts04d_mec_brst_l2": {
+      "cdf_name": "mec_loss_cone_angle_n",
+      "dtype": "ephts04d"
+    },
+    "losscnts04d_mec_srvy_l2": {
+      "cdf_name": "mec_loss_cone_angle_n",
+      "dtype": "ephts04d"
+    },
+    "losscst89d_mec_brst_l2": {
+      "cdf_name": "mec_loss_cone_angle_s",
+      "dtype": "epht89d"
+    },
+    "losscst89d_mec_srvy_l2": {
+      "cdf_name": "mec_loss_cone_angle_s",
+      "dtype": "epht89d"
+    },
+    "losscst89q_mec_brst_l2": {
+      "cdf_name": "mec_loss_cone_angle_s",
+      "dtype": "epht89q"
+    },
+    "losscst89q_mec_srvy_l2": {
+      "cdf_name": "mec_loss_cone_angle_s",
+      "dtype": "epht89q"
+    },
+    "losscsts04d_mec_brst_l2": {
+      "cdf_name": "mec_loss_cone_angle_s",
+      "dtype": "ephts04d"
+    },
+    "losscsts04d_mec_srvy_l2": {
+      "cdf_name": "mec_loss_cone_angle_s",
+      "dtype": "ephts04d"
+    },
+    "lphase_mec_brst_l2": {
+      "cdf_name": "mec_L_phase",
+      "dtype": "epht89d"
+    },
+    "lphase_mec_srvy_l2": {
+      "cdf_name": "mec_L_phase",
+      "dtype": "epht89d"
+    },
+    "lvec_mec_brst_l2": {
+      "cdf_name": "mec_L_vec",
+      "dtype": "epht89d"
+    },
+    "lvec_mec_srvy_l2": {
+      "cdf_name": "mec_L_vec",
       "dtype": "epht89d"
     },
     "mlat_mec_brst_l2": {
@@ -1774,6 +2038,22 @@
     },
     "mlt_mec_srvy_l2": {
       "cdf_name": "mec_mlt",
+      "dtype": "epht89d"
+    },
+    "pphase_mec_brst_l2": {
+      "cdf_name": "mec_P_phase",
+      "dtype": "epht89d"
+    },
+    "pphase_mec_srvy_l2": {
+      "cdf_name": "mec_P_phase",
+      "dtype": "epht89d"
+    },
+    "pvec_mec_brst_l2": {
+      "cdf_name": "mec_P_vec",
+      "dtype": "epht89d"
+    },
+    "pvec_mec_srvy_l2": {
+      "cdf_name": "mec_P_vec",
       "dtype": "epht89d"
     },
     "quat_bcs_mec_brst_l2": {
@@ -1864,6 +2144,30 @@
       "cdf_name": "mec_quat_eci_to_ssl",
       "dtype": "epht89d"
     },
+    "r_eci_mec_brst_l2": {
+      "cdf_name": "mec_r_eci",
+      "dtype": "epht89d"
+    },
+    "r_eci_mec_srvy_l2": {
+      "cdf_name": "mec_r_eci",
+      "dtype": "epht89d"
+    },
+    "r_geo_mec_brst_l2": {
+      "cdf_name": "mec_r_geo",
+      "dtype": "epht89d"
+    },
+    "r_geo_mec_srvy_l2": {
+      "cdf_name": "mec_r_geo",
+      "dtype": "epht89d"
+    },
+    "r_gse2000_mec_brst_l2": {
+      "cdf_name": "mec_r_gse2000",
+      "dtype": "epht89d"
+    },
+    "r_gse2000_mec_srvy_l2": {
+      "cdf_name": "mec_r_gse2000",
+      "dtype": "epht89d"
+    },
     "r_gse_mec_brst_l2": {
       "cdf_name": "mec_r_gse",
       "dtype": "epht89d"
@@ -1888,6 +2192,126 @@
       "cdf_name": "mec_r_sm",
       "dtype": "epht89d"
     },
+    "rfnt89d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pfn_gsm",
+      "dtype": "epht89d"
+    },
+    "rfnt89d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pfn_gsm",
+      "dtype": "epht89d"
+    },
+    "rfnt89q_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pfn_gsm",
+      "dtype": "epht89q"
+    },
+    "rfnt89q_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pfn_gsm",
+      "dtype": "epht89q"
+    },
+    "rfnts04d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pfn_gsm",
+      "dtype": "ephts04d"
+    },
+    "rfnts04d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pfn_gsm",
+      "dtype": "ephts04d"
+    },
+    "rfst89d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pfs_gsm",
+      "dtype": "epht89d"
+    },
+    "rfst89d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pfs_gsm",
+      "dtype": "epht89d"
+    },
+    "rfst89q_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pfs_gsm",
+      "dtype": "epht89q"
+    },
+    "rfst89q_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pfs_gsm",
+      "dtype": "epht89q"
+    },
+    "rfsts04d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pfs_gsm",
+      "dtype": "ephts04d"
+    },
+    "rfsts04d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pfs_gsm",
+      "dtype": "ephts04d"
+    },
+    "rmint89d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pmin_gsm",
+      "dtype": "epht89d"
+    },
+    "rmint89d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pmin_gsm",
+      "dtype": "epht89d"
+    },
+    "rmint89q_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pmin_gsm",
+      "dtype": "epht89q"
+    },
+    "rmint89q_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pmin_gsm",
+      "dtype": "epht89q"
+    },
+    "rmints04d_gsm_mec_brst_l2": {
+      "cdf_name": "mec_pmin_gsm",
+      "dtype": "ephts04d"
+    },
+    "rmints04d_gsm_mec_srvy_l2": {
+      "cdf_name": "mec_pmin_gsm",
+      "dtype": "ephts04d"
+    },
+    "rmoon_eci_mec_brst_l2": {
+      "cdf_name": "mec_r_moon_de421_eci",
+      "dtype": "epht89d"
+    },
+    "rmoon_eci_mec_srvy_l2": {
+      "cdf_name": "mec_r_moon_de421_eci",
+      "dtype": "epht89d"
+    },
+    "rsun_eci_mec_brst_l2": {
+      "cdf_name": "mec_r_sun_de421_eci",
+      "dtype": "epht89d"
+    },
+    "rsun_eci_mec_srvy_l2": {
+      "cdf_name": "mec_r_sun_de421_eci",
+      "dtype": "epht89d"
+    },
+    "tilt_mec_brst_l2": {
+      "cdf_name": "mec_dipole_tilt",
+      "dtype": "epht89d"
+    },
+    "tilt_mec_srvy_l2": {
+      "cdf_name": "mec_dipole_tilt",
+      "dtype": "epht89d"
+    },
+    "vel_eci_mec_brst_l2": {
+      "cdf_name": "mec_v_eci",
+      "dtype": "epht89d"
+    },
+    "vel_eci_mec_srvy_l2": {
+      "cdf_name": "mec_v_eci",
+      "dtype": "epht89d"
+    },
+    "vel_geo_mec_brst_l2": {
+      "cdf_name": "mec_v_geo",
+      "dtype": "epht89d"
+    },
+    "vel_geo_mec_srvy_l2": {
+      "cdf_name": "mec_v_geo",
+      "dtype": "epht89d"
+    },
+    "vel_gse2000_mec_brst_l2": {
+      "cdf_name": "mec_v_gse2000",
+      "dtype": "epht89d"
+    },
+    "vel_gse2000_mec_srvy_l2": {
+      "cdf_name": "mec_v_gse2000",
+      "dtype": "epht89d"
+    },
     "vel_gse_mec_brst_l2": {
       "cdf_name": "mec_v_gse",
       "dtype": "epht89d"
@@ -1902,6 +2326,30 @@
     },
     "vel_gsm_mec_srvy_l2": {
       "cdf_name": "mec_v_gsm",
+      "dtype": "epht89d"
+    },
+    "vel_sm_mec_brst_l2": {
+      "cdf_name": "mec_v_sm",
+      "dtype": "epht89d"
+    },
+    "vel_sm_mec_srvy_l2": {
+      "cdf_name": "mec_v_sm",
+      "dtype": "epht89d"
+    },
+    "zphase_mec_brst_l2": {
+      "cdf_name": "mec_Z_phase",
+      "dtype": "epht89d"
+    },
+    "zphase_mec_srvy_l2": {
+      "cdf_name": "mec_Z_phase",
+      "dtype": "epht89d"
+    },
+    "zvec_mec_brst_l2": {
+      "cdf_name": "mec_Z_vec",
+      "dtype": "epht89d"
+    },
+    "zvec_mec_srvy_l2": {
+      "cdf_name": "mec_Z_vec",
       "dtype": "epht89d"
     }
   },

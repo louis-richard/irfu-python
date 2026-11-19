@@ -48,6 +48,7 @@ from scipy.special import gammainc
 from .. import mms, pyrf
 from ..mms.feeps_flat_field_corrections import g_corr
 from ..mms.get_ts import get_ts
+from ..mms.tokenize import _DEPRECATED_KEYS
 from . import (
     generate_data,
     generate_defatt,
@@ -248,9 +249,13 @@ def _mms_keys():
     ) as json_file:
         keys_ = json.load(json_file)
 
-    all_keys = list(
-        np.hstack([list(instrument.keys()) for instrument in keys_.values()])
-    )
+    # The deprecated keys left out (they warn; tested on their own)
+    all_keys = [
+        key
+        for instrument in keys_.values()
+        for key in instrument
+        if key not in _DEPRECATED_KEYS
+    ]
     return all_keys
 
 
@@ -13664,6 +13669,15 @@ class TokenizeTestCase(unittest.TestCase):
         ("eres_dsl_edp_slow_l2", "edp_dce_dsl_res_slow_l2", "dce", "dsl"),
         ("e_gsm_edi_brst_l2", "edi_e_gsm_brst_l2", "efield", "gsm"),
         ("vdrift_dsl_edi_brst_l2", "edi_vdrift_dsl_brst_l2", "efield", "dsl"),
+        ("r_eci_mec_srvy_l2", "mec_r_eci", "epht89d", "eci"),
+        ("vel_gse2000_mec_brst_l2", "mec_v_gse2000", "epht89d", "gse2000"),
+        ("tilt_mec_srvy_l2", "mec_dipole_tilt", "epht89d", ""),
+        ("rsun_eci_mec_srvy_l2", "mec_r_sun_de421_eci", "epht89d", "eci"),
+        ("lphase_mec_brst_l2", "mec_L_phase", "epht89d", ""),
+        ("bmodt89d_gsm_mec_srvy_l2", "mec_bsc_gsm", "epht89d", "gsm"),
+        ("rfsts04d_gsm_mec_brst_l2", "mec_pfs_gsm", "ephts04d", "gsm"),
+        ("losscnt89q_mec_srvy_l2", "mec_loss_cone_angle_n", "epht89q", ""),
+        ("fltypets04d_mec_srvy_l2", "mec_fieldline_type", "ephts04d", ""),
     )
     @unpack
     def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
@@ -13676,7 +13690,9 @@ class TokenizeTestCase(unittest.TestCase):
         # field-aligned spectra, the potential, B direction and GSE matrix of
         # the partial moments, the average one-count level and the DES
         # photoelectron model (distaux files); EDP HF spectra and DCE residual;
-        # EDI burst E field and drift velocity
+        # EDI burst E field and drift velocity; MEC positions and velocities
+        # in ECI and GSE2000, dipole tilt, Sun position, attitude phase, and
+        # the field-model variables of the T89 (Kp), T89 quiet and TS04 files
         result = mms.tokenize(var_str)
         self.assertEqual(result["cdf_name"], cdf_name)
         self.assertEqual(result["dtype"], dtype)

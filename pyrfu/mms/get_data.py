@@ -481,10 +481,32 @@ def get_data(
     vperphplus_dbcs_hpca_brst_l2, vperphplus_dbcs_hpca_srvy_l2,
     vperpoplus_dbcs_hpca_brst_l2, vperpoplus_dbcs_hpca_srvy_l2
 
-    MEC: dst_mec_brst_l2, dst_mec_srvy_l2, eclipseearth_mec_brst_l2,
+    MEC: bfnt89d_gsm_mec_brst_l2, bfnt89d_gsm_mec_srvy_l2, bfnt89q_gsm_mec_brst_l2,
+    bfnt89q_gsm_mec_srvy_l2, bfnts04d_gsm_mec_brst_l2, bfnts04d_gsm_mec_srvy_l2,
+    bfst89d_gsm_mec_brst_l2, bfst89d_gsm_mec_srvy_l2, bfst89q_gsm_mec_brst_l2,
+    bfst89q_gsm_mec_srvy_l2, bfsts04d_gsm_mec_brst_l2, bfsts04d_gsm_mec_srvy_l2,
+    bmint89d_gsm_mec_brst_l2, bmint89d_gsm_mec_srvy_l2, bmint89q_gsm_mec_brst_l2,
+    bmint89q_gsm_mec_srvy_l2, bmints04d_gsm_mec_brst_l2, bmints04d_gsm_mec_srvy_l2,
+    bmodt89d_gsm_mec_brst_l2, bmodt89d_gsm_mec_srvy_l2, bmodt89q_gsm_mec_brst_l2,
+    bmodt89q_gsm_mec_srvy_l2, bmodts04d_gsm_mec_brst_l2, bmodts04d_gsm_mec_srvy_l2,
+    dst_mec_brst_l2, dst_mec_srvy_l2, eclipseearth_mec_brst_l2,
     eclipseearth_mec_srvy_l2, eclipsemoon_mec_brst_l2, eclipsemoon_mec_srvy_l2,
-    kp_mec_brst_l2, kp_mec_srvy_l2, ldip_mec_brst_l2, ldip_mec_srvy_l2,
+    fltypet89d_mec_brst_l2, fltypet89d_mec_srvy_l2, fltypet89q_mec_brst_l2,
+    fltypet89q_mec_srvy_l2, fltypets04d_mec_brst_l2, fltypets04d_mec_srvy_l2,
+    geodh_mec_brst_l2, geodh_mec_srvy_l2, geodlat_mec_brst_l2, geodlat_mec_srvy_l2,
+    geodlon_mec_brst_l2, geodlon_mec_srvy_l2, gmst_mec_brst_l2, gmst_mec_srvy_l2,
+    kp_mec_brst_l2, kp_mec_srvy_l2, latlonfnt89d_mec_brst_l2, latlonfnt89d_mec_srvy_l2,
+    latlonfnt89q_mec_brst_l2, latlonfnt89q_mec_srvy_l2, latlonfnts04d_mec_brst_l2,
+    latlonfnts04d_mec_srvy_l2, latlonfst89d_mec_brst_l2, latlonfst89d_mec_srvy_l2,
+    latlonfst89q_mec_brst_l2, latlonfst89q_mec_srvy_l2, latlonfsts04d_mec_brst_l2,
+    latlonfsts04d_mec_srvy_l2, ldip_mec_brst_l2, ldip_mec_srvy_l2,
+    losscnt89d_mec_brst_l2, losscnt89d_mec_srvy_l2, losscnt89q_mec_brst_l2,
+    losscnt89q_mec_srvy_l2, losscnts04d_mec_brst_l2, losscnts04d_mec_srvy_l2,
+    losscst89d_mec_brst_l2, losscst89d_mec_srvy_l2, losscst89q_mec_brst_l2,
+    losscst89q_mec_srvy_l2, losscsts04d_mec_brst_l2, losscsts04d_mec_srvy_l2,
+    lphase_mec_brst_l2, lphase_mec_srvy_l2, lvec_mec_brst_l2, lvec_mec_srvy_l2,
     mlat_mec_brst_l2, mlat_mec_srvy_l2, mlt_mec_brst_l2, mlt_mec_srvy_l2,
+    pphase_mec_brst_l2, pphase_mec_srvy_l2, pvec_mec_brst_l2, pvec_mec_srvy_l2,
     quat_bcs_mec_brst_l2, quat_bcs_mec_srvy_l2, quat_dbcs_mec_brst_l2,
     quat_dbcs_mec_srvy_l2, quat_dmpa_mec_brst_l2, quat_dmpa_mec_srvy_l2,
     quat_dsl_mec_brst_l2, quat_dsl_mec_srvy_l2, quat_geo_mec_brst_l2,
@@ -492,9 +514,22 @@ def get_data(
     quat_gse_mec_brst_l2, quat_gse_mec_srvy_l2, quat_gsm_mec_brst_l2,
     quat_gsm_mec_srvy_l2, quat_sm_mec_brst_l2, quat_sm_mec_srvy_l2,
     quat_smpa_mec_brst_l2, quat_smpa_mec_srvy_l2, quat_ssl_mec_brst_l2,
-    quat_ssl_mec_srvy_l2, r_gse_mec_brst_l2, r_gse_mec_srvy_l2, r_gsm_mec_brst_l2,
-    r_gsm_mec_srvy_l2, r_sm_mec_brst_l2, r_sm_mec_srvy_l2, vel_gse_mec_brst_l2,
-    vel_gse_mec_srvy_l2, vel_gsm_mec_brst_l2, vel_gsm_mec_srvy_l2
+    quat_ssl_mec_srvy_l2, r_eci_mec_brst_l2, r_eci_mec_srvy_l2, r_geo_mec_brst_l2,
+    r_geo_mec_srvy_l2, r_gse2000_mec_brst_l2, r_gse2000_mec_srvy_l2, r_gse_mec_brst_l2,
+    r_gse_mec_srvy_l2, r_gsm_mec_brst_l2, r_gsm_mec_srvy_l2, r_sm_mec_brst_l2,
+    r_sm_mec_srvy_l2, rfnt89d_gsm_mec_brst_l2, rfnt89d_gsm_mec_srvy_l2,
+    rfnt89q_gsm_mec_brst_l2, rfnt89q_gsm_mec_srvy_l2, rfnts04d_gsm_mec_brst_l2,
+    rfnts04d_gsm_mec_srvy_l2, rfst89d_gsm_mec_brst_l2, rfst89d_gsm_mec_srvy_l2,
+    rfst89q_gsm_mec_brst_l2, rfst89q_gsm_mec_srvy_l2, rfsts04d_gsm_mec_brst_l2,
+    rfsts04d_gsm_mec_srvy_l2, rmint89d_gsm_mec_brst_l2, rmint89d_gsm_mec_srvy_l2,
+    rmint89q_gsm_mec_brst_l2, rmint89q_gsm_mec_srvy_l2, rmints04d_gsm_mec_brst_l2,
+    rmints04d_gsm_mec_srvy_l2, rmoon_eci_mec_brst_l2, rmoon_eci_mec_srvy_l2,
+    rsun_eci_mec_brst_l2, rsun_eci_mec_srvy_l2, tilt_mec_brst_l2, tilt_mec_srvy_l2,
+    vel_eci_mec_brst_l2, vel_eci_mec_srvy_l2, vel_geo_mec_brst_l2, vel_geo_mec_srvy_l2,
+    vel_gse2000_mec_brst_l2, vel_gse2000_mec_srvy_l2, vel_gse_mec_brst_l2,
+    vel_gse_mec_srvy_l2, vel_gsm_mec_brst_l2, vel_gsm_mec_srvy_l2, vel_sm_mec_brst_l2,
+    vel_sm_mec_srvy_l2, zphase_mec_brst_l2, zphase_mec_srvy_l2, zvec_mec_brst_l2,
+    zvec_mec_srvy_l2
 
     SCM: b_gse_scm_brst_l2, b_gse_scm_srvy_l2, bschb_gse_scm_brst_l2
 
@@ -553,6 +588,17 @@ def get_data(
     +Z and -Z axes of DBCS, ``bhat*_dbcs`` the unit vector of B and
     ``xform*_gse`` the DBCS to GSE matrix used by FPI for the moments (CMAD
     Table 4-8).
+
+    The MEC variables of a field model are in the files of each model (T89
+    with Kp, T89 quiet, TS04 dynamic): their keys end with the model, e.g.
+    ``bmodt89d_gsm_mec_srvy_l2``, ``bmodt89q_gsm_mec_srvy_l2`` and
+    ``bmodts04d_gsm_mec_srvy_l2`` (the model field at the spacecraft; ``bfn``,
+    ``bfs``, ``bmin`` at the northern and southern footpoints at 100 km and at
+    the minimum of B, ``rfn``, ``rfs``, ``rmin`` their positions,
+    ``latlonfn``, ``latlonfs`` the geodetic footpoints, ``losscn``,
+    ``losscs`` the loss cone angles, ``fltype`` the field line type, CMAD
+    Table 3-5). The keys of the other MEC variables read the T89 (Kp) files,
+    which have them all.
 
     The files without the variable are skipped, with a warning: e.g. the EDI
     burst files of the intervals without EFIELD mode, "null files" with only
