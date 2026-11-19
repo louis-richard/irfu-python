@@ -13678,6 +13678,13 @@ class TokenizeTestCase(unittest.TestCase):
         ("rfsts04d_gsm_mec_brst_l2", "mec_pfs_gsm", "ephts04d", "gsm"),
         ("losscnt89q_mec_srvy_l2", "mec_loss_cone_angle_n", "epht89q", ""),
         ("fltypets04d_mec_srvy_l2", "mec_fieldline_type", "ephts04d", ""),
+        ("spinnum_hpca_srvy_l2", "hpca_spin_number", "moments", ""),
+        ("tofvmon_hpca_brst_l2", "hpca_TOF_VMON_MIN_converted", "moments", ""),
+        ("bsweep_dmpa_hpca_srvy_l2", "hpca_B_GSE_sweep_avg", "ion", "dmpa"),
+        ("tofcounts_hpca_srvy_l2", "hpca_tof_counts", "tof-counts", ""),
+        ("stemp_fgm_brst_l2", "fgm_stemp_brst_l2", "", ""),
+        ("r_gse_fsm_brst_l3", "fsm_r_gse_brst_l3", "8khz", "gse"),
+        ("swde34_dsp_fast_l2", "dsp_swd_E34_Counts", "swd", ""),
     )
     @unpack
     def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
@@ -13692,7 +13699,9 @@ class TokenizeTestCase(unittest.TestCase):
         # photoelectron model (distaux files); EDP HF spectra and DCE residual;
         # EDI burst E field and drift velocity; MEC positions and velocities
         # in ECI and GSE2000, dipole tilt, Sun position, attitude phase, and
-        # the field-model variables of the T89 (Kp), T89 quiet and TS04 files
+        # the field-model variables of the T89 (Kp), T89 quiet and TS04 files;
+        # HPCA spin number, MCP and TOF voltages, sweep-averaged B, TOF counts;
+        # FGM sensor temperature; FSM position; DSP solitary wave counts
         result = mms.tokenize(var_str)
         self.assertEqual(result["cdf_name"], cdf_name)
         self.assertEqual(result["dtype"], dtype)
@@ -13716,10 +13725,13 @@ class TokenizeTestCase(unittest.TestCase):
     def test_mms_keys_coordinate_systems(self):
         # When the CDF variable name has a coordinate system, it is the one of
         # the key (some products, e.g. HPCA DBCS moments, have none in the name).
-        # HPCA B_GSE_spin_avg is in DMPA (its CATDESC; CMAD Table 5-18, "see
-        # afg_srvy_l2pre_dmpa")
+        # HPCA B_GSE_spin_avg and B_GSE_sweep_avg are in DMPA (their CATDESC;
+        # CMAD Tables 5-17 and 5-18, "see afg_srvy_l2pre_dmpa")
         coordinates = {"gse", "gsm", "dbcs", "dmpa", "bcs", "dsl", "ssc", "gei"}
-        mislabelled = {"hpca_B_GSE_spin_avg": {"dmpa"}}
+        mislabelled = {
+            "hpca_B_GSE_spin_avg": {"dmpa"},
+            "hpca_B_GSE_sweep_avg": {"dmpa"},
+        }
         keys_path = os.path.join(os.path.dirname(mms.__file__), "mms_keys.json")
         with open(keys_path, "r", encoding="utf-8") as file:
             keys = json.load(file)

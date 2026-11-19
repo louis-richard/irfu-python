@@ -134,6 +134,12 @@ ALL_PARAMS_SCALARS = [
     "bpsdscm1",
     "bpsdscm2",
     "bpsdscm3",
+    "hirange",
+    "mode",
+    "stemp",
+    "etemp",
+    "swde12",
+    "swde34",
 ]
 
 ALL_PARAMS_VECTORS = [
@@ -164,6 +170,7 @@ ALL_PARAMS_VECTORS = [
     "quat",
     "vdrift",
     "bschb",
+    "bsweep",
     "rsun",
     "rmoon",
     "bmodt89d",
@@ -235,6 +242,10 @@ HPCA_PARAMS_SCALARS = [
     "flagheplus",
     "flagheplusplus",
     "flagoplus",
+    "spinnum",
+    "mcpvmon",
+    "tofvmon",
+    "tofcounts",
 ]
 
 HPCA_PARAMS_TENSORS = [

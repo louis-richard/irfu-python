@@ -352,7 +352,7 @@ def get_data(
     bpsdscm2_dsp_fast_l2, bpsdscm2_dsp_slow_l2, bpsdscm3_dsp_fast_l2,
     bpsdscm3_dsp_slow_l2, epsd_dsp_fast_l2, epsd_dsp_slow_l2, epsdx_dsp_fast_l2,
     epsdx_dsp_slow_l2, epsdy_dsp_fast_l2, epsdy_dsp_slow_l2, epsdz_dsp_fast_l2,
-    epsdz_dsp_slow_l2
+    epsdz_dsp_slow_l2, swde12_dsp_fast_l2, swde34_dsp_fast_l2
 
     EDI: e_dsl_edi_brst_l2, e_dsl_edi_srvy_l2, e_gse_edi_brst_l2, e_gse_edi_srvy_l2,
     e_gsm_edi_brst_l2, e_gsm_edi_srvy_l2, vdrift_dsl_edi_brst_l2,
@@ -378,8 +378,10 @@ def get_data(
 
     FGM: b_bcs_fgm_brst_l2, b_bcs_fgm_srvy_l2, b_dmpa_fgm_brst_l2, b_dmpa_fgm_srvy_l2,
     b_gse_fgm_brst_l2, b_gse_fgm_srvy_l2, b_gsm_fgm_brst_l2, b_gsm_fgm_srvy_l2,
-    flag_fgm_brst_l2, flag_fgm_srvy_l2, r_gse_fgm_brst_l2, r_gse_fgm_srvy_l2,
-    r_gsm_fgm_brst_l2, r_gsm_fgm_srvy_l2
+    etemp_fgm_brst_l2, etemp_fgm_srvy_l2, flag_fgm_brst_l2, flag_fgm_srvy_l2,
+    hirange_fgm_brst_l2, hirange_fgm_srvy_l2, mode_fgm_brst_l2, mode_fgm_srvy_l2,
+    r_gse_fgm_brst_l2, r_gse_fgm_srvy_l2, r_gsm_fgm_brst_l2, r_gsm_fgm_srvy_l2,
+    stemp_fgm_brst_l2, stemp_fgm_srvy_l2
 
     FPI: avgf1countse_fpi_brst_l2, avgf1countse_fpi_fast_l2, avgf1countsi_fpi_brst_l2,
     avgf1countsi_fpi_fast_l2, bhate_dbcs_fpi_brst_l2, bhate_dbcs_fpi_fast_l2,
@@ -440,28 +442,32 @@ def get_data(
     vi_gse_fpi_brst_l2, vi_gse_fpi_fast_l2, vi_gse_fpi_fast_ql, xforme_gse_fpi_brst_l2,
     xforme_gse_fpi_fast_l2, xformi_gse_fpi_brst_l2, xformi_gse_fpi_fast_l2
 
-    FSM: b_gse_fsm_brst_l3
+    FSM: b_gse_fsm_brst_l3, r_gse_fsm_brst_l3
 
     HPCA: azimuth_hpca_brst_l2, azimuth_hpca_srvy_l2, b_dmpa_hpca_brst_l2,
-    b_dmpa_hpca_srvy_l2, b_gsm_hpca_brst_l2, b_gsm_hpca_srvy_l2, dpfheplus_hpca_brst_l2,
-    dpfheplus_hpca_srvy_l2, dpfheplusplus_hpca_brst_l2, dpfheplusplus_hpca_srvy_l2,
-    dpfhplus_hpca_brst_l2, dpfhplus_hpca_srvy_l2, dpfoplus_hpca_brst_l2,
-    dpfoplus_hpca_srvy_l2, flagheplus_hpca_brst_l2, flagheplus_hpca_srvy_l2,
-    flagheplusplus_hpca_brst_l2, flagheplusplus_hpca_srvy_l2, flaghplus_hpca_brst_l2,
-    flaghplus_hpca_srvy_l2, flagoplus_hpca_brst_l2, flagoplus_hpca_srvy_l2,
-    nheplus_hpca_brst_l2, nheplus_hpca_srvy_l2, nheplusplus_hpca_brst_l2,
-    nheplusplus_hpca_srvy_l2, nhplus_hpca_brst_l2, nhplus_hpca_srvy_l2,
-    noplus_hpca_brst_l2, noplus_hpca_srvy_l2, pheplus_dbcs_hpca_brst_l2,
-    pheplus_dbcs_hpca_srvy_l2, pheplusplus_dbcs_hpca_brst_l2,
+    b_dmpa_hpca_srvy_l2, b_gsm_hpca_brst_l2, b_gsm_hpca_srvy_l2,
+    bsweep_dmpa_hpca_brst_l2, bsweep_dmpa_hpca_srvy_l2, bsweep_gsm_hpca_brst_l2,
+    bsweep_gsm_hpca_srvy_l2, dpfheplus_hpca_brst_l2, dpfheplus_hpca_srvy_l2,
+    dpfheplusplus_hpca_brst_l2, dpfheplusplus_hpca_srvy_l2, dpfhplus_hpca_brst_l2,
+    dpfhplus_hpca_srvy_l2, dpfoplus_hpca_brst_l2, dpfoplus_hpca_srvy_l2,
+    flagheplus_hpca_brst_l2, flagheplus_hpca_srvy_l2, flagheplusplus_hpca_brst_l2,
+    flagheplusplus_hpca_srvy_l2, flaghplus_hpca_brst_l2, flaghplus_hpca_srvy_l2,
+    flagoplus_hpca_brst_l2, flagoplus_hpca_srvy_l2, mcpvmon_hpca_brst_l2,
+    mcpvmon_hpca_srvy_l2, nheplus_hpca_brst_l2, nheplus_hpca_srvy_l2,
+    nheplusplus_hpca_brst_l2, nheplusplus_hpca_srvy_l2, nhplus_hpca_brst_l2,
+    nhplus_hpca_srvy_l2, noplus_hpca_brst_l2, noplus_hpca_srvy_l2,
+    pheplus_dbcs_hpca_brst_l2, pheplus_dbcs_hpca_srvy_l2, pheplusplus_dbcs_hpca_brst_l2,
     pheplusplus_dbcs_hpca_srvy_l2, phplus_dbcs_hpca_brst_l2, phplus_dbcs_hpca_srvy_l2,
     poplus_dbcs_hpca_brst_l2, poplus_dbcs_hpca_srvy_l2, saz_hpca_brst_l2,
-    saz_hpca_srvy_l2, theplus_dbcs_hpca_brst_l2, theplus_dbcs_hpca_srvy_l2,
-    theplusplus_dbcs_hpca_brst_l2, theplusplus_dbcs_hpca_srvy_l2,
-    thplus_dbcs_hpca_brst_l2, thplus_dbcs_hpca_srvy_l2, toplus_dbcs_hpca_brst_l2,
-    toplus_dbcs_hpca_srvy_l2, tparaheplus_hpca_brst_l2, tparaheplus_hpca_srvy_l2,
-    tparaheplusplus_hpca_brst_l2, tparaheplusplus_hpca_srvy_l2, tparahplus_hpca_brst_l2,
-    tparahplus_hpca_srvy_l2, tparaoplus_hpca_brst_l2, tparaoplus_hpca_srvy_l2,
-    tperpheplus_hpca_brst_l2, tperpheplus_hpca_srvy_l2, tperpheplusplus_hpca_brst_l2,
+    saz_hpca_srvy_l2, spinnum_hpca_brst_l2, spinnum_hpca_srvy_l2,
+    theplus_dbcs_hpca_brst_l2, theplus_dbcs_hpca_srvy_l2, theplusplus_dbcs_hpca_brst_l2,
+    theplusplus_dbcs_hpca_srvy_l2, thplus_dbcs_hpca_brst_l2, thplus_dbcs_hpca_srvy_l2,
+    tofcounts_hpca_srvy_l2, tofvmon_hpca_brst_l2, tofvmon_hpca_srvy_l2,
+    toplus_dbcs_hpca_brst_l2, toplus_dbcs_hpca_srvy_l2, tparaheplus_hpca_brst_l2,
+    tparaheplus_hpca_srvy_l2, tparaheplusplus_hpca_brst_l2,
+    tparaheplusplus_hpca_srvy_l2, tparahplus_hpca_brst_l2, tparahplus_hpca_srvy_l2,
+    tparaoplus_hpca_brst_l2, tparaoplus_hpca_srvy_l2, tperpheplus_hpca_brst_l2,
+    tperpheplus_hpca_srvy_l2, tperpheplusplus_hpca_brst_l2,
     tperpheplusplus_hpca_srvy_l2, tperphplus_hpca_brst_l2, tperphplus_hpca_srvy_l2,
     tperpoplus_hpca_brst_l2, tperpoplus_hpca_srvy_l2, tsheplus_hpca_brst_l2,
     tsheplus_hpca_srvy_l2, tsheplusplus_hpca_brst_l2, tsheplusplus_hpca_srvy_l2,
@@ -611,7 +617,13 @@ def get_data(
     the velocities in GSM, rotate the DBCS velocities (``v*_dbcs_hpca_*``)
     with `pyrfu.mms.dsl2gsm` and the definitive attitude (``defatt``,
     `pyrfu.mms.load_ancillary`). The HPCA magnetic field ``B_GSE_spin_avg``
-    of the files is in DMPA (``b_dmpa_hpca_*``).
+    of the files is in DMPA (``b_dmpa_hpca_*``), as ``B_GSE_sweep_avg``
+    (``bsweep_dmpa_hpca_*``), whose four columns (x, y, z and the magnitude)
+    are all read: the files do not label them as a vector.
+
+    The DSP solitary wave counts are those of E12 (``swde12_dsp_fast_l2``)
+    on the four spacecraft in 2017, and of E34 (``swde34_dsp_fast_l2``) on
+    MMS2 and MMS3 in 2023.
 
     .. deprecated:: 2.6.0
         The ``v*_gsm_hpca_*`` keys will be removed in pyrfu 3.0.0.

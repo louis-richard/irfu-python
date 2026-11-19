@@ -105,6 +105,14 @@
     "epsdz_dsp_slow_l2": {
       "cdf_name": "dsp_epsd_z",
       "dtype": "epsd"
+    },
+    "swde12_dsp_fast_l2": {
+      "cdf_name": "dsp_swd_E12_Counts",
+      "dtype": "swd"
+    },
+    "swde34_dsp_fast_l2": {
+      "cdf_name": "dsp_swd_E34_Counts",
+      "dtype": "swd"
     }
   },
   "edi": {
@@ -432,12 +440,36 @@
       "cdf_name": "fgm_b_gsm_srvy_l2",
       "dtype": ""
     },
+    "etemp_fgm_brst_l2": {
+      "cdf_name": "fgm_etemp_brst_l2",
+      "dtype": ""
+    },
+    "etemp_fgm_srvy_l2": {
+      "cdf_name": "fgm_etemp_srvy_l2",
+      "dtype": ""
+    },
     "flag_fgm_brst_l2": {
       "cdf_name": "fgm_flag_brst_l2",
       "dtype": ""
     },
     "flag_fgm_srvy_l2": {
       "cdf_name": "fgm_flag_srvy_l2",
+      "dtype": ""
+    },
+    "hirange_fgm_brst_l2": {
+      "cdf_name": "fgm_hirange_brst_l2",
+      "dtype": ""
+    },
+    "hirange_fgm_srvy_l2": {
+      "cdf_name": "fgm_hirange_srvy_l2",
+      "dtype": ""
+    },
+    "mode_fgm_brst_l2": {
+      "cdf_name": "fgm_mode_brst_l2",
+      "dtype": ""
+    },
+    "mode_fgm_srvy_l2": {
+      "cdf_name": "fgm_mode_srvy_l2",
       "dtype": ""
     },
     "r_gse_fgm_brst_l2": {
@@ -454,6 +486,14 @@
     },
     "r_gsm_fgm_srvy_l2": {
       "cdf_name": "fgm_r_gsm_srvy_l2",
+      "dtype": ""
+    },
+    "stemp_fgm_brst_l2": {
+      "cdf_name": "fgm_stemp_brst_l2",
+      "dtype": ""
+    },
+    "stemp_fgm_srvy_l2": {
+      "cdf_name": "fgm_stemp_srvy_l2",
       "dtype": ""
     }
   },
@@ -1299,6 +1339,10 @@
     "b_gse_fsm_brst_l3": {
       "cdf_name": "fsm_b_gse_brst_l3",
       "dtype": "8khz"
+    },
+    "r_gse_fsm_brst_l3": {
+      "cdf_name": "fsm_r_gse_brst_l3",
+      "dtype": "8khz"
     }
   },
   "hpca": {
@@ -1325,6 +1369,22 @@
     "b_gsm_hpca_srvy_l2": {
       "cdf_name": "hpca_B_GSM_spin_avg",
       "dtype": "moments"
+    },
+    "bsweep_dmpa_hpca_brst_l2": {
+      "cdf_name": "hpca_B_GSE_sweep_avg",
+      "dtype": "ion"
+    },
+    "bsweep_dmpa_hpca_srvy_l2": {
+      "cdf_name": "hpca_B_GSE_sweep_avg",
+      "dtype": "ion"
+    },
+    "bsweep_gsm_hpca_brst_l2": {
+      "cdf_name": "hpca_B_GSM_sweep_avg",
+      "dtype": "ion"
+    },
+    "bsweep_gsm_hpca_srvy_l2": {
+      "cdf_name": "hpca_B_GSM_sweep_avg",
+      "dtype": "ion"
     },
     "dpfheplus_hpca_brst_l2": {
       "cdf_name": "hpca_heplus_flux",
@@ -1389,6 +1449,14 @@
     "flagoplus_hpca_srvy_l2": {
       "cdf_name": "hpca_oplus_data_quality",
       "dtype": "ion"
+    },
+    "mcpvmon_hpca_brst_l2": {
+      "cdf_name": "hpca_MCP_VMON_MIN_converted",
+      "dtype": "moments"
+    },
+    "mcpvmon_hpca_srvy_l2": {
+      "cdf_name": "hpca_MCP_VMON_MIN_converted",
+      "dtype": "moments"
     },
     "nheplus_hpca_brst_l2": {
       "cdf_name": "hpca_heplus_number_density",
@@ -1462,6 +1530,14 @@
       "cdf_name": "hpca_start_azimuth",
       "dtype": "ion"
     },
+    "spinnum_hpca_brst_l2": {
+      "cdf_name": "hpca_spin_number",
+      "dtype": "moments"
+    },
+    "spinnum_hpca_srvy_l2": {
+      "cdf_name": "hpca_spin_number",
+      "dtype": "moments"
+    },
     "theplus_dbcs_hpca_brst_l2": {
       "cdf_name": "hpca_heplus_temperature_tensor",
       "dtype": "moments"
@@ -1484,6 +1560,18 @@
     },
     "thplus_dbcs_hpca_srvy_l2": {
       "cdf_name": "hpca_hplus_temperature_tensor",
+      "dtype": "moments"
+    },
+    "tofcounts_hpca_srvy_l2": {
+      "cdf_name": "hpca_tof_counts",
+      "dtype": "tof-counts"
+    },
+    "tofvmon_hpca_brst_l2": {
+      "cdf_name": "hpca_TOF_VMON_MIN_converted",
+      "dtype": "moments"
+    },
+    "tofvmon_hpca_srvy_l2": {
+      "cdf_name": "hpca_TOF_VMON_MIN_converted",
       "dtype": "moments"
     },
     "toplus_dbcs_hpca_brst_l2": {
