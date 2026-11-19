@@ -206,6 +206,50 @@ def _fill_empty(data, sums, counts, how):
     return data
 
 
+def _options(attrs, units, to_psd, fill_empty, method, n_phi):
+    r"""Combination of the samples (method, or the default of the units) and
+    number of azimuths (32 in burst, 8 in survey by default), after the
+    checks of the options."""
+
+    if to_psd and str(units).lower() != "1/(cm^2 s sr kev)":
+        raise ValueError(f"Phase-space density needs intensities, not {units}")
+
+    if fill_empty not in [None, "ring", "omni"]:
+        raise ValueError(f"Invalid fill_empty {fill_empty}: must be None, ring or omni")
+
+    combine = method or _DEFAULT_METHODS.get(attrs.get("units_name"), "mean")
+
+    if combine not in ["mean", "sum", "quadrature"]:
+        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
+
+    if fill_empty is not None and combine != "mean":
+        raise ValueError(f"fill_empty needs the mean, not the {combine}")
+
+    if n_phi is None:
+        if attrs["tmmode"] == "brst":
+            n_phi = 32
+        else:
+            n_phi = 8
+
+    return combine, n_phi
+
+
+def _combine(sums, n_samples, g_fact, combine):
+    r"""Values of the bins from the sums (of the squares for "quadrature")
+    and the numbers of samples: their mean, sum (NaN without samples) or
+    error of the mean, times the correction factor `g_fact`."""
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        if combine == "mean":
+            data = g_fact * sums / n_samples
+        elif combine == "sum":
+            data = np.where(n_samples > 0, g_fact * sums, np.nan)
+        else:
+            data = g_fact * np.sqrt(sums) / n_samples
+
+    return data
+
+
 def feeps_skymap(
     inp_dataset,
     b_bcs: xr.DataArray | None = None,
@@ -337,25 +381,7 @@ def feeps_skymap(
     # Units of the eyes, None without
     units = inp_dataset[eyes[0]].attrs.get("UNITS")
 
-    if to_psd and str(units).lower() != "1/(cm^2 s sr kev)":
-        raise ValueError(f"Phase-space density needs intensities, not {units}")
-
-    if fill_empty not in [None, "ring", "omni"]:
-        raise ValueError(f"Invalid fill_empty {fill_empty}: must be None, ring or omni")
-
-    combine = method or _DEFAULT_METHODS.get(attrs.get("units_name"), "mean")
-
-    if combine not in ["mean", "sum", "quadrature"]:
-        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
-
-    if fill_empty is not None and combine != "mean":
-        raise ValueError(f"fill_empty needs the mean, not the {combine}")
-
-    if n_phi is None:
-        if tmmode == "brst":
-            n_phi = 32
-        else:
-            n_phi = 8
+    combine, n_phi = _options(attrs, units, to_psd, fill_empty, method, n_phi)
 
     psi, phase_source = _spin_phase(inp_dataset, b_bcs, b_dmpa)
     spin_sectors = np.asarray(inp_dataset.spinsectnum.data)
@@ -378,13 +404,7 @@ def feeps_skymap(
     sums = sums[complete]
     n_samples = n_samples[complete]
 
-    with np.errstate(invalid="ignore", divide="ignore"):
-        if combine == "mean":
-            data = g_fact * sums / n_samples
-        elif combine == "sum":
-            data = np.where(n_samples > 0, g_fact * sums, np.nan)
-        else:
-            data = g_fact * np.sqrt(sums) / n_samples
+    data = _combine(sums, n_samples, g_fact, combine)
 
     theta_edges = np.hstack([0.0, (np.array(rings[1:]) + rings[:-1]) / 2.0, 180.0])
     coverage = _coverage(data, phi_edges, theta_edges)
