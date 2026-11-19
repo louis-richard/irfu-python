@@ -67,7 +67,12 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
         lossy, when the file has it: one per distribution in burst mode, the
         indicator of the file for all its distributions in fast survey
         (`pyrfu.pyrf.resample` interpolates it as the other per-time
-        attributes, to a fraction between 0 and 1).
+        attributes, to a fraction between 0 and 1). The attribute
+        ``errorflags`` (time,) holds the quality flags of each distribution,
+        when the file has them: 0 without quality errors, else bit 0 a
+        manually flagged interval, bit 1 overcounting or saturation likely,
+        bit 2 a compression pipeline error (``VAR_NOTES`` of the files;
+        4294967295 is the fill value).
 
     Raises
     ------
@@ -235,6 +240,15 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
 
         if loss.size == len(times):
             glob_attrs["compressionloss"] = loss
+
+    # Quality flags of each distribution (32 bits, 0 without quality errors)
+    flags_name = _fpi_name(cdf_name, "errorflags")
+
+    if flags_name in z_vars and times.size:
+        flags = np.asarray(file[flags_name].values).ravel()
+
+        if flags.size == len(times):
+            glob_attrs["errorflags"] = flags
 
     # Half widths of the accumulation (s) around the (centred) times, as
     # irfu-matlab dt_minus and dt_plus

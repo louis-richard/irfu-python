@@ -9908,13 +9908,14 @@ def _cdf_fpi_dist(
     compressionloss=None,
     parity_var=True,
     energy=None,
+    errorflags=None,
 ):
     # In-memory FPI distribution of either mode (non-record-varying phi and
     # theta): energies of the stepping table parity of each record (all 0 in
     # fast), a single non-record-varying table or the given energies of each
     # record, and optionally the energy0 and energy1 variables (twice the
-    # energies), the compression indicator of each record, and in burst no
-    # parity variable (the DES distaux files)
+    # energies), the compression indicator and quality flags of each record,
+    # and in burst no parity variable (the DES distaux files)
     time = np.datetime64("2019-09-14T07:54:10", "ns") + np.arange(
         n_records
     ) * np.timedelta64(150, "ms")
@@ -9954,6 +9955,9 @@ def _cdf_fpi_dist(
         cdf.add_variable(
             f"{pre}_compressionloss{suf}", values=loss, is_nrv=loss.size == 1
         )
+    if errorflags is not None:
+        flags = np.asarray(errorflags, dtype=np.uint32)
+        cdf.add_variable(f"{pre}_errorflags{suf}", values=flags)
     cdf.add_variable(
         names[3],
         values=np.arange(n_records * 60, dtype=float).reshape(n_records, 4, 3, 5),
@@ -10105,6 +10109,23 @@ class GetDistTestCase(unittest.TestCase):
         content = _cdf_fpi_dist(4, "fast", compressionloss=[1, 0])
         result = mms.get_dist(content, "mms1_dis_dist_fast")
         self.assertNotIn("compressionloss", result.attrs)
+
+    @data("brst", "fast")
+    def test_get_dist_errorflags(self, mode):
+        # The quality flags of each record (bits), clipped with the times; none
+        # without them in the file, or with another number of values
+        content = _cdf_fpi_dist(4, mode, errorflags=[0, 2, 5, 0])
+        result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
+        np.testing.assert_array_equal(result.attrs["errorflags"], [0, 2, 5, 0])
+        self.assertEqual(result.attrs["errorflags"].dtype, np.uint32)
+
+        tint = ["2019-09-14T07:54:10.100", "2019-09-14T07:54:10.400"]
+        result = mms.get_dist(content, f"mms1_dis_dist_{mode}", tint)
+        np.testing.assert_array_equal(result.attrs["errorflags"], [2, 5])
+
+        for content in [_cdf_fpi_dist(4, mode), _cdf_fpi_dist(4, mode, errorflags=[1])]:
+            result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
+            self.assertNotIn("errorflags", result.attrs)
 
     @data("2019-09-14T07:54:10", [0, 1])
     def test_get_dist_tint_type_error(self, tint):

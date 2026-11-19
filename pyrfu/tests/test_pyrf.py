@@ -270,6 +270,21 @@ class AverageVDFTestCase(unittest.TestCase):
         result = pyrf.time_clip(vdf, [vdf.time.data[2], vdf.time.data[5]])
         np.testing.assert_array_equal(result.attrs["compressionloss"], [0, 0, 1, 0])
 
+    def test_average_vdf_errorflags(self):
+        # An average has the quality flags of each of its distributions
+        # (bitwise or), kept by time_clip
+        vdf = generate_vdf(64.0, 9, [32, 32, 16])
+        vdf.attrs["errorflags"] = np.array([0, 1, 0, 2, 4, 0, 0, 0, 0], np.uint32)
+
+        result = pyrf.average_vdf(vdf, 3)
+        np.testing.assert_array_equal(result.attrs["errorflags"], [1, 6, 0])
+
+        result = pyrf.average_vdf(vdf, None)
+        np.testing.assert_array_equal(result.attrs["errorflags"], [7])
+
+        result = pyrf.time_clip(vdf, [vdf.time.data[2], vdf.time.data[5]])
+        np.testing.assert_array_equal(result.attrs["errorflags"], [0, 2, 4, 0])
+
     def test_average_vdf_energy_widths(self):
         # Without energy widths (get_dist leaves them out) or with None: the
         # average without them; widths per channel (energy,) kept
@@ -3106,6 +3121,19 @@ class DistAppendTestCase(unittest.TestCase):
 
         inp1.attrs.pop("compressionloss")
         self.assertNotIn("compressionloss", pyrf.dist_append(inp0, inp1).attrs)
+
+    def test_dist_append_errorflags(self):
+        # The quality flags of the two files joined, left out if one has none
+        inp0 = generate_vdf(64.0, 4, [32, 32, 16])
+        inp1 = generate_vdf(64.0, 3, [32, 32, 16])
+        inp0.attrs["errorflags"] = np.zeros(4, dtype=np.uint32)
+        inp1.attrs["errorflags"] = np.full(3, 2, dtype=np.uint32)
+
+        result = pyrf.dist_append(inp0, inp1)
+        np.testing.assert_array_equal(result.attrs["errorflags"], [0, 0, 0, 0, 2, 2, 2])
+
+        inp1.attrs.pop("errorflags")
+        self.assertNotIn("errorflags", pyrf.dist_append(inp0, inp1).attrs)
 
     def test_dist_append_missing_widths(self):
         # Energy widths missing or None as get_dist gives for files without
@@ -6944,6 +6972,18 @@ class ResampleTestCase(unittest.TestCase):
         vdf.attrs["scalar"] = np.array(1.0)
         result = pyrf.resample(vdf, generate_ts(16.0, 8))
         self.assertEqual(result.attrs["scalar"], 1.0)
+
+    def test_resample_errorflags(self):
+        # The quality flags (bits) are neither averaged nor interpolated: left
+        # out, the other per-time attributes resampled
+        vdf = generate_vdf(64.0, 32, (32, 32, 16))
+        vdf.attrs["errorflags"] = np.arange(32, dtype=np.uint32) % 3
+        vdf.attrs["compressionloss"] = np.zeros(32, dtype=np.uint8)
+
+        for ref in [generate_ts(16.0, 8), generate_ts(128.0, 64)]:
+            result = pyrf.resample(vdf, ref)
+            self.assertNotIn("errorflags", result.attrs)
+            self.assertEqual(len(result.attrs["compressionloss"]), len(ref))
 
     def _ts(self, t_s, data):
         times = self.T_0 + np.round(np.asarray(t_s) * 1e9).astype("timedelta64[ns]")
