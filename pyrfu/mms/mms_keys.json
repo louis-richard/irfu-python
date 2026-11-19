@@ -136,6 +136,14 @@
     }
   },
   "edi": {
+    "counts-q0_edi_brst_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "q0"
+    },
+    "counts-q0_edi_srvy_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "q0"
+    },
     "e_dsl_edi_brst_l2": {
       "cdf_name": "edi_e_dsl_brst_l2",
       "dtype": "efield"
@@ -159,6 +167,54 @@
     "e_gsm_edi_srvy_l2": {
       "cdf_name": "edi_e_gsm_srvy_l2",
       "dtype": "efield"
+    },
+    "flux-amb-alt-cc_edi_brst_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-alt-cc"
+    },
+    "flux-amb-alt-cc_edi_srvy_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-alt-cc"
+    },
+    "flux-amb-alt-oc_edi_brst_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-alt-oc"
+    },
+    "flux-amb-alt-oc_edi_srvy_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-alt-oc"
+    },
+    "flux-amb-alt-oob_edi_brst_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-alt-oob"
+    },
+    "flux-amb-alt-oob_edi_srvy_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-alt-oob"
+    },
+    "flux-amb-perp-ob_edi_brst_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-perp-ob"
+    },
+    "flux-amb-perp-ob_edi_srvy_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-perp-ob"
+    },
+    "flux-amb-pm2_edi_brst_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-pm2"
+    },
+    "flux-amb-pm2_edi_srvy_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb-pm2"
+    },
+    "flux-amb_edi_brst_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb"
+    },
+    "flux-amb_edi_srvy_l2": {
+      "cdf_name": "edi_*",
+      "dtype": "amb"
     },
     "vdrift_dsl_edi_brst_l2": {
       "cdf_name": "edi_vdrift_dsl_brst_l2",

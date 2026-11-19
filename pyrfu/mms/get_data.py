@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import fnmatch
 import logging
 import os
 import posixpath
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any, cast
 
 # 3rd party imports
@@ -92,6 +93,68 @@ def _read(reader, file_content, cdf_name, tint):
         out = None
 
     return out
+
+
+def _read_variables(file_content, cdf_name, tint: list | None = None):
+    r"""Dataset of the variables of a file matching the pattern `cdf_name`
+    (e.g. ``mms1_edi_*``): its data variables and their errors (``*_delta*``),
+    named without the spacecraft, instrument, rate and level, or None if the
+    file has none of them (a null file). In a file with several time bases,
+    the time dimension of each variable is named after its base (e.g.
+    ``time_90`` for ``Epoch_90``)."""
+
+    file = load(file_content)
+    names = [
+        name
+        for name in file
+        if fnmatch.fnmatchcase(name, cdf_name)
+        and (_var_type(file[name]) == "data" or "_delta" in name)
+    ]
+
+    if not names:
+        return None
+
+    bases = {name: file[name].attributes["DEPEND_0"][0] for name in names}
+    prefix = cdf_name.rstrip("*")
+    out = {}
+
+    for name in names:
+        data = get_ts(file_content, name, tint)
+
+        if len(set(bases.values())) > 1:
+            base = bases[name].split("_", 1)[-1].lower()
+            data = data.rename({data.dims[0]: f"time_{base}"})
+
+        out["_".join(name.removeprefix(prefix).split("_")[:-2])] = data
+
+    return Dataset(out)
+
+
+def _var_type(variable) -> str:
+    r"""VAR_TYPE of a CDF variable, empty without it."""
+
+    attrs = variable.attributes
+
+    if "VAR_TYPE" in attrs:
+        return str(attrs["VAR_TYPE"][0])
+
+    return ""
+
+
+def _append_variables(out, data):
+    r"""Datasets of `_read_variables` of two files appended in time, variable
+    by variable."""
+
+    if out is None:
+        return data
+
+    if set(out) != set(data):
+        raise ValueError(
+            f"The variables change between files ({sorted(out)}, {sorted(data)}): "
+            "split the time interval"
+        )
+
+    return Dataset({key: ts_append(out[key], data[key]) for key in data})
 
 
 def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
@@ -355,10 +418,16 @@ def get_data(
     epsdx_dsp_slow_l2, epsdy_dsp_fast_l2, epsdy_dsp_slow_l2, epsdz_dsp_fast_l2,
     epsdz_dsp_slow_l2, swde12_dsp_fast_l2, swde34_dsp_fast_l2
 
-    EDI: e_dsl_edi_brst_l2, e_dsl_edi_srvy_l2, e_gse_edi_brst_l2, e_gse_edi_srvy_l2,
-    e_gsm_edi_brst_l2, e_gsm_edi_srvy_l2, vdrift_dsl_edi_brst_l2,
-    vdrift_dsl_edi_srvy_l2, vdrift_gse_edi_brst_l2, vdrift_gse_edi_srvy_l2,
-    vdrift_gsm_edi_brst_l2, vdrift_gsm_edi_srvy_l2
+    EDI: counts-q0_edi_brst_l2, counts-q0_edi_srvy_l2, e_dsl_edi_brst_l2,
+    e_dsl_edi_srvy_l2, e_gse_edi_brst_l2, e_gse_edi_srvy_l2, e_gsm_edi_brst_l2,
+    e_gsm_edi_srvy_l2, flux-amb-alt-cc_edi_brst_l2, flux-amb-alt-cc_edi_srvy_l2,
+    flux-amb-alt-oc_edi_brst_l2, flux-amb-alt-oc_edi_srvy_l2,
+    flux-amb-alt-oob_edi_brst_l2, flux-amb-alt-oob_edi_srvy_l2,
+    flux-amb-perp-ob_edi_brst_l2, flux-amb-perp-ob_edi_srvy_l2,
+    flux-amb-pm2_edi_brst_l2, flux-amb-pm2_edi_srvy_l2, flux-amb_edi_brst_l2,
+    flux-amb_edi_srvy_l2, vdrift_dsl_edi_brst_l2, vdrift_dsl_edi_srvy_l2,
+    vdrift_gse_edi_brst_l2, vdrift_gse_edi_srvy_l2, vdrift_gsm_edi_brst_l2,
+    vdrift_gsm_edi_srvy_l2
 
     EDP: bitmaske_edp_brst_l2, bitmaske_edp_fast_l2, bitmaske_edp_slow_l2,
     bitmaskv_edp_brst_l2, bitmaskv_edp_fast_l2, bitmaskv_edp_slow_l2,
@@ -601,6 +670,18 @@ def get_data(
     `pyrfu.mms.db_init`): they are neither in the public SDC files nor in
     the public copy of the archive on AWS.
 
+    The keys of the EDI ambient and quality zero datasets
+    (``flux-amb*_edi_*``, ``counts-q0_edi_*``) give a Dataset of all the
+    fluxes (or counts) of the file, their errors (``*_delta*``) and the
+    trajectories of the electrons, e.g. ``flux1_0``, ``flux1_0_delta``,
+    ``traj1_gse_0``: the fluxes at 0 and 180 degrees pitch angle of channel 1
+    (and of channels 2 to 4 in burst amb-pm2), at 90 degrees of each GDU in
+    the amb-alt and amb-perp modes (CMAD pp. 344-357). In the files with
+    several time bases (amb-alt: 0 and 180 degrees, 90 degrees; q0: each GDU)
+    the time dimension of each variable is named after its base, e.g.
+    ``time_0_180`` and ``time_90``. The q0 trajectories of GDU2 are in
+    degrees, as those of GDU1, although their UNITS say rad.
+
     The MEC variables of a field model are in the files of each model (T89
     with Kp, T89 quiet, TS04 dynamic): their keys end with the model, e.g.
     ``bmodt89d_gsm_mec_srvy_l2``, ``bmodt89q_gsm_mec_srvy_l2`` and
@@ -677,10 +758,16 @@ def get_data(
     if verbose:
         logger.info("Loading %s...", cdf_name)
 
-    # The skymaps of the FPI distribution files with get_dist, the other
-    # variables with get_ts
+    # The skymaps of the FPI distribution files with get_dist, all the
+    # variables of a file (a pattern) as a Dataset, the other variables with
+    # get_ts
+    reader: Callable[..., Any]
+    append: Callable[..., Any]
+
     if "-dist" in var["dtype"] and _is_skymap(cdf_name):
         reader, append = get_dist, dist_append
+    elif cdf_name.endswith("*"):
+        reader, append = _read_variables, _append_variables
     else:
         reader, append = get_ts, ts_append
 

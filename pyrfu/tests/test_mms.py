@@ -9809,6 +9809,64 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "missing_label"):
             self._get_data_local("e_gse_edi_brst_l2", [content], tint)
 
+    @staticmethod
+    def _cdf_edi_amb(t_start, names, n_records=4):
+        # In-memory EDI ambient file with the given (name, time base) data
+        # variables of 4 records (a time base per name), their errors (support
+        # data) and a variable without VAR_TYPE
+        cdf = pycdfpp.CDF()
+        t_0 = np.datetime64(t_start, "ns")
+        for base in sorted({base for _, base in names}):
+            time = t_0 + np.arange(n_records) * np.timedelta64(250, "ms")
+            if base == "Epoch_90":
+                time = time + np.timedelta64(125, "ms")
+            cdf.add_variable(
+                base, values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+            )
+        for i, (name, base) in enumerate(names):
+            for full, var_type, scale in [
+                (f"mms1_edi_{name}_srvy_l2", "data", 1.0),
+                (f"mms1_edi_{name}_delta_srvy_l2", "support_data", 0.1),
+            ]:
+                cdf.add_variable(full, values=scale * (np.arange(n_records) + i))
+                cdf[full].add_attribute("DEPEND_0", base)
+                cdf[full].add_attribute("VAR_TYPE", var_type)
+        cdf.add_variable("mms1_edi_label", values=np.ones(n_records))
+        return bytes(pycdfpp.save(cdf))
+
+    def test_get_data_edi_datasets(self):
+        # The keys of the EDI ambient datasets give a Dataset of the data
+        # variables and their errors of the files; a time dimension per time
+        # base when the file has several; the null files skipped; ValueError
+        # when the variables change between files
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        names = [("flux1_0", "Epoch_0_180"), ("flux1_90_gdu1", "Epoch_90")]
+        contents = [
+            self._cdf_edi_amb("2019-09-14T07:54:00", names),
+            self._cdf_edi("2019-09-14T07:54:10", 0),
+            self._cdf_edi_amb("2019-09-14T07:54:20", names),
+        ]
+        with self.assertLogs("pyrfu.mms.get_data", "WARNING"):
+            result = self._get_data_local("flux-amb-alt-cc_edi_srvy_l2", contents, tint)
+
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertListEqual(
+            sorted(result),
+            ["flux1_0", "flux1_0_delta", "flux1_90_gdu1", "flux1_90_gdu1_delta"],
+        )
+        self.assertTupleEqual(result.flux1_0.dims, ("time_0_180",))
+        self.assertTupleEqual(result.flux1_90_gdu1_delta.dims, ("time_90",))
+        np.testing.assert_array_equal(result.flux1_90_gdu1.data, [1, 2, 3, 4] * 2)
+
+        names = [("flux1_0", "Epoch")]
+        content = self._cdf_edi_amb("2019-09-14T07:54:00", names)
+        result = self._get_data_local("flux-amb_edi_srvy_l2", [content], tint)
+        self.assertTupleEqual(result.flux1_0_delta.dims, ("time",))
+
+        other = self._cdf_edi_amb("2019-09-14T07:54:20", [("flux1_180", "Epoch")])
+        with self.assertRaisesRegex(ValueError, "variables change between files"):
+            self._get_data_local("flux-amb_edi_srvy_l2", [content, other], tint)
+
     def test_get_ts_append_empty_file(self):
         # As get_data: a file without records, before or after a file with
         # data, gives the data and the energies of the latter
@@ -13688,6 +13746,8 @@ class TokenizeTestCase(unittest.TestCase):
         ("ionc2_aspoc_srvy_l2", "asp2_ionc", "", ""),
         ("ebeam1_aspoc_srvy_l2", "asp1_energy", "", ""),
         ("status_aspoc_srvy_l2", "aspoc_status", "", ""),
+        ("flux-amb-pm2_edi_brst_l2", "edi_*", "amb-pm2", ""),
+        ("counts-q0_edi_srvy_l2", "edi_*", "q0", ""),
     )
     @unpack
     def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
@@ -13705,7 +13765,8 @@ class TokenizeTestCase(unittest.TestCase):
         # the field-model variables of the T89 (Kp), T89 quiet and TS04 files;
         # HPCA spin number, MCP and TOF voltages, sweep-averaged B, TOF counts;
         # FGM sensor temperature; FSM position; DSP solitary wave counts; ASPOC
-        # currents, beam energies and status of each unit
+        # currents, beam energies and status of each unit; EDI ambient and
+        # quality zero datasets (all the variables of the files)
         result = mms.tokenize(var_str)
         self.assertEqual(result["cdf_name"], cdf_name)
         self.assertEqual(result["dtype"], dtype)
@@ -13766,7 +13827,6 @@ class TokenizeTestCase(unittest.TestCase):
         "es12_dsl_edp_fast_l2a",
         "adcoff_edp_slow_l2a",
         "phplus_gsm_hpca_brst_l2",
-        "flux-amb-pm2_edi_brst_l2",
         "energye_fpi_fast_ql",
     )
     def test_tokenize_unsupported(self, var_str):
