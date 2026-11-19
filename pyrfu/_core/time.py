@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-r"""The time conversions of pyrfu, in one place (they were written inline, in
-several ways, with different rounding).
+r"""The time conversions of pyrfu, in one place.
 
 The times are numpy.datetime64 of any unit, converted to ns first; the
 seconds come from the exact integer steps in ns divided by 1e9 (correctly
 rounded; ``* 1e-9`` is not), and the durations in seconds go to ns by
-rounding (truncating gave e.g. 15699999 ns for 0.0157 s). NaT gives NaN and
+rounding (truncating gives e.g. 15699999 ns for 0.0157 s). NaT gives NaN and
 NaN gives NaT.
 """
 

@@ -20,6 +20,7 @@ def _circular_mean(angles, axis):
 def _sides(phi, colat):
     r"""Anodes of the two sides of the HPCA field of view (azimuths 180 degrees
     apart), each sorted by polar angle."""
+
     offset = (phi - phi[0] + 180.0) % 360.0 - 180.0
     sides = [np.flatnonzero(np.abs(offset) < 90.0)]
     sides.append(np.flatnonzero(np.abs(offset) >= 90.0))
@@ -99,7 +100,8 @@ def hpca_skymap(
     dist = get_hpca_dist(inp, azimuth, elevation, source, data_path)
 
     # half-spin, energy, azimuth, anode
-    phi_p, data = dist["phi"], dist["data"]
+    phi_p = dist["phi"]
+    data = dist["data"]
     colat_p = 90.0 - dist["theta"][0, 0, :]
     n_t, n_en, n_az, _ = data.shape
 

@@ -36,6 +36,7 @@ def unix2datetime64(time: list[float] | NDArray[Any]) -> TimeArray:
     pyrfu.pyrf.datetime642unix
 
     """
+
     # Check input type
     if isinstance(time, (list, np.ndarray)):
         time_array = np.array(time)
@@ -44,4 +45,6 @@ def unix2datetime64(time: list[float] | NDArray[Any]) -> TimeArray:
 
     # To the nearest ns (rounded rather than truncated, e.g., 6.5e-5 * 1e9 =
     # 64999.99999999999), NaT for NaN
-    return _datetime64(time_array)
+    out = _datetime64(time_array)
+
+    return out

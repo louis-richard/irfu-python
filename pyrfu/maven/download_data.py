@@ -24,8 +24,7 @@ LASP_PUBL = "https://lasp.colorado.edu/maven/sdc/public/files/api/v1/"
 
 
 def _login_lasp():
-    r"""Session to the public MAVEN SDC (a POST to lasp.colorado.edu, with
-    the login and password, was made first, unused)."""
+    r"""Session to the public MAVEN SDC (no login)."""
     return requests.Session()
 
 
@@ -90,8 +89,8 @@ def _wanted(file_name: str, var: dict) -> bool:
     r"""File of the request: of the plan (MAG coordinates, the end of the
     fourth field of the MAG file names, e.g. "pl" in
     mvn_mag_l2_2015001pl_20150101_v01_r01.sts) and of the file extension,
-    when var has them. With a plan and no extension, the .sts files (only the
-    MAG .sts files with the plan were downloaded, KeyError without it)."""
+    when var has them. With a plan and no extension, the .sts files."""
+
     if "plan" in var and file_name.split("_")[3][7:] != var["plan"]:
         return False
 
@@ -154,10 +153,9 @@ def download_data(var, tint, login: str = "", password: str = "", data_path: str
 
     url = _construct_url(tint, var, lasp_url)
 
-    # The session closed also when the search or a download fails (it was left
-    # open)
+    # The session is closed also if the search or a download fails
     with _login_lasp() as sdc_session:
-        # (no timeout, and an error page was taken as the listing)
+        # List the files, HTTPError on an error page
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ResourceWarning)
             response = sdc_session.get(

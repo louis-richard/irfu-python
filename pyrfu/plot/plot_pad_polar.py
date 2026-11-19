@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import warnings
-
 # Built-in imports
+import warnings
 from typing import Literal
 
 # 3rd party imports
@@ -23,19 +22,18 @@ from pyrfu.mms._internal.vdf_mc import _sample
 from .colorbar import colorbar as _add_colorbar
 from .plot_ang_ang import _units_label
 
-# Largest angular width (degrees) of the cells drawn, so that the pitch-angle
-# bins are drawn as arcs rather than chords
+# Largest angular width of the cells drawn [deg], for arcs, not chords
 _MAX_ARC = 2.0
 
-# Largest mismatch of the edges of neighbouring bins, relative to their width,
-# that is joined rather than drawn as a gap (the FPI half widths are rounded:
-# the channels overlap or miss each other by up to 0.1 %)
+# Largest relative mismatch of neighbouring bin edges that is joined (the FPI
+# half widths are rounded: up to 0.1 % overlap or gap)
 _JOIN = 0.01
 
 
 def _time_index(pad, tint):
     r"""Indices of the time closest to tint (one element), of the times in
     the interval tint (two elements), or of all the times (None)."""
+
     time = pad.time.data
 
     if tint is None:
@@ -61,9 +59,11 @@ def _cells(lower, upper):
     between bins). Neighbouring bins whose edges differ by less than _JOIN of
     their width share the midpoint; cells covered by overlapping bins go to
     the bin with the closest centre."""
+
     lower, upper = (np.array(edge, dtype=np.float64) for edge in [lower, upper])
     order = np.argsort(lower + upper)
-    low, high = lower[order], upper[order]
+    low = lower[order]
+    high = upper[order]
     width = np.minimum((high - low)[:-1], (high - low)[1:])
     join = np.abs(low[1:] - high[:-1]) <= _JOIN * width
     middle = (low[1:] + high[:-1]) / 2
@@ -98,6 +98,7 @@ def _arcs(edges, index):
 def _speed_units(pad):
     r"""Speed units of the axes (10^3 km/s for electrons, else km/s) and
     their value in m/s."""
+
     if str(pad.attrs["species"]).lower() in ["electrons", "electron", "e"]:
         return "10$^3$ km/s", 1e6
 
@@ -107,6 +108,7 @@ def _speed_units(pad):
 def _binned(pad, sc_pot, scale):
     r"""Polar cells of the bins: speeds (time-averaged edges, axis units)
     and pitch angles (degrees), with the time-averaged distribution."""
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         data = np.nanmean(np.asarray(pad.data.data, dtype=np.float64), axis=0)
@@ -134,6 +136,7 @@ def _monte_carlo(pad, sc_pot, scale, n_mc, n_grid, random_state):
     r"""Distribution on a Cartesian (v_par, v_perp) grid from n_mc particles
     per bin and per time, drawn uniformly in the volume of the bin (each time
     with its own energy edges), and averaged over time as numpy.nanmean."""
+
     data = np.asarray(pad.data.data, dtype=np.float64)
     valid = np.isfinite(data)
     n_valid = np.sum(valid, axis=0)
@@ -181,6 +184,7 @@ def _monte_carlo(pad, sc_pot, scale, n_mc, n_grid, random_state):
 def _contours(data, radii, angles):
     r"""Contours of log10(data) at the centres of the bins, extended to the
     pitch angles 0 and 180 degrees when the bins reach them."""
+
     (r_lower, r_upper), (a_lower, a_upper) = radii, angles
     drawn = r_upper > r_lower
     values = np.log10(data[drawn])
@@ -327,6 +331,7 @@ def plot_pad_polar(
     >>> axs[1], caxs1 = plot.plot_pad_polar(axs[1], pad_e, monte_carlo=True)
 
     """
+
     if colorbar not in ["right", "top", "none"]:
         raise ValueError(f"Invalid colorbar {colorbar}: right, top or none")
 

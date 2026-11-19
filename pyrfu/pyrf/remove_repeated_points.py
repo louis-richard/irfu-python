@@ -7,8 +7,8 @@ import xarray as xr
 
 
 def _no_repeat(time):
-    # Points separated in time by less than 100 ns from the next one are treated
-    # as repeats, and the later one is kept (as mms_removerepeatpnts.m)
+    # Points separated in time by less than 100 ns from the next one are
+    # treated as repeats, and the later one is kept (as mms_removerepeatpnts.m)
     time = np.asarray(time)
 
     if time.size == 0:

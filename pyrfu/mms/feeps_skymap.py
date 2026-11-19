@@ -14,7 +14,7 @@ from pyrfu._core.time import _ns
 
 from ..pyrf.ts_skymap import ts_skymap
 from .dpf2psd import dpf2psd
-from .feeps_omni import _eyes_on_omni_energies
+from .feeps_omni import _DEFAULT_METHODS, _eyes_on_omni_energies
 from .feeps_pitch_angles import t_bot, t_top, v_fcs
 from .feeps_spin_avg import _feeps_complete_spins, _spin_bounds
 
@@ -39,8 +39,14 @@ _MIN_B_PERP = 0.1
 def _look_direction(eye):
     r"""Polar angle and azimuth (degrees) of the look direction of an eye
     ("top-1", ...) in BCS."""
+
     s_type, sensor_id = eye.split("-")
-    rotation = t_top if s_type == "top" else t_bot
+
+    if s_type == "top":
+        rotation = t_top
+    else:
+        rotation = t_bot
+
     look = rotation @ np.array(v_fcs[int(sensor_id)])
     look /= np.linalg.norm(look)
     theta = np.rad2deg(np.arccos(look[2]))
@@ -51,6 +57,7 @@ def _look_direction(eye):
 def _sector_phase(spin_sectors, tmmode, mms_id):
     r"""Spin phase (degrees) at the centre of the accumulation of each sample.
     Survey samples accumulate the 8 sectors up to the labelled one."""
+
     sectors = np.asarray(spin_sectors, dtype=float)
 
     if tmmode == "srvy":
@@ -63,8 +70,10 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     r"""Spin phase (degrees) of each sample: from the spin sectors, or from FGM
     where it is defined (checked against the sectors). Returns the phases and
     the name of their source."""
+
     attrs = inp_dataset.attrs
-    tmmode, mms_id = attrs["tmmode"], attrs["mmsId"]
+    tmmode = attrs["tmmode"]
+    mms_id = attrs["mmsId"]
     psi = _sector_phase(inp_dataset.spinsectnum.data, tmmode, mms_id)
 
     if b_bcs is None or b_dmpa is None:
@@ -72,7 +81,8 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
 
     t_fgm = _ns(b_bcs.time.data)
     b_dmpa = b_dmpa.interp(time=b_bcs.time.data)
-    b_xyz, d_xyz = b_bcs.data[:, :3], b_dmpa.data[:, :3]
+    b_xyz = b_bcs.data[:, :3]
+    d_xyz = b_dmpa.data[:, :3]
 
     # B close to the spin axis gives an undefined rotation
     b_perp = np.linalg.norm(b_xyz[:, :2], axis=1) / np.linalg.norm(b_xyz, axis=1)
@@ -92,7 +102,7 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
     psi_fgm = np.interp(t_feeps, t_fgm[good], psi_fgm, left=np.nan, right=np.nan)
 
     if tmmode == "srvy":
-        # time tag at the centre of the labelled sector, 3.5 sectors after the
+        # Time tag at the centre of the labelled sector, 3.5 sectors after the
         # centre of the accumulation
         psi_fgm -= _SRVY_CENTRE_SHIFT * _SECTOR_WIDTH
 
@@ -111,13 +121,16 @@ def _spin_phase(inp_dataset, b_bcs, b_dmpa):
 def _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges):
     r"""Sums and numbers of the finite samples of the eyes in each (spin,
     energy, phi, theta) bin."""
-    n_t, n_e, n_eyes = dalleyes.shape
-    n_spins, n_phi, n_theta = len(bounds) - 1, len(phi_edges) - 1, len(rings)
 
-    # spin of each sample
+    n_t, n_e, n_eyes = dalleyes.shape
+    n_spins = len(bounds) - 1
+    n_phi = len(phi_edges) - 1
+    n_theta = len(rings)
+
+    # Spin of each sample
     i_spin = np.repeat(np.arange(n_spins), np.diff(bounds))
 
-    # despun azimuth and ring of each sample and eye
+    # Despun azimuth and ring of each sample and eye
     look = np.array([_look_direction(eye) for eye in eyes])
     i_theta = np.array([np.argmin(np.abs(np.array(rings) - t)) for t in look[:, 0]])
     phi = (look[np.newaxis, :, 1] + psi[:, np.newaxis]) % 360.0
@@ -144,7 +157,9 @@ def _energy_widths(inp_dataset, eyes, energies):
     r"""Lower and upper widths (keV) of the channels around the omni-directional
     energies, from the channel bounds of the eyes (mean over the eyes), or None
     if the eyes have no bounds."""
-    lower, upper = [], []
+
+    lower = []
+    upper = []
 
     for eye in eyes:
         names = [f"energy_{b}_bound_{eye}" for b in ["lower", "upper"]]
@@ -158,7 +173,8 @@ def _energy_widths(inp_dataset, eyes, energies):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        lower, upper = np.nanmean(lower, axis=0), np.nanmean(upper, axis=0)
+        lower = np.nanmean(lower, axis=0)
+        upper = np.nanmean(upper, axis=0)
 
     return energies - lower, upper - energies
 
@@ -175,6 +191,7 @@ def _coverage(data, phi_edges, theta_edges):
 def _fill_empty(data, sums, counts, how):
     r"""Fills the empty bins: with the mean of their ring ("ring"), then the
     empty rings with the mean of all the samples of the spin ("omni")."""
+
     with np.errstate(invalid="ignore"):
         ring = sums.sum(axis=2, keepdims=True) / counts.sum(axis=2, keepdims=True)
         spin = sums.sum(axis=(2, 3), keepdims=True) / counts.sum(
@@ -196,6 +213,8 @@ def feeps_skymap(
     n_phi: int | None = None,
     to_psd: bool = True,
     fill_empty: Literal["ring", "omni"] | None = None,
+    *,
+    method: Literal["mean", "sum", "quadrature"] | None = None,
 ):
     r"""Skymaps of the FEEPS data, one per spin.
 
@@ -223,6 +242,15 @@ def feeps_skymap(
         all the samples of the spin, i.e. the spin-averaged omni-directional
         flux ("omni"). Filling assumes gyrotropy around the spin axis ("ring")
         or isotropy ("omni"); the ``coverage`` attribute is that of the data.
+        Only with the mean (`method`).
+    method : {"mean", "sum", "quadrature"}, Optional
+        Combination of the samples of the eyes in each bin and spin: the mean
+        (intensities, count rates), the sum (counts) or the square root of the
+        sum of the squares divided by the number of samples (errors of the
+        mean). Default is from the units of `inp_dataset` (``units_name`` of
+        `pyrfu.mms.get_feeps_alleyes`): "sum" for "counts", "quadrature" for
+        "fluxerr", "mean" otherwise. The counts and the errors need
+        ``to_psd=False``.
 
     Returns
     -------
@@ -234,8 +262,9 @@ def feeps_skymap(
     ------
     ValueError
         If the integral channel of the eyes is not split, if `to_psd` is True
-        and the data are not intensities (or have no ``UNITS``), or if
-        `fill_empty` is invalid.
+        and the data are not intensities (or have no ``UNITS``), if
+        `fill_empty` is invalid or given with another method than the mean,
+        or if `method` is invalid.
 
     See Also
     --------
@@ -267,7 +296,9 @@ def feeps_skymap(
     (``delta_theta_minus/plus``) reach halfway to the next cone, so that the
     bins cover the sphere: moments are coarse partial moments above about 30
     keV. The eyes measure the total ion flux, which is converted to phase-space
-    density as protons. Zero intensities are kept, as in `feeps_omni`.
+    density as protons. Zero intensities are kept, as in `feeps_omni`. With
+    the counts ("sum"), the one-count level of each bin is
+    ``vdf_one_count(skymap of the intensities, skymap of the counts)``.
 
     Bad eyes, the energy check and the sun masks leave bins, sometimes whole
     rings, without data. They count as zero in `psd_moments`, so the moments
@@ -297,10 +328,13 @@ def feeps_skymap(
     >>> vdf_e = mms.feeps_skymap(feeps_e, b_bcs, b_dmpa)
 
     """
+
     eyes, dalleyes, energies, g_fact = _eyes_on_omni_energies(inp_dataset)
     attrs = inp_dataset.attrs
-    tmmode, d_type, mms_id = attrs["tmmode"], attrs["dtype"], attrs["mmsId"]
-    # Units of the eyes, none without (they were taken as intensities)
+    tmmode = attrs["tmmode"]
+    d_type = attrs["dtype"]
+    mms_id = attrs["mmsId"]
+    # Units of the eyes, None without
     units = inp_dataset[eyes[0]].attrs.get("UNITS")
 
     if to_psd and str(units).lower() != "1/(cm^2 s sr kev)":
@@ -309,8 +343,19 @@ def feeps_skymap(
     if fill_empty not in [None, "ring", "omni"]:
         raise ValueError(f"Invalid fill_empty {fill_empty}: must be None, ring or omni")
 
+    combine = method or _DEFAULT_METHODS.get(attrs.get("units_name"), "mean")
+
+    if combine not in ["mean", "sum", "quadrature"]:
+        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
+
+    if fill_empty is not None and combine != "mean":
+        raise ValueError(f"fill_empty needs the mean, not the {combine}")
+
     if n_phi is None:
-        n_phi = 32 if tmmode == "brst" else 8
+        if tmmode == "brst":
+            n_phi = 32
+        else:
+            n_phi = 8
 
     psi, phase_source = _spin_phase(inp_dataset, b_bcs, b_dmpa)
     spin_sectors = np.asarray(inp_dataset.spinsectnum.data)
@@ -318,22 +363,34 @@ def feeps_skymap(
     rings = _RINGS[d_type]
     phi_edges = np.linspace(0.0, 360.0, n_phi + 1)
 
-    sums, counts = _bin_spins(dalleyes, eyes, psi, bounds, rings, phi_edges)
+    # Sums (of the squares for the errors) and numbers of samples per bin
+    if combine == "quadrature":
+        values = dalleyes**2
+    else:
+        values = dalleyes
+
+    sums, n_samples = _bin_spins(values, eyes, psi, bounds, rings, phi_edges)
 
     # The complete spins only
     complete = np.isin(
         bounds[:-1], _feeps_complete_spins(spin_sectors, inp_dataset.time.data)[0]
     )
-    sums, counts = sums[complete], counts[complete]
+    sums = sums[complete]
+    n_samples = n_samples[complete]
 
-    with np.errstate(invalid="ignore"):
-        data = g_fact * sums / counts
+    with np.errstate(invalid="ignore", divide="ignore"):
+        if combine == "mean":
+            data = g_fact * sums / n_samples
+        elif combine == "sum":
+            data = np.where(n_samples > 0, g_fact * sums, np.nan)
+        else:
+            data = g_fact * np.sqrt(sums) / n_samples
 
     theta_edges = np.hstack([0.0, (np.array(rings[1:]) + rings[:-1]) / 2.0, 180.0])
     coverage = _coverage(data, phi_edges, theta_edges)
 
     if fill_empty is not None:
-        data = _fill_empty(data, g_fact * sums, counts, fill_empty)
+        data = _fill_empty(data, g_fact * sums, n_samples, fill_empty)
 
     time = inp_dataset.time.data[bounds[:-1][complete]]
     n_spins = len(time)

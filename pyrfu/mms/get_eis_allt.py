@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 def _eis_names(cdf, pref, specie, data_unit, file_name):
     r"""Names of the variables of `specie` in a file (the P# of the look-up
     table changes with the file version), and its energy table."""
+
     names = [name for name, _ in cdf.items()]
 
     # Files not reprocessed (v3.0.0, 2015-2016) name the variables without the
@@ -51,8 +52,8 @@ def _eis_names(cdf, pref, specie, data_unit, file_name):
             f"{', '.join(sorted(species - {'dump'}))}"
         )
 
-    # The PHxTOF oxygen is a single "dump" channel without energy table
-    # (KeyError), not loaded by IDL SPEDAS (unverified)
+    # The PHxTOF oxygen is a single "dump" channel without energy table, not
+    # loaded by IDL SPEDAS (unverified)
     if f"{pref}_{specie}_t0_energy" not in names:
         raise ValueError(
             f"No energy table of {specie} in {file_name}: a single channel without "
@@ -176,7 +177,7 @@ def get_eis_allt(
         file_content = _get_file_content_sources(
             resource, file_name, sdc_session, headers
         )
-        # The name of the file in the messages (the S3 object was printed)
+        # The name of the file in the messages
         label = _file_label(file_name)
         cdf_names, file_energy = _eis_names(
             load(file_content), pref, specie, data_unit, label
@@ -194,7 +195,11 @@ def get_eis_allt(
                 logger.info("Loading %s...", cdf_name)
 
             ts = get_ts(file_content, cdf_name, tint)
-            outdict[key] = ts_append(outdict[key], ts) if key in outdict else ts
+
+            if key in outdict:
+                outdict[key] = ts_append(outdict[key], ts)
+            else:
+                outdict[key] = ts
 
     for i in range(6):
         outdict[f"t{i:d}"] = outdict[f"t{i:d}"].rename({"Energy": "energy"})

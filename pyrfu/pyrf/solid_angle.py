@@ -8,6 +8,7 @@ import xarray as xr
 
 def _directions(inp, name):
     r"""Unit vectors (n, 3) of a vector (3,) or vectors (n, 3)."""
+
     if not isinstance(inp, (list, np.ndarray, xr.DataArray)):
         raise TypeError(f"{name} must be array_like or xarray.DataArray")
 
@@ -57,8 +58,8 @@ def solid_angle(inp0, inp1, inp2):
     the spherical excess, with the angles of the triangle from the law of
     cosines: it loses all precision for small triangles (a relative error
     of 0.2 for 0.01 rad sides, 4e3 for 1e-4 rad), and gives NaN for vectors
-    that are not unit vectors or for degenerate triangles (zero here). The
-    new formula agrees with a 50-digit evaluation to 1e-11 down to 1e-4 rad
+    that are not unit vectors or for degenerate triangles (zero here). This
+    formula agrees with a 50-digit evaluation to 1e-11 down to 1e-4 rad
     sides.
 
     References
@@ -80,7 +81,8 @@ def solid_angle(inp0, inp1, inp2):
     denominator = 1.0 + np.sum(vec_a * vec_b, axis=1)
     denominator += np.sum(vec_a * vec_c, axis=1) + np.sum(vec_b * vec_c, axis=1)
 
-    # Solid angle with the sign of (c x b) . a = -a . (b x c), as irf.solidangle
+    # Solid angle with the sign of (c x b) . a = -a . (b x c), as
+    # irf.solidangle
     angle = -2.0 * np.arctan2(numerator, denominator)
 
     return angle

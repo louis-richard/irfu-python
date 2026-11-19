@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import warnings
 from collections.abc import Hashable
-
-# Built-in imports
 from typing import Literal, cast
 
 # 3rd party imports
@@ -23,6 +22,7 @@ def _edges(centres, axis=0):
     r"""Edges of the cells around `centres` along `axis`: the midpoints, and
     half a step beyond the first and last centres (as the "nearest" shading
     of matplotlib's pcolormesh)."""
+
     half = np.diff(centres, axis=axis) / 2
     first = np.take(centres, [0], axis=axis) - np.take(half, [0], axis=axis)
     last = np.take(centres, [-1], axis=axis) + np.take(half, [-1], axis=axis)
@@ -35,8 +35,9 @@ def _own_table_mesh(x_data, y_data, inp_data):
     n_t): each time drawn with the cell edges of its own y values. The times
     get their own left and right edges with a masked column of zero width
     between them (pcolormesh shares the corners of neighbouring columns,
-    which drew every time with the y edges averaged over its neighbours,
-    i.e. alternating tables both at their mean)."""
+    which would draw every time with the y edges averaged over its
+    neighbours, i.e. alternating tables both at their mean)."""
+
     t_edges = _edges(x_data)
     y_edges = _edges(y_data, axis=0)
 
@@ -141,14 +142,9 @@ def plot_spectr(
     elif isinstance(inp, xr.Dataset):
         depend_0_name = inp.data.dims[0]
 
-        # The y-axis quantity (e.g. "energy") can be time-dependent, in
-        # which case it is stored as a non-dimension coordinate on the
-        # Dataset (dims: [time, idx]) rather than as a separate data
-        # variable. Prefer a coordinate named "energy" if present, then
-        # fall back to any other non-dimension coordinate along idx, and
-        # finally to the legacy behaviour of looking for a second data
-        # variable. A coordinate not along idx (e.g., the scalar coordinate
-        # left by sel) was taken as y (IndexError)
+        # y values from a non-dimension coordinate along idx ("energy" first,
+        # e.g., a time-dependent table), else from the other data variable;
+        # coordinates not along idx (e.g., scalar ones left by sel) skipped
         non_dim_coords = [
             name
             for name in inp.coords
@@ -172,17 +168,20 @@ def plot_spectr(
     else:
         raise TypeError("inp must be an xarray.DataArray or xarray.Dataset")
 
-    # pcolormesh takes finite coordinates only (NaN energies raised
-    # ValueError): the y bins without a value, and with a time-dependent
-    # table, the times without one, are left out
+    # pcolormesh needs finite coordinates: drop the y bins without a value
+    # and, with a time-dependent table, the times without one
     if y_data.ndim == 1:
         keep = np.isfinite(y_data)
-        y_data, inp_data = y_data[keep], inp_data[keep]
+        y_data = y_data[keep]
+        inp_data = inp_data[keep]
     else:
         keep = np.any(np.isfinite(y_data), axis=1)
-        y_data, inp_data = y_data[keep], inp_data[keep]
+        y_data = y_data[keep]
+        inp_data = inp_data[keep]
         keep = np.all(np.isfinite(y_data), axis=0)
-        x_data, y_data, inp_data = x_data[keep], y_data[:, keep], inp_data[:, keep]
+        x_data = x_data[keep]
+        y_data = y_data[:, keep]
+        inp_data = inp_data[:, keep]
 
     if cscale == "log":
         if clim is not None:
@@ -193,7 +192,7 @@ def plot_spectr(
         elif np.any(np.isfinite(inp_data) & (inp_data > 0)):
             options = {"norm": mpl.colors.LogNorm(), "cmap": cmap}
         else:
-            # Without positive data, LogNorm raised Invalid vmin or vmax
+            # Without positive data, LogNorm needs explicit limits
             warnings.warn(
                 "no positive data for the log colour scale: limits set to [1, 10]",
                 UserWarning,

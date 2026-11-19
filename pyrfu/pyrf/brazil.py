@@ -57,6 +57,7 @@ def brazil(
     attributes ``x_edges`` and ``y_edges``.
 
     """
+
     beta_para = np.asarray(beta_para, dtype=np.float64)
     p_aniso = np.asarray(p_aniso, dtype=np.float64)
 

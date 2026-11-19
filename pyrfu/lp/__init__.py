@@ -50,8 +50,7 @@ class LangmuirProbe:
         Raises
         ------
         ValueError
-            If r_wire has more than 2 elements (an assertion compared the
-            radii with 2 instead of their number).
+            If r_wire has more than 2 elements.
 
         """
 
@@ -62,7 +61,10 @@ class LangmuirProbe:
             )
 
         self.name = name
-        r_wire = None if r_wire is None else np.atleast_1d(r_wire).astype(float)
+
+        if r_wire is not None:
+            r_wire = np.atleast_1d(r_wire).astype(float)
+
         self.wire = {"l": l_wire, "r": r_wire}
         self.sphere = {"r": r_sphere, "surface": surface}
         self.s_photoemission = s_photoemission
@@ -118,9 +120,10 @@ class LangmuirProbe:
             "sunlit": a_sphere_sunlit + a_wire_sunlit,
         }
 
-        # NaN without probe (it raised ZeroDivisionError)
+        # NaN without probe
         with np.errstate(divide="ignore", invalid="ignore"):
-            total, sunlit = np.float64(self.area["total"]), self.area["sunlit"]
+            total = np.float64(self.area["total"])
+            sunlit = self.area["sunlit"]
             self.area["total_sunlit"] = total / sunlit
             self.area["sunlit_total"] = sunlit / total
 
@@ -143,18 +146,20 @@ class LangmuirProbe:
 
         """
 
-        c_sphere, c_wire = 0.0, 0.0
+        c_sphere = 0.0
+        c_wire = 0.0
 
         if self._has_sphere():
             c_sphere = estimate("capacitance_sphere", self.sphere["r"])
 
         if self._has_wire():
-            r_wire, l_wire = np.mean(self.wire["r"]), self.wire["l"]
+            r_wire = np.mean(self.wire["r"])
+            l_wire = self.wire["l"]
 
             if np.all(l_wire > 10 * self.wire["r"]):
                 c_wire = estimate("capacitance_wire", r_wire, l_wire)
             elif np.all(l_wire > self.wire["r"]):
-                # (pyrf.estimate takes the half length)
+                # pyrf.estimate takes the half length
                 c_wire = estimate("capacitance_cylinder", r_wire, l_wire / 2)
             else:
                 raise ValueError(

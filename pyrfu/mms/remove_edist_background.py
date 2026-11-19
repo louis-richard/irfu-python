@@ -53,6 +53,7 @@ def _load_bgdist_model(file_name: str, source: str, data_path: str):
         If the local model file doesn't exist.
 
     """
+
     if source == "local":
         file_path = os.path.join(data_path, "models", "fpi", file_name)
 
@@ -158,7 +159,7 @@ def remove_edist_background(
         raise TypeError("Could not identify if data is fast or burst.")
 
     # Resource to read the data and the photoelectron model from, as the other
-    # readers ("default" raised ValueError)
+    # readers
     source = _resolve_source(source)
 
     dataset_name = f"mms{mms_id}_fpi_{data_rate}_l2_des-dist"
@@ -217,10 +218,9 @@ def remove_edist_background(
         n_photo = photoe_scle
 
     # The background of each (energy table, model record) once, given to the
-    # distributions that use it (it was computed for each time): the model
-    # scaled by n_photo, plus, for n_sec > 0, isotropic secondary electrons,
-    # the model averaged over azimuth (axis 1 of energy, phi, theta), as
-    # irfu-matlab (it was averaged over the polar angle)
+    # distributions that use it: the model scaled by n_photo, plus, for
+    # n_sec > 0, isotropic secondary electrons, the model averaged over
+    # azimuth (axis 1 of energy, phi, theta), as irfu-matlab
     tables = np.asarray(vdf.attrs["esteptable"]).astype(int)
     pairs, which = np.unique(
         np.stack([tables, idx_model], axis=1), axis=0, return_inverse=True

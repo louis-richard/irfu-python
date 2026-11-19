@@ -14,11 +14,11 @@ from pyrfu.mms._internal.epd import _common_attrs
 
 def _omni_attrs(telescope_attrs, energy_dim, method):
     r"""Attributes of the omni-directional flux: those with the same value in
-    all the telescopes (the attributes of the telescope 0 labelled it: name,
-    pointers to its support variables, display maximum), and for the omni
-    flux its name (``_t0`` → ``_omni``, as SPEDAS), DEPEND_1 the name of its
-    energy coordinate, and SCALEMAX the telescopes' maxima combined as the
-    data (an upper bound of the omni maximum of the file)."""
+    all the telescopes, and for the omni flux its name (``_t0`` → ``_omni``,
+    as SPEDAS), DEPEND_1 the name of its energy coordinate, and SCALEMAX the
+    telescopes' maxima combined as the data (an upper bound of the omni
+    maximum of the file)."""
+
     attrs = _common_attrs(telescope_attrs)
     first = telescope_attrs[0]
 
@@ -40,9 +40,10 @@ def _omni_attrs(telescope_attrs, energy_dim, method):
     except (KeyError, TypeError, ValueError):
         pass
     else:
-        attrs["SCALEMAX"] = (
-            scale_max.sum(axis=0) if method == "sum" else scale_max.mean(axis=0)
-        )
+        if method == "sum":
+            attrs["SCALEMAX"] = scale_max.sum(axis=0)
+        else:
+            attrs["SCALEMAX"] = scale_max.mean(axis=0)
 
     return attrs
 
@@ -128,8 +129,8 @@ def eis_omni(eis_allt, method: str = "mean"):
         [eis_allt[scope].attrs for scope in scopes], dims[1], method.lower()
     )
 
-    # Energy widths and species, attributes of the Dataset (they were left
-    # out, on which eis_spec_combine_sc raised KeyError)
+    # Energy widths and species, attributes of the Dataset (needed by
+    # eis_spec_combine_sc)
     for key in ["delta_energy_plus", "delta_energy_minus", "species"]:
         if key in eis_allt.attrs:
             attrs[key] = eis_allt.attrs[key]

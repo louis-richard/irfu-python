@@ -36,14 +36,14 @@ def iso86012datetime64(
     pyrfu.pyrf.datetime642iso8601
 
     """
+
     # Check input type
     if isinstance(time, (str, list, tuple, np.ndarray)):
         time_array = np.atleast_1d(np.asarray(time))
     else:
         raise TypeError("time must be a str, a list, a tuple or a numpy.ndarray")
 
-    # The UTC designator "Z": numpy.datetime64 has no time zones (it warns,
-    # and will raise)
+    # Strip the UTC designator "Z" (numpy.datetime64 warns on time zones)
     if time_array.dtype.kind == "U":
         time_array = np.char.rstrip(time_array, "Z")
 

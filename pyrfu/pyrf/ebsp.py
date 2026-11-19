@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
-    # (only with E)
+    # Only with E
     fs_e, fs_b = [calc_fs(e_xyz), calc_fs(db_xyz)]
 
     resample_b_options = {"f_s": fs_b}
@@ -40,38 +40,37 @@ def _checksampling(e_xyz, db_xyz, b_xyz, b_bgd, flag_no_resamp):
             )
 
         fs_ = fs_e
+    elif fs_b > 1.5 * fs_e:
+        e_xyz = resample(e_xyz, db_xyz, **resample_b_options)
+        b_bgd = resample(b_bgd, db_xyz, **resample_b_options)
+
+        fs_ = fs_b
+        logger.info("Interpolating e to b")
+    elif fs_e > 1.5 * fs_b:
+        db_xyz = resample(db_xyz, e_xyz)
+        b_bgd = resample(b_bgd, e_xyz)
+
+        fs_ = fs_e
+        logger.info("Interpolating b to e")
+    elif fs_e == fs_b and len(e_xyz) == len(db_xyz):
+        fs_ = fs_e
     else:
-        if fs_b > 1.5 * fs_e:
-            e_xyz = resample(e_xyz, db_xyz, **resample_b_options)
-            b_bgd = resample(b_bgd, db_xyz, **resample_b_options)
+        fs_ = 2 * fs_e
+        start_time = np.max([_unix(e_xyz.time.data)[0], _unix(db_xyz.time.data)[0]])
+        end_time = np.min([_unix(e_xyz.time.data)[-1], _unix(db_xyz.time.data)[-1]])
 
-            fs_ = fs_b
-            logger.info("Interpolating e to b")
-        elif fs_e > 1.5 * fs_b:
-            db_xyz = resample(db_xyz, e_xyz)
-            b_bgd = resample(b_bgd, e_xyz)
+        nt = np.floor((end_time - start_time) * fs_).astype(np.int64)
 
-            fs_ = fs_e
-            logger.info("Interpolating b to e")
-        elif fs_e == fs_b and len(e_xyz) == len(db_xyz):
-            fs_ = fs_e
-        else:
-            fs_ = 2 * fs_e
-            start_time = np.max([_unix(e_xyz.time.data)[0], _unix(db_xyz.time.data)[0]])
-            end_time = np.min([_unix(e_xyz.time.data)[-1], _unix(db_xyz.time.data)[-1]])
+        t = np.linspace(start_time, end_time, nt)
 
-            nt = np.floor((end_time - start_time) * fs_).astype(np.int64)
+        t = ts_time(t)
 
-            t = np.linspace(start_time, end_time, nt)
+        e_xyz = resample(e_xyz, t)
+        b_bgd = resample(b_bgd, t)
+        b_xyz = resample(b_xyz, t)
+        db_xyz = resample(db_xyz, t)
 
-            t = ts_time(t)
-
-            e_xyz = resample(e_xyz, t)
-            b_bgd = resample(b_bgd, t)
-            b_xyz = resample(b_xyz, t)
-            db_xyz = resample(db_xyz, t)
-
-            logger.info("Interpolating b and e to 2x e sampling")
+        logger.info("Interpolating b and e to 2x e sampling")
 
     return e_xyz, db_xyz, b_xyz, b_bgd, fs_
 
@@ -133,7 +132,8 @@ def _average_data(data=None, x=None, y=None, av_window=None):
     pad_nan = np.ones((n_point_to_add, data.shape[1]), dtype="complex128") * np.nan
     data_padded = np.vstack((pad_nan, data, pad_nan))
 
-    # MATLAB: padTime = dtx*(1:nPointToAdd); the pad does NOT repeat x(1)/x(end)
+    # MATLAB: padTime = dtx*(1:nPointToAdd); the pad does NOT repeat
+    # x(1)/x(end)
     x_pad_pref = x[0] - dtx * np.arange(n_point_to_add, 0, -1)
     x_pad_suff = x[-1] + dtx * np.arange(1, n_point_to_add + 1)
     x_padded = np.hstack((x_pad_pref, x, x_pad_suff))
@@ -177,8 +177,8 @@ def _censure_plot(inp, idx_nan, censure, n_data, a_):
 
 def _censure_gaps(inp, idx_nan, censure):
     r"""_censure_plot of the (time, frequency, ...) array `inp`, the
-    components of each frequency with its censure (one call per array, it was
-    one per component)."""
+    components of each frequency with its censure (one call per array)."""
+
     shape = inp.shape
     n_comp = int(np.prod(shape[2:], dtype=np.int64))
     out = _censure_plot(
@@ -193,7 +193,8 @@ def _censure_gaps(inp, idx_nan, censure):
 
 def _average_stacked(inp, in_time, out_time, av_window=None):
     r"""_average_data of the (time, ...) array `inp`, real part (one call per
-    array, it was one per component)."""
+    array)."""
+
     out = _average_data(
         np.ascontiguousarray(inp.reshape(inp.shape[0], -1)),
         in_time,
@@ -205,8 +206,8 @@ def _average_stacked(inp, in_time, out_time, av_window=None):
 
 def _trace_ratio(s_mat):
     r"""tr(S^2) / tr(S)^2 of the spectral matrices `s_mat` (time, n, n), NaN
-    where tr(S) is NaN (the censured times: the complex division by NaN
-    raised "invalid value encountered in divide")."""
+    where tr(S) is NaN (the censured times, without warning)."""
+
     num = np.trace(np.matmul(s_mat, s_mat), axis1=1, axis2=2)
     den = np.trace(s_mat, axis1=1, axis2=2) ** 2
     out = np.full(num.shape, np.nan, dtype=num.dtype)
@@ -215,9 +216,9 @@ def _trace_ratio(s_mat):
 
 
 def _degree_of_polarization(s_mat, a_coef, b_coef):
-    r"""sqrt(a tr(S^2) / tr(S)^2 - b), NaN where the ratio is NaN (the complex
-    square root of NaN raised "invalid value encountered in sqrt" on
-    Windows)."""
+    r"""sqrt(a tr(S^2) / tr(S)^2 - b), NaN where the ratio is NaN (without
+    warning, also on Windows)."""
+
     ratio = _trace_ratio(s_mat)
     out = np.full(ratio.shape, np.nan, dtype=ratio.dtype)
     np.sqrt(a_coef * ratio - b_coef, out=out, where=np.isfinite(ratio))
@@ -229,6 +230,7 @@ def _polarization(wb, new_freq_mat, in_time, out_time, av_window, censure, matla
     (time, 3) at one frequency, averaged on `out_time` and censured at the
     edges: wave-vector polar and azimuthal angles (deg), planarity,
     ellipticity, 3D and 2D degrees of polarization (complex), (time, 6)."""
+
     n_data_out = len(out_time)
     s_mat = np.zeros((len(in_time), 3, 3), dtype="complex128")
 
@@ -254,8 +256,7 @@ def _polarization(wb, new_freq_mat, in_time, out_time, av_window, censure, matla
     a_mat[:, :3, :] = np.real(s_mat_avg)
     a_mat[:, 3:6, :] = -np.imag(s_mat_avg)
 
-    # SVD of the matrices without NaN, all at once (it was a loop over the
-    # times); NaN elsewhere
+    # SVD of the matrices without NaN, all at once; NaN elsewhere
     valid = ~np.any(np.isnan(a_mat), axis=(1, 2))
     _, ww_, vv_ = np.linalg.svd(a_mat[valid], full_matrices=False)
     w_mat[..., valid] = ww_.T[None, ...]
@@ -327,6 +328,7 @@ def _set_units(res, keys, units):
 def _spectra_units(e_xyz, db_xyz):
     r"""Units of the B and E spectra (None for E without E). Warns when E is
     not in mV/m or delta_b not in nT, the units the Poynting flux assumes."""
+
     units_b = _ratio(_power(_units(db_xyz), 2), "Hz")
 
     if e_xyz is None:
@@ -549,8 +551,7 @@ def ebsp(
         "r": xyz,
     }
 
-    # The options are keyword-only parameters (a misspelt one, ignored in
-    # **kwargs, raises TypeError)
+    # The options are keyword-only parameters (a misspelt one raises TypeError)
     want_polarization = polarization
 
     flag_no_resample = no_resample
@@ -562,7 +563,7 @@ def ebsp(
     n_wave_period_to_average = nav
 
     # An array (constant or on the times of delta_b) as a time series of
-    # matrices, as convert_fac takes it (it was rejected)
+    # matrices, as convert_fac takes it
     if fac_matrix is not None and not isinstance(fac_matrix, xr.DataArray):
         fac_matrix = np.asarray(fac_matrix, dtype=np.float64)
 
@@ -645,8 +646,7 @@ def ebsp(
     if flag_want_fac:
         res["flagFac"] = True
 
-        # Times of B0 for the E rotated to FAC with Ez from dE.B = 0 (float seconds
-        # were read as ns: B0 was resampled to times in 1970)
+        # Times of B0 for the E rotated to FAC with Ez from dE.B = 0
         time_b0 = b_bgd.time.data
 
         if want_ee and not flag_de_dot_b0:
@@ -660,9 +660,11 @@ def ebsp(
                 e_xyz = convert_fac(e_xyz, fac_matrix)
 
         else:
-            idx_nan_e = (
-                np.isnan(e_xyz.data) if want_ee else np.full((len(in_time), 3), False)
-            )
+            if want_ee:
+                idx_nan_e = np.isnan(e_xyz.data)
+            else:
+                idx_nan_e = np.full((len(in_time), 3), False)
+
             eisr2 = None
             idx_nan_eisr2 = np.full((len(in_time), 2), False)
 
@@ -671,9 +673,11 @@ def ebsp(
         else:
             db_xyz = convert_fac(db_xyz, fac_matrix)
     else:
-        idx_nan_e = (
-            np.isnan(e_xyz.data) if want_ee else np.full((len(in_time), 3), False)
-        )
+        if want_ee:
+            idx_nan_e = np.isnan(e_xyz.data)
+        else:
+            idx_nan_e = np.full((len(in_time), 3), False)
+
         eisr2 = None
         idx_nan_eisr2 = np.full((len(in_time), 2), False)
 
@@ -729,9 +733,8 @@ def ebsp(
         logger.info("ebsp ... calculate B wavelet transform ....")
 
     # Power of B and E (time, frequency, xx yy zz ss), of E in the spin plane
-    # (or of E when not rotated) and Poynting flux (time, frequency, xyz): one
-    # array each (nine arrays before); polarization parameters (averaged
-    # times, frequency, see _polarization)
+    # (or of E when not rotated) and Poynting flux (time, frequency, xyz);
+    # polarization parameters (averaged times, frequency, see _polarization)
     n_data, n_freq, n_data_out = [len(in_time), len(a_), len(out_time)]
 
     power_b = np.zeros((n_data, n_freq, 4), dtype="complex128")
@@ -762,7 +765,11 @@ def ebsp(
         wb[idx_nan_b] = np.nan
 
         if want_ee:
-            w_exp_e = w_exp_mat2 if sw_e.shape[1] == 2 else w_exp_mat
+            if sw_e.shape[1] == 2:
+                w_exp_e = w_exp_mat2
+            else:
+                w_exp_e = w_exp_mat
+
             we = fft.ifft(sw_e * w_exp_e, axis=0, workers=os.cpu_count())
             we[idx_nan_e] = np.nan
 
@@ -807,10 +814,12 @@ def ebsp(
             # j = c + 2 (cyclic) of E and B
             coeff_poynting = 10 / 4 / np.pi * (1 / 4) * (4 * np.pi)
 
-            we, wb_ = np.asarray(we), wb
+            we = np.asarray(we)
+            wb_ = wb
 
             for c_ in range(3):
-                i, j = (c_ + 1) % 3, (c_ + 2) % 3
+                i = (c_ + 1) % 3
+                j = (c_ + 2) % 3
                 poynting[:, ind_a, c_] = (
                     coeff_poynting
                     * np.real(
@@ -925,7 +934,8 @@ def ebsp(
         the_svd_fac, phi_svd_fac, planarity, ellipticity = [
             np.real(pol_params[..., i]) for i in range(4)
         ]
-        dop_3d, dop_2d = pol_params[..., 4], pol_params[..., 5]
+        dop_3d = pol_params[..., 4]
+        dop_2d = pol_params[..., 5]
 
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore", category=RuntimeWarning)

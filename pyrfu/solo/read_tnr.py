@@ -12,6 +12,7 @@ import pycdfpp
 import xarray as xr
 from xarray import DataArray
 
+# Local imports
 from ..pyrf import read_cdf, time_clip
 from ._list_files import _list_files
 
@@ -74,18 +75,16 @@ def read_tnr(
 
     """
 
-    # Check input types (numpy integers, e.g. from an array, were rejected)
+    # Check input type
     if not isinstance(sensor, numbers.Integral):
         raise TypeError("sensor must be an integer")
 
     files = _list_files_tnr_l2(tint, data_path, tree)
 
-    # (None was returned)
     if not files:
         raise FileNotFoundError(f"no L2 TNR file in {tint}")
 
-    # Spectra of each file, put together once at the end (ts_append in the
-    # loop copied all the previous files for each one)
+    # Spectra of each file, put together once at the end
     spectra = []
 
     for file in files:
@@ -118,8 +117,7 @@ def read_tnr(
         bande_ = bande_[puntical]
 
         # Renumber the sweeps after a reset of SWEEP_NUM (a jump of more than
-        # 100), as read_TNR.m, in int64: differences of the uint32 wrapped, so
-        # that any small decrease (records out of order) counted as a reset
+        # 100), as read_TNR.m, in int64 so that the differences do not wrap
         sweep_num = sweep_.astype(np.int64)
         xdelta_sw = np.where(np.abs(np.diff(sweep_num)) > 100)[0]
 
@@ -161,8 +159,7 @@ def read_tnr(
 
         # One spectrum per sweep, the sweeps in increasing order; each record
         # fills its band (32 frequencies of 128), a later record of the same
-        # band and sweep replacing an earlier one. All the sweeps at once (a
-        # search of the records of each sweep, quadratic in their number)
+        # band and sweep replacing an earlier one
         sweeps, first, which = np.unique(
             sweep_num, return_index=True, return_inverse=True
         )

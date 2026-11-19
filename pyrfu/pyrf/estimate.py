@@ -104,6 +104,7 @@ def estimate(what_to_estimate: str, radius: float, length: float | None = None):
 
 
     """
+
     if what_to_estimate.lower() == "capacitance_disk":
         out = _estimate_capa_disk(radius)
     elif what_to_estimate.lower() == "capacitance_sphere":
@@ -111,7 +112,7 @@ def estimate(what_to_estimate: str, radius: float, length: float | None = None):
     elif what_to_estimate.lower() == "capacitance_wire":
         out = _estimate_capa_wire(radius, length)
     elif what_to_estimate.lower() == "capacitance_cylinder":
-        # Without length, h / a raised TypeError
+        # The half length is required
         if length is None:
             raise ValueError("capacitance_cylinder requires the half length")
 

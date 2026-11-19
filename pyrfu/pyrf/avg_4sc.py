@@ -62,6 +62,7 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     >>> b_xyz = avg_4sc(b_mms)
 
     """
+
     # Check input type
     if not isinstance(b_list, (list, tuple)):
         raise TypeError("b_list must be a list or a tuple")
@@ -102,9 +103,7 @@ def avg_4sc(b_list: Sequence[DataArray]) -> DataArray:
             b_avg_data += b.data.data
 
         # The other variables, the coordinates and the attributes from the
-        # first spacecraft, as nanavg_4sc (the dimensions were taken from the
-        # coordinates: a scalar coordinate, e.g. left by sel, raised
-        # ValueError)
+        # first spacecraft, as nanavg_4sc
         b_avg = b_list_r[0].assign(
             data=b_list_r[0]["data"].copy(data=b_avg_data / len(b_list_r))
         )

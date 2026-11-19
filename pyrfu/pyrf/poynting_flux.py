@@ -88,7 +88,7 @@ def poynting_flux(e_xyz, b_xyz, b_hat=None):
     s_xyz.attrs["UNITS"] = "mW/m^2"
 
     # Time integral of the Poynting flux (of each component, or along b_hat),
-    # with NaNs counted as zero (in a copy, the returned fluxes keep them)
+    # NaNs counted as zero in a copy (the returned fluxes keep them)
     if b_hat is not None:
         b_m = resample(b_hat, e_xyz)
         s_z = dot(normalize(b_m), s_xyz)

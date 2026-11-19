@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 from xarray import DataArray, Dataset
 
@@ -54,4 +52,6 @@ def dpf2psd(inp: Dataset | DataArray) -> Dataset | DataArray:
     if units.lower() not in _DPF:
         raise ValueError("Invalid unit")
 
-    return vdf_convert(inp, "s^3/m^6")
+    out = vdf_convert(inp, "s^3/m^6")
+
+    return out

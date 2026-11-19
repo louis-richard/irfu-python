@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -80,7 +78,10 @@ def medfilt(inp: DataArray, kernel_size: int | None = None) -> DataArray:
         raise TypeError("Input must be a DataArray")
 
     # Odd number of points
-    kernel_size = 3 if kernel_size is None else int(np.round(kernel_size))
+    if kernel_size is None:
+        kernel_size = 3
+    else:
+        kernel_size = int(np.round(kernel_size))
 
     if kernel_size % 2 == 0:
         kernel_size += 1

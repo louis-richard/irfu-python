@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
-
 # Built-in imports
+import logging
 from typing import Literal
 
 # 3rd party imports
@@ -46,6 +45,7 @@ def _bin_edges(data, bins, bin_range, log):
         range is not strictly positive.
 
     """
+
     # Explicit bin edges are used as they are.
     if not isinstance(bins, (int, np.integer)):
         return np.asarray(bins, dtype=float)
@@ -57,16 +57,18 @@ def _bin_edges(data, bins, bin_range, log):
                 "are non-finite, or not positive along a logarithmic dimension)"
             )
 
-        low, upp = np.min(data), np.max(data)
+        low = np.min(data)
+        upp = np.max(data)
 
         # Constant data: a range one unit (one decade) wide around the value,
         # as numpy.histogram, instead of zero-width bins
         if low == upp:
-            low, upp = (
-                (low / np.sqrt(10), upp * np.sqrt(10))
-                if log
-                else (low - 0.5, upp + 0.5)
-            )
+            if log:
+                low = low / np.sqrt(10)
+                upp = upp * np.sqrt(10)
+            else:
+                low = low - 0.5
+                upp = upp + 0.5
     else:
         low, upp = bin_range
 
@@ -96,6 +98,7 @@ def _bin_centers(edges, log):
         Bin centers, shape (n,).
 
     """
+
     if log:
         return np.sqrt(edges[:-1] * edges[1:])
 
@@ -214,13 +217,15 @@ def histogram2d(
     if scale not in SCALES:
         raise ValueError(f"scale must be one of {SCALES}, not {scale!r}")
 
-    log_x, log_y = scale[:3] == "log", scale[3:] == "log"
+    log_x = scale[:3] == "log"
+    log_y = scale[3:] == "log"
 
     # resample inp2 with respect to inp1
     if len(inp2) != len(inp1) or not np.array_equal(inp2.time.data, inp1.time.data):
         inp2 = resample(inp2, inp1)
 
-    x_data, y_data = np.asarray(inp1.data), np.asarray(inp2.data)
+    x_data = np.asarray(inp1.data)
+    y_data = np.asarray(inp2.data)
 
     # Discard the samples that cannot be binned, numpy would otherwise fail to
     # compute the range of the histogram.
@@ -239,7 +244,8 @@ def histogram2d(
             len(keep),
         )
 
-    x_data, y_data = x_data[keep], y_data[keep]
+    x_data = x_data[keep]
+    y_data = y_data[keep]
 
     if weights is not None:
         weights = np.asarray(weights)[keep]
@@ -254,9 +260,14 @@ def histogram2d(
     if isinstance(bins, (list, tuple, np.ndarray)) and len(bins) == 2:
         bins_x, bins_y = bins
     else:
-        bins_x, bins_y = bins, bins
+        bins_x = bins
+        bins_y = bins
 
-    range_x, range_y = (None, None) if y_range is None else y_range
+    if y_range is None:
+        range_x = None
+        range_y = None
+    else:
+        range_x, range_y = y_range
 
     x_edges = _bin_edges(x_data, bins_x, range_x, log_x)
     y_edges = _bin_edges(y_data, bins_y, range_y, log_y)
@@ -289,8 +300,10 @@ def histogram2d(
     # unknown units without UNITS
     if density:
         units = _ratio("", _product(_units(inp1), _units(inp2)))
+    elif weights is None:
+        units = ""
     else:
-        units = "" if weights is None else None
+        units = None
 
     out.attrs = _attrs(out.attrs, units)
     out.x_bins.attrs = _attrs({}, _units(inp1))

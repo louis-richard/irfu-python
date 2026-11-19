@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -81,9 +80,8 @@ def dec_par_perp(
     if not isinstance(flag_spin_plane, bool):
         raise TypeError("flag_spin_plane must be a bool")
 
-    # Check inp and b_bgd shapes (the components were not checked: an inp of
-    # 2 components failed in a broadcast); in the spin plane, inp may have
-    # only x and y (as irfu-matlab irf_dec_parperp)
+    # Check inp and b_bgd shapes; in the spin plane, inp may have only x and
+    # y (as irfu-matlab irf_dec_parperp)
     n_comps = (2, 3) if flag_spin_plane else (3,)
 
     if inp.ndim != 2 or inp.shape[1] not in n_comps:
@@ -135,7 +133,7 @@ def dec_par_perp(
         alpha_arr = np.arctan2(b_bgd_data[:, 2], b_tot)
         alpha = ts_scalar(inp_time, alpha_arr)
 
-    # Components in the units of inp, alpha in rad (they had none)
+    # Components in the units of inp, alpha in rad
     for out in [a_para, a_perp]:
         out.attrs = _attrs(out.attrs, _units(inp))
 

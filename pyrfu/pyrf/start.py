@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party import
+# 3rd party imports
 import xarray as xr
 
 # Local imports
@@ -39,8 +39,7 @@ def start(inp):
     if isinstance(inp, xr.DataArray) and list(inp.dims)[0] != "time":
         raise ValueError("inp must be a time series")
 
-    # As end and datetime642unix (ns * 1e-9 differed from ns / 1e9 in the last
-    # digit for about 40 % of the times)
+    # As end and datetime642unix (ns / 1e9, correctly rounded)
     out = datetime642unix(inp.time.data[:1])[0]
 
     return out

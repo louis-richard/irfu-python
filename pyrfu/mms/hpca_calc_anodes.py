@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import warnings
-
 # Built-in imports
+import warnings
 from typing import Literal
 
 # 3rd party imports
@@ -84,7 +83,7 @@ def hpca_calc_anodes(
         else:
             updated_spectra = np.where(has_data, np.nansum(spectra, axis=1), np.nan)
 
-    # The attributes of inp and of its energies (lost)
+    # Keep the attributes of inp and of its energies
     out = xr.DataArray(
         updated_spectra,
         coords=[times, energies],

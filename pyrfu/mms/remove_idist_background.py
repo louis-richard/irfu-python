@@ -53,6 +53,7 @@ def remove_idist_background(vdf, def_bg):
             Research: Space Physics, 124, https://doi.org/10.1029/2019JA026980
 
     """
+
     if _charge_sign(vdf) < 0:
         raise ValueError(
             "vdf must be an ion distribution (electrons: remove_edist_background)"

@@ -25,7 +25,7 @@ def _alpha(d_p, b_z):
 
 def _shue1998(d_p, b_z):
     # Magnetopause of Shue et al. (1998), in R_E, at theta = 0, 0.1, ..., 3.1
-    # rad as irfu-matlab (0:0.1:pi; it was linspace(0, pi, 31))
+    # rad as irfu-matlab (0:0.1:pi)
     theta_ = np.arange(0.0, np.pi, 0.1)
     r_zero = _rzero(d_p, b_z)
     alpha_ = _alpha(d_p, b_z)
@@ -145,8 +145,7 @@ def magnetosphere(
         if not np.isfinite(m_a) or m_a <= 1:
             raise ValueError(f"the Mach number must be larger than 1, not {m_a}")
 
-        # Standoff distance of the magnetopause, from the same solar wind (it
-        # was downloaded from OMNI a second time)
+        # Standoff distance of the magnetopause, from the same solar wind
         x_mp, _ = _shue1998(d_p, b_z)
         gamma_ = 5 / 3
 

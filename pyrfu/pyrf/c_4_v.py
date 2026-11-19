@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 from scipy import constants, interpolate
 
@@ -44,6 +45,7 @@ def _positions_at(r_xyz, t_ref, offsets):
     offset (s, precise below the resolution of t_ref), by a cubic spline
     extrapolated outside the data, as irfu-matlab c_4_v (interp1 'spline',
     'extrap')."""
+
     r_out = []
 
     for r_sc, offset in zip(r_xyz, offsets):
@@ -59,6 +61,7 @@ def _shifts_moving(r_xyz, time_center, velocity, delta_t):
     moving at velocity in the frame of the positions: the fixed point of
     n.(r_a(t_c + dt_a) - r_1(t_c)) / |v|, from the shifts at fixed
     positions."""
+
     speed = np.linalg.norm(velocity)
     n_hat = velocity / speed
     r_1 = _positions_at(r_xyz[:1], time_center, [0.0])[0]
@@ -143,8 +146,7 @@ def c_4_v(r_xyz, time, frame: Literal["spacecraft", "positions"] = "spacecraft")
     time = list(time)
 
     # Epochs and speeds are told apart by their size (the speed of light in
-    # km/s, about 3.5 days after 1970): relative crossing times were taken as
-    # a velocity
+    # km/s, about 3.5 days after 1970): reject times relative to MMS1
     if not np.issubdtype(np.asarray(time[0]).dtype, np.datetime64) and (
         float(time[0]) <= constants.c / 1e3
     ):

@@ -35,9 +35,8 @@ def plot_line(axis, inp, **kwargs):
 
     if axis is None:
         _, axis = plt.subplots(1)
-    else:
-        if not isinstance(axis, mpl.axes.Axes):
-            raise TypeError("axis must be a matplotlib.axes._axes.Axes")
+    elif not isinstance(axis, mpl.axes.Axes):
+        raise TypeError("axis must be a matplotlib.axes._axes.Axes")
 
     if not isinstance(inp, xr.DataArray):
         raise TypeError("inp must be an xarray.DataArray object!")

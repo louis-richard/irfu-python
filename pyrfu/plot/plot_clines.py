@@ -4,7 +4,7 @@
 # Built-in imports
 import warnings
 
-# 3rd party import
+# 3rd party imports
 import matplotlib as mpl
 import numpy as np
 from matplotlib.cm import ScalarMappable
@@ -65,8 +65,7 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
     if cscale != "log":
         raise NotImplementedError
 
-    # The energies on the log colour scale: a 0 or NaN energy raised Invalid
-    # vmin or vmax
+    # Only finite positive energies on the log colour scale
     on_scale = np.isfinite(energy) & (energy > 0)
 
     if not np.any(on_scale):
@@ -80,7 +79,7 @@ def plot_clines(axis, inp, yscale="log", cscale="log", cmap="jet", **kwargs):
 
     norm = LogNorm(vmin=np.min(energy[on_scale]), vmax=np.max(energy[on_scale]))
 
-    # Color of each line from its energy, as on the colorbar (was from the index)
+    # Color of each line from its energy, as on the colorbar
     for i in np.where(on_scale)[0]:
         plot_line(axis, inp[:, i], color=c_map(norm(energy[i])), **kwargs)
 

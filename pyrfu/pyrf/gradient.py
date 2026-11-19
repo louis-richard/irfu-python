@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -64,8 +62,7 @@ def gradient(inp, time_step: float | None = None):
 
     """
 
-    # Times in seconds from the first sample, from the exact time steps in ns (the
-    # median time step was wrong across gaps and for jittered times)
+    # Times in seconds from the first sample, from the exact time steps in ns
     time = _seconds(inp.time.data, inp.time.data[0])
     steps = np.diff(time)
 
@@ -74,8 +71,7 @@ def gradient(inp, time_step: float | None = None):
         sorted_steps = np.sort(steps)
         time_step = sorted_steps[min(1, len(steps) - 1)] if len(steps) else np.inf
 
-    # Segments between the data gaps, differentiated separately (they were
-    # differentiated across the gaps)
+    # Segments between the data gaps, differentiated separately
     bounds = np.r_[0, np.flatnonzero(steps > 3 * time_step) + 1, len(time)]
     data = np.asarray(inp.data, dtype=np.float64)
     d_inp_dt = np.full(data.shape, np.nan)
@@ -93,7 +89,7 @@ def gradient(inp, time_step: float | None = None):
         attrs=inp.attrs,
     )
 
-    # Units per s ("mV/m" gave "mV/m/s", "" gave "/s")
+    # Units per s, e.g. "(mV/m)/s"
     if "UNITS" in out.attrs:
         out.attrs["UNITS"] = _ratio(_units(inp), "s")
 

@@ -3,14 +3,17 @@
 
 # Built-in imports
 import warnings
+from typing import Literal
 
 # 3rd party imports
 import numpy as np
 import xarray as xr
 
-from .feeps_active_eyes import feeps_active_eyes
-
 # Local imports
+from pyrfu.mms._internal.epd import _nan_reduce
+
+from .feeps_active_eyes import feeps_active_eyes
+from .feeps_omni import _DEFAULT_METHODS
 from .feeps_pitch_angles import feeps_pitch_angles
 
 # Angular response (finite field of view) of instruments electrons can use
@@ -38,7 +41,7 @@ def _pa_data_map(idx_maps, d_type, d_rate):
     return pa_data_map
 
 
-def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
+def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id, combine):
     pa_times = pitch_angles.time
     pa_data = pitch_angles.data
 
@@ -71,18 +74,20 @@ def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
             if np.isnan(energies[0]):
                 continue
 
-            # remove any 0s before averaging (on a float copy, not the input)
-            data = inp_dataset[var_name].data
-            data = np.where(data == 0, np.nan, data.astype(float))
+            # remove any 0s before averaging (on a float copy, not the input),
+            # as IDL SPEDAS; the intensity errors (0 without counts) on the
+            # same samples, but the counts kept (a zero count is a measurement)
+            data = inp_dataset[var_name].data.astype(float)
+
+            if combine != "sum":
+                data = np.where(data == 0, np.nan, data)
 
             # energy indices to use:
             idx = np.where(
                 np.logical_and(energies >= energy[0], energies <= energy[1]),
             )[0]
 
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                dflux[:, pa_map[isen]] = np.nanmean(data[:, idx], axis=1)
+            dflux[:, pa_map[isen]] = _nan_reduce(data[:, idx], 1, combine)
 
             dpa[:, pa_map[isen]] = pa_data[:, pa_map[isen]]
 
@@ -94,7 +99,7 @@ def _dpa_dflux(inp_dataset, pitch_angles, pa_data_map, energy, d_type, mms_id):
     return dpa, dflux
 
 
-def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
+def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type, combine):
     n_pabins = len(pa_bins) - 1
     # Account for angular response
     dangresp = angular_repsonse[d_type]
@@ -111,9 +116,10 @@ def _pa_flux(pa_times, pa_bins, pa_labels, dpa, dflux, d_type):
             ind = (dpa + dangresp >= pa_labels[ipa] - delta_pa) & (
                 dpa - dangresp < pa_labels[ipa] + delta_pa
             )
-            pa_flux[:, ipa] = np.nanmean(np.where(ind, dflux, np.nan), axis=1)
+        pa_flux[:, ipa] = _nan_reduce(np.where(ind, dflux, np.nan), 1, combine)
 
-    pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
+    if combine != "sum":
+        pa_flux[pa_flux == 0] = "nan"  # fill any missed bins with NAN
 
     return pa_flux
 
@@ -124,6 +130,8 @@ def feeps_pad(
     bin_size: float = 16.3636,
     energy: list | None = None,
     angles_from_bfield: bool = False,
+    *,
+    method: Literal["mean", "sum", "quadrature"] | None = None,
 ):
     r"""Compute pitch angle distribution using FEEPS data.
 
@@ -148,6 +156,13 @@ def feeps_pad(
     angles_from_bfield : bool, Optional
         For burst data, compute the pitch angles from `b_bcs` instead of using
         the pitch angles of the CDF (``pitch_angle``). Default is False.
+    method : {"mean", "sum", "quadrature"}, Optional
+        Combination of the energy channels of each eye, then of the eyes in
+        each pitch angle bin: the mean (intensities, count rates), the sum
+        (counts) or the square root of the sum of the squares divided by the
+        number of values (errors of the mean). Default is from the units of
+        `inp_dataset` (``units_name`` of `pyrfu.mms.get_feeps_alleyes`): "sum"
+        for "counts", "quadrature" for "fluxerr", "mean" otherwise.
 
     Returns
     -------
@@ -158,8 +173,8 @@ def feeps_pad(
     ------
     ValueError
         If the integral channel of the eyes is not split (16 channels), the
-        energy range starts below 32 keV, or the data rate or species is not
-        supported.
+        energy range starts below 32 keV, the data rate or species is not
+        supported, or `method` is not one of the above.
 
     Warns
     -----
@@ -179,7 +194,11 @@ def feeps_pad(
     As in IDL SPEDAS (``mms_feeps_pad``), the zero fluxes are set to NaN
     before averaging over the energy channels and the eyes: the PAD is the
     mean of the non-zero fluxes, several times an average with the zeros when
-    few counts are measured, and a bin with zeros only is NaN.
+    few counts are measured, and a bin with zeros only is NaN. The same
+    samples are left out of the intensity errors ("quadrature"), which are 0
+    without counts. The counts ("sum") keep their zeros: a bin whose eyes have
+    no count is 0, and the intensity per count of the PAD (intensity PAD /
+    counts PAD) is that of the samples with counts.
 
     """
 
@@ -191,6 +210,13 @@ def feeps_pad(
                 f"{k} has 16 energy channels: split the integral channel first "
                 "with feeps_split_integral_ch (or use feeps_corrections)"
             )
+
+    combine = method or _DEFAULT_METHODS.get(
+        inp_dataset.attrs.get("units_name"), "mean"
+    )
+
+    if combine not in ["mean", "sum", "quadrature"]:
+        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
 
     if energy is None:
         energy = [70.0, 600.0]
@@ -223,7 +249,7 @@ def feeps_pad(
     pa_labels = [pa_bin + bin_size / 2.0 for pa_bin in pa_bins[:-1]]
 
     if d_rate == "brst" and not angles_from_bfield and "pitch_angle" in inp_dataset:
-        # pitch angles of the CDF, fill values (inactive eyes) to NaN
+        # Pitch angles of the CDF, fill values (inactive eyes) to NaN
         pitch_angles = inp_dataset["pitch_angle"].astype(float)
         pitch_angles = pitch_angles.where(
             (pitch_angles >= 0.0) & (pitch_angles <= 180.0)
@@ -241,6 +267,7 @@ def feeps_pad(
         energy,
         d_type,
         mms_id,
+        combine,
     )
 
     pa_flux = _pa_flux(
@@ -250,6 +277,7 @@ def feeps_pad(
         dpa,
         dflux,
         d_type,
+        combine,
     )
 
     pad = xr.DataArray(
@@ -259,8 +287,7 @@ def feeps_pad(
         attrs=attrs,
     )
 
-    # Units of the eyes (intensity, count rate, ...), none without (it was set
-    # to an intensity); pitch angles in deg
+    # Units of the eyes (intensity, count rate, ...), if any; angles in deg
     if "UNITS" in inp_dataset[eye_names[0]].attrs:
         pad.attrs["UNITS"] = inp_dataset[eye_names[0]].attrs["UNITS"]
 

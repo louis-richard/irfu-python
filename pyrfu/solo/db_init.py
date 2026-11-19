@@ -16,7 +16,9 @@ _PACKAGE_CFG_PATH = os.path.join(
 def config_path() -> str:
     r"""Path of the SolO configuration file, in the user configuration
     directory (created from the package configuration the first time)."""
-    return user_config_path("solo_config.json", _PACKAGE_CFG_PATH)
+    out = user_config_path("solo_config.json", _PACKAGE_CFG_PATH)
+
+    return out
 
 
 def db_init(local_data_dir):
@@ -34,6 +36,5 @@ def db_init(local_data_dir):
 
     """
 
-    # In the configuration of the user directory, at once (a write that failed
-    # left a partial file)
+    # Write to the user configuration at once (no partial file on failure)
     set_local_data_dir(config_path, local_data_dir)

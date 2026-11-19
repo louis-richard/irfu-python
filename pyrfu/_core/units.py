@@ -64,12 +64,16 @@ def _ratio(numerator, denominator):
     if numerator is None or denominator is None:
         return None
 
-    numerator, denominator = numerator.strip(), denominator.strip()
+    numerator = numerator.strip()
+    denominator = denominator.strip()
 
     if not denominator:
         return numerator
 
-    numerator = f"({numerator})" if _outside(numerator, "/") else numerator or "1"
+    if _outside(numerator, "/"):
+        numerator = f"({numerator})"
+    else:
+        numerator = numerator or "1"
 
     return f"{numerator}/{_wrap(denominator)}"
 
@@ -100,7 +104,11 @@ def _check_units(inp, expected, name):
     (expected, a str or a list of the accepted spellings); no check without
     UNITS."""
     units = _units(inp)
-    expected = [expected] if isinstance(expected, str) else list(expected)
+
+    if isinstance(expected, str):
+        expected = [expected]
+    else:
+        expected = list(expected)
 
     if units is not None and units.strip() not in expected:
         warnings.warn(
@@ -113,8 +121,7 @@ def _check_units(inp, expected, name):
 
 def _check_same_units(inps, name):
     r"""ValueError unless the inputs (time series, or distributions with the
-    units of their data) have the same UNITS, or none (the units of the first
-    one were taken)."""
+    units of their data) have the same UNITS, or none."""
     units = sorted({str(_units(inp)) for inp in inps})
 
     if len(units) > 1:

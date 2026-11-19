@@ -35,6 +35,7 @@ def ts_scalar(
         0th order tensor time series.
 
     """
+
     # Check input type
     if not isinstance(time, np.ndarray):
         raise TypeError("time must be a numpy.ndarray")
@@ -56,4 +57,6 @@ def ts_scalar(
     else:
         raise TypeError("attrs must be a dict")
 
-    return xr.DataArray(data, coords=[time[:]], dims="time", attrs=attrs)
+    out = xr.DataArray(data, coords=[time[:]], dims="time", attrs=attrs)
+
+    return out

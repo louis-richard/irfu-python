@@ -55,3 +55,27 @@ The doxtring as to follow the numpydoc_ style
 .. _Sphinx: http://www.sphinx-doc.org/en/master/
 .. _numpydoc: https://numpydoc.readthedocs.io/en/latest/format.html
 
+Deprecations
+------------
+A public function, argument, key or behaviour is not removed or changed
+without warning: it is first deprecated, and keeps working with a
+``FutureWarning`` (shown to the users of the package, unlike
+``DeprecationWarning``) that points at the caller and names the version that
+deprecated it, the version that removes it and the alternative, e.g.
+
+.. code:: text
+
+    vdf_reduce is deprecated since pyrfu 2.6.0 and will be removed in pyrfu
+    3.0.0; use pyrfu.mms.reduce instead.
+
+- Items are deprecated in the minor versions and removed only in the major
+  versions: pyrfu 3.0.0 removes what the 2.x versions deprecated.
+- The warnings come from ``pyrfu._core.deprecation``, so that they all have
+  the same form: ``deprecated`` (a function), ``deprecated_kwarg`` (a
+  deprecated or renamed argument), ``deprecated_alias`` (a renamed function)
+  and ``warn_deprecated`` (anything else, e.g. a key).
+- The docstring of the deprecated item has a ``.. deprecated:: <version>``
+  directive with the alternative, the change is listed under "Deprecations"
+  in ``CHANGELOG.rst``, and a test checks the warning and that the old form
+  still works.
+

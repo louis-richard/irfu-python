@@ -76,6 +76,7 @@ def vdf_mask(vdf, below=None, above=None, mask=None):
     >>> vdf_i = mms.vdf_mask(vdf_i, below=100.0)
 
     """
+
     energy = np.broadcast_to(
         np.asarray(vdf.energy.data, dtype=np.float64), vdf.data.shape[:2]
     )

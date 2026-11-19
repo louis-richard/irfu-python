@@ -18,7 +18,7 @@ def _time_interval(tint):
     if isinstance(tint, xr.DataArray):
         t_start, t_stop = tint.time.data[[0, -1]]
     elif isinstance(tint, (np.ndarray, list, tuple)):
-        # A tuple, and datetime.datetime values, raised TypeError
+        # datetime64 or datetime.datetime values, or ISO 8601 strings
         if isinstance(tint[0], (np.datetime64, datetime.datetime)):
             t_start, t_stop = [np.datetime64(t_, "ns") for t_ in tint]
         elif isinstance(tint[0], str):
@@ -63,6 +63,7 @@ def time_clip(inp, tint):
     match the times).
 
     """
+
     t_start, t_stop = _time_interval(tint)
 
     idx_min = np.searchsorted(inp.time.data, t_start, side="left")

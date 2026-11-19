@@ -3,6 +3,7 @@
 
 """Contributed by Apostolos Kolokotronis."""
 
+# Built-in imports
 from collections.abc import Sequence
 
 # 3rd party imports
@@ -20,8 +21,8 @@ from .resample import resample
 
 def _valid_count(inp):
     r"""1 where `inp` (array_like or DataArray) is not NaN, 0 where it is, as a
-    numpy.ndarray of int (xr.where returned a numpy.ndarray for an array,
-    whose ``.data`` taken by feeps_avg_4sc was a memoryview)."""
+    numpy.ndarray of int."""
+
     return (~np.isnan(np.asarray(inp))).astype(np.int64)
 
 
@@ -32,6 +33,7 @@ def _without_gaps(inp, inp_r):
     start and after the end of `inp`). A covered time that is not between two
     samples of `inp` at most 1.5 periods apart (a gap edge, an end) takes the
     nearest sample, not a value interpolated across the gap."""
+
     time = _ns(inp.time.data).astype(np.float64)
     ref = _ns(inp_r.time.data).astype(np.float64)
     steps = np.diff(time) if len(time) > 1 else np.diff(ref)
@@ -40,7 +42,8 @@ def _without_gaps(inp, inp_r):
     i_r = np.searchsorted(time, ref)
     i_l = np.clip(i_r - 1, 0, len(time) - 1)
     i_rc = np.clip(i_r, 0, len(time) - 1)
-    dist_l, dist_r = np.abs(ref - time[i_l]), np.abs(time[i_rc] - ref)
+    dist_l = np.abs(ref - time[i_l])
+    dist_r = np.abs(time[i_rc] - ref)
     i_near = np.where(dist_l <= dist_r, i_l, i_rc)
 
     covered = np.minimum(dist_l, dist_r) <= d_t / 2.0
@@ -82,11 +85,11 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
     -----
     Each spacecraft is resampled to the times of the first one, NaN in its
     data gaps and outside its time range, so that the average there is that
-    of the spacecraft with data, as `pyrfu.mms.feeps_avg_4sc` (the
-    resampling filled the gaps and extrapolated past the ends, averaged as
-    data). The result is labelled "4sc_avg" (probe, mms, MMS and mmsId).
+    of the spacecraft with data, as `pyrfu.mms.feeps_avg_4sc`. The result is
+    labelled "4sc_avg" (probe, mms, MMS and mmsId).
 
     """
+
     # Check input type
     if not isinstance(b_list, (list, tuple)):
         raise TypeError("b_list must be a list or a tuple")
@@ -122,7 +125,7 @@ def nanavg_4sc(b_list: Sequence[DataArray]) -> DataArray:
         b_nan_denom += _valid_count(value)
         b_avg_data += np.nan_to_num(value, nan=0.0)
 
-    # Copy so that the attributes of the caller's first time series are unchanged
+    # Copy so that the caller's first time series keeps its attributes
     attrs = dict(b_list[0].attrs)
 
     for key in ["probe", "mms", "MMS", "mmsId"]:

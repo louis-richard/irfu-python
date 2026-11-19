@@ -12,7 +12,7 @@ from xarray import DataArray
 # Local imports
 from ..pyrf.resample import resample
 
-# Spacecraft pairs (0-based), in the order of irfu-matlab: 12, 13, 14, 23, 24, 34
+# Spacecraft pairs (0-based), as irfu-matlab: 12, 13, 14, 23, 24, 34
 _PAIRS = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
 
 

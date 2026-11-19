@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -131,7 +129,7 @@ def convert_fac(
         raise ValueError("b_bgd must be a vector or a tensor time series")
 
     if inp_data.ndim == 2 and inp_data.shape[1] == 3:
-        # Floating point output (integer input was truncated)
+        # Floating point output, also for integer input
         out_data = np.zeros(inp.shape, dtype=np.result_type(inp_data, np.float32))
 
         out_data[:, 0] = np.sum(r_perp_x * inp_data, axis=1)
@@ -147,7 +145,7 @@ def convert_fac(
         out_data[:, 0] = inp * np.sum(r_perp_x * r_xyz_data, axis=1)
         out_data[:, 1] = inp * np.sum(r_para * r_xyz_data, axis=1)
 
-        # In the units of inp (they had none)
+        # In the units of inp
         out = xr.DataArray(
             out_data,
             coords=[time, ["perp", "para"]],

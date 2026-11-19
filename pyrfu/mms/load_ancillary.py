@@ -58,6 +58,7 @@ _UNITS = {
 def _list_files_sdc(tint, mms_id, product):
     r"""Ancillary files of the SDC covering tint, the latest version of each
     period, in time order (as list_files_ancillary for the local files)."""
+
     tint_0, tint_1 = iso86012datetime64(np.array(tint))
     tint_long = extend_tint(tint, [-86400, 0])
 
@@ -109,6 +110,7 @@ def _sdc_content(url):
 def _sdc_file(file, mms_id, product):
     r"""Ancillary file of the SDC as a file object, from the cache if it is on
     (in the layout of the local ancillary files: ancillary/sc/product)."""
+
     if not _cache.enabled():
         return io.BytesIO(_sdc_content(file["url"]))
 
@@ -127,6 +129,7 @@ def _sdc_file(file, mms_id, product):
 def _read_file(file, product_info, tint):
     r"""Rows of an ancillary file (path or file-like) in tint, with the last of
     the rows repeating a time (as mms_load_ancillary)."""
+
     # All the columns of the product: the rows may leave the last ones empty
     # (the maneuver flag of DEFQ) or have no data ("No data exists")
     rows = pd.read_csv(
@@ -237,8 +240,7 @@ def load_ancillary(
             f"{', '.join(anc_dict)}"
         )
 
-    # Time interval in ISO 8601, from the forms of time_clip (a tuple,
-    # datetime.datetime and a time series failed)
+    # Time interval in ISO 8601, from the forms of time_clip
     tint = list(datetime642iso8601(np.array(_time_interval(tint))))
 
     # Resource: the ancillary files are not on AWS, read them from the SDC

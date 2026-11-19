@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 # Built-in imports
 import functools
 import re
@@ -26,7 +25,8 @@ from .list_files_aws import _tint_bounds
 LASP_PUBL = "https://lasp.colorado.edu/mms/sdc/public/files/api/v1/"
 LASP_SITL = "https://lasp.colorado.edu/mms/sdc/sitl/files/api/v1/"
 
-# Test url from example in https://lasp.colorado.edu/mms/sdc/public/about/how-to/
+# Test url from example in
+# https://lasp.colorado.edu/mms/sdc/public/about/how-to/
 TEST_URL = "file_names/science?start_date=2015-04-10&end_date=2015-04-11&sc_id=mms2"
 
 
@@ -40,6 +40,7 @@ def _login_lasp():
     connectivity/credential probe only happens once, until the MMS configuration
     file changes (e.g., after mms.db_init). The session is shared: do not close it.
     """
+
     return _login_lasp_cached(_config_stamp())
 
 
@@ -47,6 +48,7 @@ def _login_lasp():
 def _login_lasp_cached(config_stamp):
     r"""Login to LASP colorado (cached by the stamp of the configuration file,
     see db_init._config_stamp)."""
+
     del config_stamp  # cache key only
 
     config = _read_config()
@@ -102,13 +104,13 @@ def _construct_url_json_list(tint, mms_id, var, lasp_url):
     https://lasp.colorado.edu/mms/sdc/team/about/how-to/
     """
 
-    # Files starting before the end (the query end is inclusive), to the second
-    # above (a file starting in its last fraction of a second was left out)
+    # Files starting before the end, to the second above (the query end is
+    # inclusive)
     t_start, t_end = _tint_bounds(tint)
     start_date = t_start.strftime("%Y-%m-%d")
     end_date = (t_end - timedelta(seconds=1)).strftime("%Y-%m-%d-%H-%M-%S")
 
-    # lasp_url ends with "/" (it was doubled)
+    # lasp_url ends with "/"
     url = f"{lasp_url}file_info/science"
     url = f"{url}?start_date={start_date}&end_date={end_date}&sc_id=mms{mms_id}"
 
@@ -124,7 +126,8 @@ def _construct_url_json_list(tint, mms_id, var, lasp_url):
 
 def _file_start(digits):
     r"""Start (UTC, datetime64) of a file from the digits of its name,
-    YYYYMMDD or YYYYMMDDhhmmss (dateutil read them as local time)."""
+    YYYYMMDD or YYYYMMDDhhmmss."""
+
     hms = digits[8:].ljust(6, "0")
     return np.datetime64(
         f"{digits[:4]}-{digits[4:6]}-{digits[6:8]}T{hms[:2]}:{hms[2:4]}:{hms[4:6]}",
@@ -161,9 +164,7 @@ def _files_in_interval(in_files, trange):
 
     times = [t[1] for t in sorted_files]
 
-    # All in UTC: dateutil read the times as local time, so that on the night
-    # of a change to summer time the files were out of order and some holding
-    # data left out
+    # All in UTC, so that the files stay in order on a change to summer time
     idx_min = bisect_left(times, iso86012datetime64(np.array([trange[0]]))[0])
 
     def mkout(f):
@@ -214,8 +215,7 @@ def list_files_sdc(tint, mms_id, var):
 
     """
 
-    # Time interval in ISO 8601, from the forms of time_clip (a time series
-    # failed)
+    # Time interval in ISO 8601, from the forms of time_clip
     tint = datetime642iso8601(np.array(_time_interval(tint)))
 
     # Start session on MMS's SDC

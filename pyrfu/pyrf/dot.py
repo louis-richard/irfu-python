@@ -75,8 +75,7 @@ def dot(inp1: DataArray, inp2: DataArray) -> DataArray:
     # Compute scalar product
     out_data = np.sum(inp1.data * inp2.data, axis=1)
 
-    # Output to xarray
-    # Product of the units (none)
+    # Output to xarray, in the product of the units
     out = ts_scalar(
         inp1.time.data, out_data, attrs=_attrs({}, _product(_units(inp1), _units(inp2)))
     )

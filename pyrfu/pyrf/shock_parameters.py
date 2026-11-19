@@ -4,7 +4,7 @@
 # Built-in imports
 import logging
 
-# Third party imports
+# 3rd party imports
 import numpy as np
 from scipy import constants
 
@@ -55,7 +55,7 @@ def shock_parameters(spec):
     """
 
     # Copy so that the defaults set below don't change the caller's dict;
-    # lists as arrays (b_u or v_u given as lists raised TypeError at 1e3 * v)
+    # lists as arrays (for 1e3 * v)
     spec = {
         k: np.asarray(v) if isinstance(v, (list, tuple)) else v for k, v in spec.items()
     }
@@ -244,7 +244,7 @@ def _frame(spec):
 
 # Derived parameters: name, inputs of each region (all given for the first
 # region), whether nvec and v_sh are needed, and the function of spec and the
-# region (one guarded loop each before)
+# region
 _PARAMETERS = [
     ("v_a", ["n"], False, lambda s, r: _v_alfv(s[f"b{r}"], s[f"n{r}"])),
     ("v_ts", ["t_i", "t_e"], False, lambda s, r: _v_sound(s[f"t_i{r}"], s[f"t_e{r}"])),

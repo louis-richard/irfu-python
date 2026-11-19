@@ -67,6 +67,7 @@ def file_size(size) -> int | None:
 def _settings() -> dict:
     r"""Cache settings of the MMS configuration: enabled, maximum size
     (bytes), maximum age since last use (hours) and directory."""
+
     cache = _read_config()["cache"]
     directory = cache["dir"] or os.path.join(
         platformdirs.user_cache_dir("pyrfu"), "mms"
@@ -82,12 +83,15 @@ def _settings() -> dict:
 
 def enabled() -> bool:
     r"""True if the cache is on."""
-    return _settings()["enabled"]
+    out = _settings()["enabled"]
+
+    return out
 
 
 def mms_path(mms_id: str, var: Mapping[str, str], file_name: str) -> str:
     r"""Path of an MMS file in the layout of the SDC: spacecraft, instrument,
     rate, level[, data type], year, month[, day for burst], file name."""
+
     parts = [f"mms{mms_id}", var["inst"], var["tmmode"], var["lev"]]
     parts += [var["dtype"]] if var.get("dtype") else []
     match = _TIME_TAG.search(file_name)
@@ -96,7 +100,9 @@ def mms_path(mms_id: str, var: Mapping[str, str], file_name: str) -> str:
         year, month, day = match.groups()[:3]
         parts += [year, month] + ([day] if var["tmmode"] == "brst" else [])
 
-    return posixpath.join(*parts, file_name)
+    out = posixpath.join(*parts, file_name)
+
+    return out
 
 
 def _ensure_dir(settings: dict, sub_dir: str, path: str) -> None:
@@ -105,6 +111,7 @@ def _ensure_dir(settings: dict, sub_dir: str, path: str) -> None:
     the files below it (the cache can hold SITL data): os.makedirs gives its
     mode to the last directory only. The cache directory itself is left as it
     is (it can be a directory of the user)."""
+
     os.makedirs(os.path.join(settings["dir"], sub_dir), mode=0o700, exist_ok=True)
     os.makedirs(path, exist_ok=True)
 
@@ -117,6 +124,7 @@ def _listing_path(settings: dict, key: dict) -> str:
 def listing(key: dict, lister: Callable[[], list]) -> list:
     r"""Listing `lister()` (JSON-serialisable items), from the cache if it was
     made less than the maximum age ago with the same `key`."""
+
     settings = _settings()
     path = _listing_path(settings, key)
 
@@ -147,6 +155,7 @@ def listing(key: dict, lister: Callable[[], list]) -> list:
 def _read_cached(path: str, size: int | None) -> bytes | None:
     r"""Content of a cached file, None if it is missing or has not the expected
     size (it is then removed). Refreshes its time of last use."""
+
     try:
         with open(path, "rb") as file:
             content = file.read()
@@ -170,6 +179,7 @@ def read(remote: RemoteFile, fetch: Callable[[], bytes]) -> bytes:
     r"""Content of `remote`, from the cache or from `fetch()` (then cached if
     it is not larger than the maximum size). A failure of the cache gives a
     warning and the content of `fetch()`."""
+
     settings = _settings()
     path = os.path.join(settings["dir"], remote.source, *remote.path.split("/"))
 
@@ -224,6 +234,7 @@ def _evict(settings: dict) -> None:
     r"""Removes the files not used for the maximum age (and the temporary
     files left by interrupted downloads), then the least recently used ones
     while the cache is larger than its maximum size."""
+
     limit = time.time() - settings["max_age"] * 3600.0
     kept = []
 
@@ -265,12 +276,13 @@ def cache_info() -> dict:
     >>> mms.cache_info()["size"]
 
     """
+
     settings = _settings()
     files = _cached_files(settings)
     listings_dir = os.path.join(settings["dir"], _LISTINGS) + os.sep
     n_listings = sum(path.startswith(listings_dir) for _, _, path in files)
 
-    return {
+    out = {
         "enabled": settings["enabled"],
         "dir": settings["dir"],
         "max_size": settings["size"],
@@ -281,6 +293,8 @@ def cache_info() -> dict:
         ),
         "n_listings": n_listings,
     }
+
+    return out
 
 
 def clear_cache() -> None:
@@ -297,6 +311,7 @@ def clear_cache() -> None:
     >>> mms.clear_cache()
 
     """
+
     settings = _settings()
 
     for sub_dir in (*_SOURCES, _LISTINGS):

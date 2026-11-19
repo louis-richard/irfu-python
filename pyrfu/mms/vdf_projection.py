@@ -71,6 +71,7 @@ def _width_edges(vdf: Dataset, i_t: int):
     the time index i_t: the lower edge of the first channel, the geometric
     means of the upper edges and the lower edges of the next channels, and
     the upper edge of the last channel. None without the widths."""
+
     if not {"delta_energy_minus", "delta_energy_plus"} <= set(vdf.attrs):
         return None
 
@@ -84,6 +85,7 @@ def _angle_widths(vdf: Dataset, i_times: np.ndarray, n_t: int):
     and delta_theta_* (theta) attributes at the times i_times (those of the
     first one if the distribution was rebinned to n_t other times), or None
     without them."""
+
     keys = ["delta_phi_minus", "delta_phi_plus"]
     keys += ["delta_theta_minus", "delta_theta_plus"]
 
@@ -106,6 +108,7 @@ def _angle_widths(vdf: Dataset, i_times: np.ndarray, n_t: int):
 def _sub_angles(centres, minus, plus, n_sub):
     r"""n_sub angles evenly spaced across each bin [centre - minus, centre +
     plus], bin after bin."""
+
     frac = (np.arange(n_sub) + 0.5) / n_sub
     sub = (centres - minus)[:, None] + (minus + plus)[:, None] * frac[None, :]
     return sub.ravel()
@@ -114,6 +117,7 @@ def _sub_angles(centres, minus, plus, n_sub):
 def _log_edges(energy, half_width):
     r"""Energy edges `half_width` (in log10(E)) below each channel and above
     the last one."""
+
     log_energy = np.log10(energy)
     return np.hstack(
         [10 ** (log_energy - half_width), 10 ** (log_energy[-1] + half_width)]
@@ -123,12 +127,16 @@ def _log_edges(energy, half_width):
 def _table_edges(step_table, energy0_edges, energy1_edges):
     r"""Edges of the energy table of the distributions: table 1 if they all
     use it (step table), else table 0."""
-    return energy1_edges if np.all(step_table) else energy0_edges
+
+    if np.all(step_table):
+        return energy1_edges
+    return energy0_edges
 
 
 def _channel_edges(vdf: Dataset, i_t: int, energy_edges):
     r"""Edges from the channel widths at the time index i_t if the skymap has
     them, as many as `energy_edges` (e.g. EIS, FEEPS), else `energy_edges`."""
+
     width_edges = _width_edges(vdf, i_t)
 
     if width_edges is None or len(width_edges) != len(energy_edges):
@@ -143,6 +151,7 @@ def _rebin_tables(
     r"""Distributions of `tint` with alternating energy tables rebinned to one
     table of 64 channels (psd_rebin): data, azimuthal angles (radians) of the
     look directions and energies (eV)."""
+
     logger.info("Rebinning distribution.")
     temp = ts_skymap(
         dist.time.data,
@@ -196,9 +205,8 @@ def _init(vdf: Dataset, tint: list):
     # Energy table per time: array, then the value at t_id or the time clip
     step_table: Any = vdf.attrs.get("esteptable", np.zeros(len(vdf.time)))
 
-    # The energy tables, else the energies of the first two times (the default
-    # of attrs.get was evaluated even with the attribute: a single time raised
-    # IndexError)
+    # The energy tables, else the energies of the first two times (the first
+    # one twice for a single time)
     energy = np.atleast_2d(vdf.energy.data)
     energy0 = vdf.attrs["energy0"] if "energy0" in vdf.attrs else energy[0]
     energy1 = (
@@ -265,7 +273,9 @@ def _cotrans(dist, polar, azimuthal, x_vec, y_vec, z_vec, e_lim, bin_corr, width
     n_sub = 5
 
     for i in range(len(dist)):
-        pol_i, azm_i, dist_i = polar[i, :], azimuthal[i, :], dist[i, ...]
+        pol_i = polar[i, :]
+        azm_i = azimuthal[i, :]
+        dist_i = dist[i, ...]
 
         if widths is not None:
             phi_m, phi_p, theta_m, theta_p = widths
@@ -344,7 +354,7 @@ def _cotrans_jit(
         in_bin &= plane_az <= edges_az[i_az + 1] + np.deg2rad(0.1)
 
         with warnings.catch_warnings():
-            # empty bins give NaN, as before
+            # Empty bins give NaN
             warnings.simplefilter("ignore", category=RuntimeWarning)
             out[i_az, :] = np.nanmean(
                 np.where(in_bin[None, ...], weighted, np.nan), axis=(1, 2)
@@ -420,21 +430,26 @@ def vdf_projection(
     centres.
 
     """
-    # Mass and charge of the species (electrons without species attribute).
-    # All the species not starting with "e" were protons.
+    # Mass and charge of the species (electrons without species attribute)
     if "species" not in vdf.attrs:
         vdf = vdf.assign_attrs(species="electrons")
 
-    # (a DataArray raised AttributeError before the check, in _init)
+    # Check input type
     if not isinstance(vdf, Dataset):
         raise TypeError("vdf must be a xarray.Dataset")
 
-    mass, is_des = _mass(vdf), _charge_sign(vdf) < 0.0
-    charge = 1.0 if is_des else _charge(vdf)
+    mass = _mass(vdf)
+    is_des = _charge_sign(vdf) < 0.0
+
+    if is_des:
+        charge = 1.0
+    else:
+        charge = _charge(vdf)
 
     # The relativistic phase-space density, projected with the relativistic
     # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)
-    data, units = vdf.data.data, str(vdf.data.attrs.get("UNITS", ""))
+    data = vdf.data.data
+    units = str(vdf.data.attrs.get("UNITS", ""))
 
     if not _is_relativistic(vdf) and units.lower() in _PSD:
         vdf = _output(vdf, data * _relativistic_factor(vdf, data), units)

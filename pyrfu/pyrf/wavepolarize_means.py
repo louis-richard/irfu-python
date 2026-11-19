@@ -36,8 +36,8 @@ def _mfa(b_wave, b_bgd):
 
 def _rotation_angle(upper, lower):
     # Angle of the rotation that makes the state vector real. ATAN(upper,
-    # lower) in the original IDL wavpol is a two-argument arctangent; irfu-matlab
-    # uses atan(upper / lower), which is wrong when lower < 0.
+    # lower) in the original IDL wavpol is a two-argument arctangent;
+    # irfu-matlab uses atan(upper / lower), which is wrong when lower < 0.
     angle = np.arctan2(upper, lower)
     return np.where(upper > 0, angle, 2 * np.pi + angle)
 
@@ -248,7 +248,7 @@ def wavepolarize_means(
         ]
     ]
 
-    # Units: b_wave squared per Hz, deg and dimensionless (none)
+    # Units: b_wave squared per Hz, deg and dimensionless
     for out, units in zip(
         [b_psd, wave_angle, deg_pol, ellipticity, helicity],
         [_ratio(_power(_units(b_wave), 2), "Hz"), "deg", "", "", ""],

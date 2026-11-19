@@ -55,9 +55,12 @@ def generate_timeline(
         Timeline.
 
     """
+
     ref = np.datetime64(ref_time)
     times = [ref + np.timedelta64(int(i * 1e9 / f_s), "ns") for i in range(n_pts)]
-    return np.array(times).astype(dtype)
+    out = np.array(times).astype(dtype)
+
+    return out
 
 
 def generate_data(n_pts: int, tensor_order: int = 0) -> NDArray[np.float32]:
@@ -79,7 +82,9 @@ def generate_data(n_pts: int, tensor_order: int = 0) -> NDArray[np.float32]:
 
     data = np.random.random((n_pts, *([3] * tensor_order)))
 
-    return data.astype(np.float32)
+    out = data.astype(np.float32)
+
+    return out
 
 
 def generate_ts(
@@ -107,6 +112,7 @@ def generate_ts(
         Synthetic timeseries.
 
     """
+
     if attrs is None:
         attrs = {}
 
@@ -152,6 +158,7 @@ def generate_spectr(
 
 
     """
+
     out = cast(
         DataArray,
         pyrf.ts_spectr(
@@ -270,7 +277,10 @@ def generate_defatt(f_s: float, n_pts: int) -> Dataset:
         Defatt dataset.
 
     """
+
     z_ra = generate_ts(f_s, n_pts, 0)
     z_dec = generate_ts(f_s, n_pts, 0)
     defatt_dict = {"z_ra": z_ra, "z_dec": z_dec}
-    return xr.Dataset(defatt_dict)
+    out = xr.Dataset(defatt_dict)
+
+    return out

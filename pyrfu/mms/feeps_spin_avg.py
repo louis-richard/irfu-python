@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
+from typing import Literal
+
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -8,16 +11,18 @@ import xarray as xr
 # Local imports
 from pyrfu._core.time import _ns
 from pyrfu.mms._internal.epd import _spin_reduce
+from pyrfu.mms.feeps_omni import _DEFAULT_METHODS
 
 
 def _spin_bounds(spin_sectors, time):
     r"""Start indices of the spins [s_k, s_k+1), from the decreases of the spin
     sector and the data gaps (two samples more than 1.5 median sampling
     periods apart), with the partial spins at both ends."""
+
     spin_starts = np.where(spin_sectors[:-1] >= spin_sectors[1:])[0] + 1
 
-    # A gap of a whole number of spins starting mid-spin left the sectors
-    # increasing: the two partial spins around it made one complete spin
+    # Data gaps start spins too: a gap of a whole number of spins can leave
+    # the sectors increasing
     if len(time) > 2:
         d_t = np.diff(_ns(time))
         gaps = np.where(d_t > 1.5 * np.median(d_t))[0] + 1
@@ -30,11 +35,11 @@ def _feeps_complete_spins(spin_sectors, time):
     r"""Start and stop indices of the complete spins: the spins of
     `_spin_bounds` with all the sectors, i.e., as many samples as there are
     different sector numbers."""
+
     bounds = _spin_bounds(spin_sectors, time)
     lengths = np.diff(bounds)
 
-    # The partial first and last spins and the spins cut by data gaps are left
-    # out (they were kept)
+    # The partial spins at the ends and those cut by data gaps are left out
     complete = lengths == len(np.unique(spin_sectors))
 
     if not np.any(complete):
@@ -43,7 +48,12 @@ def _feeps_complete_spins(spin_sectors, time):
     return bounds[:-1][complete], bounds[1:][complete]
 
 
-def feeps_spin_avg(flux_omni, spin_sectors):
+def feeps_spin_avg(
+    flux_omni,
+    spin_sectors,
+    *,
+    method: Literal["mean", "sum", "quadrature"] | None = None,
+):
     r"""Spin-average the omni-directional FEEPS energy spectra.
 
     Parameters
@@ -52,6 +62,12 @@ def feeps_spin_avg(flux_omni, spin_sectors):
         Omni-direction flux.
     spin_sectors : xarray.DataArray or numpy.ndarray
         Time series of the spin sectors, on the times of `flux_omni`.
+    method : {"mean", "sum", "quadrature"}, Optional
+        Combination of the samples of a spin: the mean (intensities, count
+        rates), the sum (counts) or the square root of the sum of the squares
+        divided by the number of samples (errors of the mean). Default is from
+        the units of `flux_omni` (``units_name`` of `pyrfu.mms.feeps_omni`):
+        "sum" for "counts", "quadrature" for "fluxerr", "mean" otherwise.
 
     Returns
     -------
@@ -63,7 +79,8 @@ def feeps_spin_avg(flux_omni, spin_sectors):
     ------
     ValueError
         If `spin_sectors` and `flux_omni` don't have the same number of times,
-        or if the interval has no complete spin.
+        if the interval has no complete spin, or if `method` is not one of the
+        above.
 
     Notes
     -----
@@ -81,6 +98,11 @@ def feeps_spin_avg(flux_omni, spin_sectors):
 
     """
 
+    combine = method or _DEFAULT_METHODS.get(flux_omni.attrs.get("units_name"), "mean")
+
+    if combine not in ["mean", "sum", "quadrature"]:
+        raise ValueError(f"method must be mean, sum or quadrature, not {combine!r}")
+
     # NumPy array, a DataArray would be aligned on time in the comparison
     spin_sectors = np.asarray(spin_sectors)
 
@@ -92,7 +114,7 @@ def feeps_spin_avg(flux_omni, spin_sectors):
     energies = flux_omni.energy.data
     data = flux_omni.data
 
-    spin_avg = _spin_reduce(data, spin_starts, spin_stops).astype(np.float64)
+    spin_avg = _spin_reduce(data, spin_starts, spin_stops, combine).astype(np.float64)
 
     spin_avg_flux = xr.DataArray(
         spin_avg,

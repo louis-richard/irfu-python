@@ -78,4 +78,6 @@ def feeps_remove_sun(inp_dataset):
                 if len(this_bad_sector) != 0:
                     out_dict[k].data[this_bad_sector] = np.nan
 
-    return xr.Dataset(out_dict, attrs=var)
+    out = xr.Dataset(out_dict, attrs=var)
+
+    return out

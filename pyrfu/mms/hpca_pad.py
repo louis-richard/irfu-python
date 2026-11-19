@@ -26,9 +26,8 @@ def _match_half_spins(vdf, saz, aze, n_az: int = 16):
     :func:`pyrfu.mms.get_hpca_dist`, and whether it is complete: its n_az
     samples in vdf with start azimuths 0, 1, ..., n_az - 1 and non-zero
     azimuths. The aze time is either the start of the half-spin (as in the
-    files), or its centre (as :func:`pyrfu.mms.get_data` gives it). The
-    half-spins were paired by count after the first one: a missing aze record
-    shifted all the next half-spins by 180 deg, and a gap in vdf raised."""
+    files), or its centre (as :func:`pyrfu.mms.get_data` gives it)."""
+
     if len(saz) != len(vdf) or not np.array_equal(saz.time.data, vdf.time.data):
         raise ValueError("saz and vdf must have the same times")
 
@@ -131,8 +130,8 @@ def hpca_pad(
     if elim is None:
         elim = [ien.data[0], ien.data[-1]]
 
-    # 2. complete half-spins of aze, matched with vdf by time, from the first to
-    # the last one; the samples of the others are NaN
+    # 2. complete half-spins of aze, matched with vdf by time, from the first
+    # to the last one; the samples of the others are NaN
     i_start, complete = _match_half_spins(vdf, saz, aze, n_az)
     i_first = i_start[complete][0]
     vdf = vdf.isel(time=slice(i_first, i_start[complete][-1] + n_az))
@@ -151,7 +150,8 @@ def hpca_pad(
     pitch_a = angle_vec - d_angle / 2
 
     # 3.2. data dimension
-    n_en, n_ti = len(ien), len(vdf)
+    n_en = len(ien)
+    n_ti = len(vdf)
     tt_ = vdf.time.data
 
     # 3.3. particle velocity directions [nt, npo, ner]: each sample has the
@@ -192,9 +192,8 @@ def hpca_pad(
     e_max = ien.data[j_elim]
     logger.info("PSD/pflux pitch angle dist. from %s [eV] to %s [eV]", e_min, e_max)
 
-    # Each pitch-angle bin [angle - d_angle, angle], one at a time (the 12
-    # masked copies of the data were kept): mean over the anodes [n_ti, n_en],
-    # then over the energies of elim [n_ti]
+    # Each pitch-angle bin [angle - d_angle, angle], one at a time: mean over
+    # the anodes [n_ti, n_en], then over the energies of elim [n_ti]
     pads = []
 
     with warnings.catch_warnings():
@@ -212,7 +211,7 @@ def hpca_pad(
     dims = ["time", "theta"]
     pad_spec = xr.DataArray(padd_, coords=coords, dims=dims)
 
-    # Units of vdf (none), pitch angles in deg
+    # Units of vdf, pitch angles in deg
     if "UNITS" in vdf.attrs:
         pad_spec.attrs["UNITS"] = vdf.attrs["UNITS"]
 

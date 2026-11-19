@@ -16,6 +16,7 @@ def _channels(energy_phxtof, energy_extof):
     r"""Indices of the PHxTOF channels kept, of the cross-over pairs (PHxTOF,
     ExTOF) averaged and of the ExTOF channels kept, as IDL SPEDAS 6.1
     mms_eis_combine_proton_spec (energy_extof without its lowest channel)."""
+
     idx_phxtof = np.flatnonzero(energy_phxtof < energy_extof[0])
     idx_phxtof_cross = np.flatnonzero(energy_phxtof > energy_extof[0])
     idx_extof_cross = np.flatnonzero(energy_extof < energy_phxtof[-1])
@@ -144,8 +145,7 @@ def eis_combine_proton_spec(phxtof_allt, extof_allt):
         ]
     )
 
-    # Samples at the times of both instruments (they could be paired across
-    # times)
+    # Samples at the times of both instruments
     time_data, i_phx, i_ex = np.intersect1d(
         phxtof_allt.time.data, extof_allt.time.data, return_indices=True
     )

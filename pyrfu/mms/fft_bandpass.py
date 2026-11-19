@@ -79,7 +79,8 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
         if isinstance(value, bool) or not isinstance(value, numbers.Real):
             raise TypeError(f"{name} must be a real number")
 
-    f_min, f_max = float(f_min), float(f_max)
+    f_min = float(f_min)
+    f_max = float(f_max)
 
     # Check that f_min < f_max
     if f_min >= f_max:
@@ -103,15 +104,13 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
         inp_time = inp_time[:-1]
         inp_data = inp_data[:-1, :]
 
-    # Set NaN values to zero so FFT works (in a new array: inp_data is a view of
-    # the caller's data)
+    # Set NaN values to zero so FFT works (in a new array: inp_data is a view
+    # of the caller's data)
     idx_nans = np.isnan(inp_data)
     inp_data = np.where(idx_nans, 0.0, inp_data)
 
     # Bandpass filter field data: the frequencies of the FFT bins (as
-    # irfu-matlab, -f_nyq:df:f_nyq-df once shifted; they were spaced by
-    # 2 f_nyq / (N - 1), so that the positive and negative frequencies of a
-    # component could fall on either side of a cutoff, which halved it)
+    # irfu-matlab, -f_nyq:df:f_nyq-df once shifted)
     f_sam = calc_fs(inp)
     frequencies = np.fft.fftshift(np.fft.fftfreq(len(inp_time), 1 / f_sam))
 
@@ -138,9 +137,7 @@ def fft_bandpass(inp: DataArray, f_min: float, f_max: float) -> DataArray:
         precision
     )
 
-    # Same dimensions, coordinates and attributes as the input (rebuilt as a
-    # scalar or a 3-vector: (time, 2) and (time, 6) raised, (time, 1) was
-    # squeezed and the coordinates were dropped)
+    # Same dimensions, coordinates and attributes as the input
     out: DataArray = inp.isel(time=slice(0, len(inp_time))).copy(data=out_data)
 
     return out

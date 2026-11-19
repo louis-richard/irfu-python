@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Local imports
+# Built-in imports
 from typing import Literal
 
+# Local imports
 from ..pyrf.anisotropy_thresholds import anisotropy_thresholds
 
 # Growth rates in units of the proton cyclotron frequency

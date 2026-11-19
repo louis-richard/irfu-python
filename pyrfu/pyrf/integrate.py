@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -75,7 +73,7 @@ def integrate(inp: DataArray, time_step: float | None = None) -> DataArray:
     out_data = np.cumsum(np.where(is_nan, 0.0, data * delta_t[:, None]), axis=0)
     out_data[is_nan] = np.nan
 
-    # Units times s (they were "(nT)*s")
+    # Units times s
     attrs = dict(inp.attrs)
 
     if "UNITS" in attrs:

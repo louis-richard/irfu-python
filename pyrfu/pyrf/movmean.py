@@ -84,8 +84,7 @@ def movmean(inp: DataArray, window_size: int | None = None) -> DataArray:
         )
 
     # Cumulative sums (with a leading zero) of the finite values and of their
-    # number, so that NaNs are ignored rather than propagated to all the later
-    # samples. Double precision (or complex) to limit round-off in the sums.
+    # number, NaNs ignored, in double precision (or complex) for round-off
     is_finite: NDArray[np.bool_] = np.isfinite(inp_data)
     out_dtype = np.result_type(inp_data.dtype, np.float64)
     values: NDArray[Any] = np.where(is_finite, inp_data, 0).astype(out_dtype)

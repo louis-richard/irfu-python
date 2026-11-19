@@ -59,8 +59,7 @@ def ts_tensor_xyz(
     if data.ndim != 3 or data.shape[1:] != (3, 3):
         raise ValueError("data must have shape (n, 3, 3)")
 
-    # As ts_scalar and ts_vec_xyz (attrs that were not a dict were replaced
-    # by {}); a copy, the caller's dict is unchanged
+    # As ts_scalar and ts_vec_xyz: a copy, the caller's dict is unchanged
     if attrs is None:
         attrs = {}
     elif isinstance(attrs, dict):

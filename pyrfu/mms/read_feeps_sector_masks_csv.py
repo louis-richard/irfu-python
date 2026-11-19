@@ -34,6 +34,7 @@ def _mask_dates():
 def _read_masks(str_date):
     r"""Masked sectors of the eyes of the four spacecraft in the files of
     str_date (YYYYMMDD); not to be changed."""
+
     masks = {}
 
     for mms_sc in np.arange(1, 5):
@@ -50,7 +51,8 @@ def _read_masks(str_date):
 
         # sectors (rows) masked for each eye (columns: top 1-12, bottom 1-12)
         for i in range(12):
-            top, bottom = csv_data[:, i] == 1, csv_data[:, i + 12] == 1
+            top = csv_data[:, i] == 1
+            bottom = csv_data[:, i + 12] == 1
             masks[f"mms{mms_sc:d}_imask_top-{i + 1:d}"] = np.flatnonzero(top).tolist()
             masks[f"mms{mms_sc:d}_imask_bottom-{i + 1:d}"] = np.flatnonzero(
                 bottom
@@ -88,6 +90,7 @@ def read_feeps_sector_masks_csv(tint):
     t_start = iso86012datetime64(np.atleast_1d(tint[0]))[0]
     str_date = str_dates[np.argmin(np.abs(dates - t_start))]
 
-    # A copy: the masks of each date are read once (four files on every call
-    # before)
-    return copy.deepcopy(_read_masks(str_date))
+    # A copy, as the masks of each date are read once and cached
+    out = copy.deepcopy(_read_masks(str_date))
+
+    return out

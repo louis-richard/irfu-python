@@ -4,7 +4,7 @@
 
 def hpca_energies():
     r"""Construct Hot Plasma Composition Analyser (HPCA) energy bins"""
-    return [
+    out = [
         1.35500,
         1.57180,
         1.84280,
@@ -69,3 +69,5 @@ def hpca_energies():
         31869.8,
         37593.1,
     ]
+
+    return out

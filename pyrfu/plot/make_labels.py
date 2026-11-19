@@ -33,7 +33,7 @@ def make_labels(axs, pos, pref=None, suff=None, pad: int = 0, **kwargs):
 
     """
 
-    # A 2-D array of axes raised AttributeError (its rows taken as axes)
+    # Flatten, e.g., the 2-D array of plt.subplots(2, 2)
     axs_flat = np.ravel(axs)
 
     if len(axs_flat) + pad > 26:

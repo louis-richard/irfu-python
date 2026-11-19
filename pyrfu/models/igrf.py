@@ -86,7 +86,7 @@ def igrf(
 
     years_igrf, g_igrf, h_igrf = _igrf_coefficients()
 
-    # datetime64 times as unix seconds (they raised UFuncTypeError)
+    # datetime64 times as unix seconds
     if np.issubdtype(np.asarray(time).dtype, np.datetime64):
         time = _unix(time)
 

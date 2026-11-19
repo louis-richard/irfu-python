@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -16,8 +17,7 @@ from ..pyrf.ts_vec_xyz import ts_vec_xyz
 
 def _calc_angle(look_, vec):
     vec_hat = normalize(vec)
-    # Clipped: rounding takes the cosine of (anti)parallel directions slightly
-    # beyond 1 (NaN, the telescope left out)
+    # Clip: rounding can take the cosine of (anti)parallel directions beyond 1
     cos_theta = np.clip(np.sum(vec_hat.data * look_.data, axis=1), -1.0, 1.0)
     theta_ = np.rad2deg(np.pi - np.arccos(cos_theta))
     return theta_
@@ -26,10 +26,10 @@ def _calc_angle(look_, vec):
 def _pad_mean(pa_file, flux_file, pa_label, delta_pa):
     r"""Mean of the telescopes whose field of view (+-10 deg) overlaps each
     pitch-angle bin, (time, bin, energy); NaN without telescope or data."""
+
     pa_hangw = 10.0  # deg, angular response of the telescopes
 
-    # Telescopes overlapping each bin (time, telescope, bin), at once (a loop
-    # over the times and the bins)
+    # Telescopes overlapping each bin (time, telescope, bin)
     pa_tel = np.asarray(pa_file)[:, :, np.newaxis]
     pa_label = np.asarray(pa_label, dtype=np.float64)
     overlap = (pa_tel + pa_hangw >= pa_label - delta_pa) & (
@@ -51,6 +51,7 @@ def _pad_sum(pa_file, flux_file, pa_width, n_pabins):
     r"""Sum of the telescopes whose centre pitch angle is in each bin, [k w,
     (k + 1) w), 180 deg in the last one, (time, bin, energy); NaN without
     telescope or data. Each telescope is in one bin."""
+
     i_bin = np.floor(np.where(np.isfinite(pa_file), pa_file, -1.0) / pa_width)
     i_bin = np.minimum(i_bin, n_pabins - 1)
     in_bin = (i_bin[:, :, None] == np.arange(n_pabins)).astype(np.float64)
@@ -151,7 +152,6 @@ def eis_pad(
 
     if isinstance(vec, xr.DataArray):
         # No B (no pitch angle) outside the time range of vec and in its gaps
-        # (it was held at its last value and interpolated across)
         vec = _without_gaps(vec, resample(vec, inp_allt.time))
     else:
         vec = np.asarray(vec, dtype=np.float64)
@@ -174,7 +174,7 @@ def eis_pad(
 
     pa_file = np.zeros([len(time_), len(scopes)])
 
-    # Lower and upper edges of the channels (the lower one was E + delta_minus)
+    # Lower and upper edges of the channels
     e_minu_w = np.asarray(inp_allt.delta_energy_minus, dtype=np.float64)
     e_plus_w = np.asarray(inp_allt.delta_energy_plus, dtype=np.float64)
     e_minu = inp_allt.energy.data - e_minu_w
@@ -196,7 +196,7 @@ def eis_pad(
         # get energy range of interest
         flux_file[:, i_s, :] = inp_allt[scope][:, ener_idx]
 
-    # The zero fluxes are kept, as IDL and pySPEDAS (they were set to NaN)
+    # The zero fluxes are kept, as IDL and pySPEDAS
     if method == "sum":
         pa_flux = _pad_sum(pa_file, flux_file, pa_width, n_pabins)
     else:
@@ -210,7 +210,7 @@ def eis_pad(
         "method": method,
     }
 
-    # Units of the telescopes (none without, they were "")
+    # Units of the telescopes, if any
     for key in ["UNITS", "LABLAXIS"]:
         if key in inp_allt[scopes[0]].attrs:
             attrs[key] = inp_allt[scopes[0]].attrs[key]

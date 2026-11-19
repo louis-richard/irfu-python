@@ -9,6 +9,7 @@ import numpy as np
 import xarray as xr
 from scipy import constants
 
+# Local imports
 from pyrfu.mms._internal.vdf_bins import (
     _is_skymap,
     _mass,
@@ -17,7 +18,6 @@ from pyrfu.mms._internal.vdf_bins import (
     _speed_edges,
 )
 
-# Local imports
 from ..pyrf.ts_scalar import ts_scalar
 from .psd_moments import psd_moments
 from .vdf_convert import _relativistic_psd, vdf_convert
@@ -137,6 +137,7 @@ def vdf_cuts(vdf_fac, par_width: float = 10.0, perp_width: float = 10.0):
     >>> dists, moms = mms.vdf_cuts(vdf_fac)
 
     """
+
     if not _is_skymap(vdf_fac):
         raise ValueError("vdf_fac must be a skymap")
 
@@ -144,8 +145,7 @@ def vdf_cuts(vdf_fac, par_width: float = 10.0, perp_width: float = 10.0):
     time = vdf_fac.time.data
     n_t = len(time)
 
-    # Relativistic phase-space density and speeds (they were non-relativistic
-    # without the relativistic attribute)
+    # Relativistic phase-space density and speeds
     f_si = _relativistic_psd(vdf_fac)
     energy = np.broadcast_to(vdf_fac.energy.data, f_si.shape[:2])
     speed = _speed(energy, mass)

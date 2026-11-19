@@ -83,8 +83,7 @@ def psd(
         n_fft = n_persegs
         logger.warning("nfft < n_persegs. set to n_persegs")
 
-    # Sampling frequency from the time steps in ns (in us, as xarray keeps the
-    # times, the frequencies were 1000 times too large)
+    # Sampling frequency from the time steps in ns
     f_samp = calc_fs(inp)
 
     freqs, p_xx = signal.welch(
@@ -102,9 +101,12 @@ def psd(
 
     # Frequency first, then the other dimensions (components) of the input
     coords = [freqs, *[inp.coords[dim].data for dim in inp.dims[1:]]]
-    # Units squared, per Hz for a density (none)
+    # Units squared, per Hz for a density
     units = _power(_units(inp), 2)
-    units = _ratio(units, "Hz") if scaling == "density" else units
+
+    if scaling == "density":
+        units = _ratio(units, "Hz")
+
     out = xr.DataArray(
         p_xx, coords=coords, dims=["f", *inp.dims[1:]], attrs=_attrs({}, units)
     )

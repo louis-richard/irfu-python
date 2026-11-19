@@ -13,7 +13,7 @@ import xarray as xr
 
 
 def _reject_outliers(data, outliers_q=0.99):
-    # all-NaN table (no data): nothing to reject
+    # All-NaN table (no data): nothing to reject
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
         q = np.nanquantile(data, q=outliers_q)
@@ -84,7 +84,7 @@ def feeps_remove_sunlit_sectors(feeps_eyes, outliers_q: float = 0.99, i_en: int 
             for ss, idx in enumerate(times_in_ss):
                 table[row, ss] = np.nanmean(data[idx], axis=0)
 
-    # sectors without data (zero flux) are left out of the quantile
+    # Sectors without data (zero flux) are left out of the quantile
     table = np.where(table == 0, np.nan, table)
     table_clean = _reject_outliers(table, outliers_q=outliers_q)
 

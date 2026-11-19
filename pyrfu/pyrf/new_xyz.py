@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -57,7 +55,7 @@ def new_xyz(inp, trans_mat, coordinate_system: str | None = None):
 
     """
 
-    # A list raised AttributeError (.T)
+    # Array, also for a list (.T)
     trans_mat = np.asarray(trans_mat)
 
     if inp.data.ndim == 3:

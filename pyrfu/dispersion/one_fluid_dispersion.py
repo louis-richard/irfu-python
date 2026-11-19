@@ -33,9 +33,8 @@ def _disprel_roots(k, theta, v_a, c_s, wc_e, wc_p):
     # cubic in x = w^2, solved here in x / wc_p^2 for a better conditioning:
     # [(1 - a x) c_s^2 D + k^2 c_s^2 sin^2(theta)] (cos^2(theta) - a x)
     # - x cos^2(theta) c_s^2 D / wc_p^2 = 0, with a = 1 / (k^2 v_a^2)
-    # + 1 / (wc_e wc_p). The same roots for c_s > 0 (D = w^2 / c_s^2 - k^2,
-    # infinite for a cold plasma: LinAlgError); for c_s = 0, x = 0 and the
-    # cold roots
+    # + 1 / (wc_e wc_p). Valid also for a cold plasma (c_s = 0), where the
+    # roots are x = 0 and the cold roots
     cos2, sin2 = [np.cos(np.deg2rad(theta)) ** 2, np.sin(np.deg2rad(theta)) ** 2]
     a_ = (1 / (k**2 * v_a**2) + 1 / (wc_e * wc_p)) * wc_p**2
     d_ = [-(k**2) * c_s**2, wc_p**2]

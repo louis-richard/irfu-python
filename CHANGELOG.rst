@@ -1,6 +1,157 @@
 Changelog
 =========
 
+2.6.0 (2026-11-18)
+------------------
+
+This release deprecates the items to be removed in pyrfu 3.0.0, with a
+``FutureWarning`` of one form until then, and makes ``geopack`` an optional
+dependency. It adds options that keep the previous behaviour by default
+(extrapolation in ``pyrf.resample``, a seed for the Monte-Carlo integrations,
+time decoding in ``pyrf.read_cdf``), and the counting statistics of FEEPS: the
+counts and the intensity errors of the L2 files, combined exactly through the
+omni-directional spectra, spin averages, pitch-angle distributions, skymaps
+and four-spacecraft averages, and the one-count level of spectra. It reads
+the compression indicator of the FPI distributions and documents the floor of
+the counts of the lossy fast survey distributions.
+
+Deprecations
+^^^^^^^^^^^^
+
+- ``pyrf.waverage(f_sampl=)`` and ``pyrf.wave_fft(f_sampling=)``: renamed
+  ``f_s``, as the other routines (``resample``, ``lowpass``, ...); the old
+  names still work, with a ``FutureWarning``.
+- ``plot.plot_magnetosphere``: plot the magnetopause and the bow shock of
+  ``pyrf.magnetosphere`` with matplotlib instead.
+- The keys of the HPCA velocities in GSM, ``v{s}_gsm_hpca_{srvy,brst}_l2``
+  (``mms.get_data``, ``mms.tokenize``): those of the files lack the rotation
+  by the tilt of the spin axis (2 to 4 degrees); rotate the DBCS velocities
+  (``v{s}_dbcs_hpca_*``) with ``mms.dsl2gsm`` and the definitive attitude
+  instead.
+- ``mms.eis_moments(n_bg=, p_bg=)``: the EIS files have no background
+  product; subtract a background from the returned density and pressure
+  instead (the temperature from the differences).
+- The deprecation warnings of ``mms.vdf_reduce``,
+  ``mms.vdf_frame_transformation``, ``mms.load_brst_segments(data_path=,
+  download=)``, ``mms.feeps_pad_spinavg(bin_size=)``, ``pyrf.lowpass(fhz=)``
+  and the keys with extra spaces of ``dispersion.disp_surf_calc`` have one
+  form: the version that deprecated the item (2.5.0, 2.5.1 or 2.5.7), pyrfu
+  3.0.0 for its removal (some said "a future version") and the alternative.
+
+Requirements
+^^^^^^^^^^^^
+
+- ``geopack`` is no longer a dependency but an optional one,
+  ``pyrfu[geopack]``: only the magnetic field lines of
+  ``plot.plot_magnetosphere`` need it (``ImportError`` naming the extra
+  otherwise).
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- The FEEPS counts (``counts{s}_{rate}_{level}`` of
+  ``mms.get_feeps_alleyes``) are summed: over the eyes and the samples of a
+  spin by ``mms.feeps_omni``, ``mms.feeps_spin_avg`` and
+  ``mms.get_feeps_omni``, over the energy channels and the eyes of a
+  pitch-angle bin by ``mms.feeps_pad`` (their zeros kept), over the samples
+  of a skymap bin by ``mms.feeps_skymap``, and over the spacecraft by
+  ``mms.feeps_avg_4sc``. They were averaged as intensities, as IDL SPEDAS and
+  pySPEDAS do. The intensities and count rates are averaged as before, with
+  the same results.
+
+New features
+^^^^^^^^^^^^
+
+- FEEPS L2 counts and intensity errors: ``mms.get_feeps_alleyes`` (and
+  ``mms.get_feeps_omni``) read ``counts{s}_{rate}_l2`` (``ValueError``: the
+  L2 files have no counts) as :math:`N = (100 / p)^2` from the
+  ``percent_error`` :math:`p = 100 / \sqrt{N}` of the files (exact integers),
+  0 where the count rate is 0 and NaN without data, and the new
+  ``fluxerr{s}_{rate}_l2``, the intensity times :math:`p / 100`. Neither IDL
+  SPEDAS nor pySPEDAS reads ``percent_error``.
+- Keyword-only ``method`` ("mean", "sum" or "quadrature") of
+  ``mms.feeps_omni``, ``mms.feeps_spin_avg``, ``mms.feeps_pad``,
+  ``mms.feeps_pad_spinavg``, ``mms.feeps_skymap`` and ``mms.feeps_avg_4sc``:
+  the eyes, samples or spacecraft are averaged, summed, or combined as the
+  error of the mean (the square root of the sum of the squares over their
+  number). The default follows the units: the counts are summed, the
+  intensity errors (``fluxerr``) combined in quadrature, the other units
+  averaged. The correction factor of the spacecraft (0.84 for the MMS1 ions)
+  multiplies every method, as IDL SPEDAS. The errors are propagated exactly:
+  the intensity over the square root of the summed counts underestimates
+  them where the eyes have different intensities per count (by 7 % or more
+  in 5 % of the omni samples of MMS3 electrons, 2017-07-11).
+- ``mms.vdf_counts``, ``mms.vdf_one_count`` and ``mms.vdf_error`` accept
+  spectra (``xarray.DataArray``) as well as distributions: e.g. the one-count
+  level of an omni-directional FEEPS spectrum is
+  ``mms.vdf_one_count(flux_omni, counts_omni)``, and that of each bin of a
+  FEEPS skymap ``mms.vdf_one_count(skymap, counts_skymap)``.
+- ``mms.get_dist`` (and ``mms.get_data`` for the FPI distributions) reads
+  the compression indicator of each distribution, ``compressionloss`` (0
+  lossless, 1 lossy; that of the file for all its distributions in fast
+  survey), as a per-time attribute, clipped, joined (``pyrf.dist_append``,
+  the files of ``mms.get_data``), appended and
+  resampled with the times (``pyrf.resample`` interpolates it, to a fraction
+  between 0 and 1); ``pyrf.average_vdf`` marks an average lossy if one of its
+  distributions is.
+- ``mms.vdf_one_count(..., n=1)``: the level of ``n`` counts per bin, e.g.
+  ``n=2`` for the floor of the FPI fast survey distributions.
+- ``pyrf.resample(..., extrapolate=True)``: with ``extrapolate=False``, the
+  times outside the time range of the input are NaN instead of extrapolated.
+- ``pyrf.int_sph_dist(..., seed=None)`` and ``mms.reduce(..., seed=None)``:
+  with a seed, the Monte-Carlo particles are reproducible (bit for bit with
+  the same number of numba threads); ``mms.reduce`` derives a seed per time.
+- ``pyrf.read_cdf(path, *, decode_epochs=False, squeeze=True)``:
+  ``decode_epochs=True`` decodes the CDF times (TT2000, EPOCH, EPOCH16) to
+  datetime64[ns], and ``squeeze=False`` keeps the shapes as stored.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.psd_moments``: the fourth output, ``p2_psd``, is the momentum
+  flux tensor, the pressure tensor plus m n V V (it was described as the
+  pressure tensor), and the units of the outputs.
+- A new example notebook, the electron energy spectrum with its errors and
+  one-count levels: FPI (burst) and FEEPS (survey) averaged over 9 s (MMS3,
+  2017-07-11, spectrum 2 of Fig. 3 of Oka et al., 2022), with the counting
+  errors and the one-count levels per bin and in the average.
+- The MMS example notebooks (but the data access one) set the default data
+  resource with ``mms.db_init(default="aws")`` after the imports, instead of
+  ``source="aws"`` in each call (``source="sdc"`` kept for the ancillary
+  files), without ``verbose=False``; all the example notebooks re-executed.
+- ``mms.get_dist``: the FPI fast survey distributions are always lossy, and
+  their counts do not go below a floor of about 2 per bin (Barrie et al.,
+  2017; da Silva et al., 2020): on 2017-07-11 (MMS3 electrons, plasma sheet)
+  the fast survey spectrum is up to 2.8 times the burst one above 20 keV,
+  where the true counts are below 2 per bin and 4.5 s. The counts, errors and
+  one-count levels of the low-count bins are those of the burst
+  distributions (also noted in ``mms.vdf_counts``, ``mms.vdf_one_count``,
+  ``mms.vdf_error`` and ``mms.psd_moments_err``).
+- ``mms.feeps_flat_field_corrections``: the gains multiply every unit, the
+  counts and the intensity errors included, as IDL SPEDAS (unchanged): the
+  intensity per count and the relative errors are unchanged.
+- ``mms.feeps_corrections``: the corrections apply to the counts and the
+  intensity errors as to the intensities (tested).
+- ``mms.get_feeps_omni``: how the units are combined.
+- ``mms.feeps_avg_4sc``: the counts and errors are resampled as the
+  intensities (interpolated on the times of another spacecraft).
+
+Development
+^^^^^^^^^^^
+
+- ``pyrfu._core.deprecation``: ``deprecated``, ``deprecated_kwarg``,
+  ``deprecated_alias`` and ``warn_deprecated`` give all the deprecations of
+  pyrfu the same form (a ``FutureWarning`` naming the version that
+  deprecates the item, the version that removes it and the alternative,
+  pointing at the caller), and the deprecation policy is in the contributing
+  guide.
+- The NaN-aware mean, sum and quadrature of the EPD routines are one helper,
+  ``_nan_reduce`` (``mms/_internal/epd.py``).
+- The tests no longer read the user's MMS configuration: each test has its
+  own configuration file, with the default settings (resource "local"), so
+  that no test reaches the network when the user's default resource is
+  "aws" or "sdc".
+
 2.5.16 (2026-11-16)
 -------------------
 

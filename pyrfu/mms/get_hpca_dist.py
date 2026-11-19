@@ -19,11 +19,13 @@ mass_and_charge = {
 def _units_name(inp):
     r"""Units name of the SPEDAS structure from the UNITS of inp, as IDL SPEDAS
     from the variable name: "df_cm" for a phase-space density (cm^-6 s^3) and
-    without UNITS, "flux" for a flux (1/(cm^2 s sr eV)); it was always
-    "df_cm"."""
+    without UNITS, "flux" for a flux (1/(cm^2 s sr eV))."""
+
     units = str(inp.attrs.get("UNITS", "s^3"))
 
-    return "flux" if "sr" in units else "df_cm"
+    if "sr" in units:
+        return "flux"
+    return "df_cm"
 
 
 def get_hpca_dist(

@@ -94,7 +94,7 @@ def st_diff(r_mms, b_mms, lmn):
     # To time series, in the LMN coordinates system
     v_str_xyz = ts_vec_xyz(b_xyz.time.data, -v_str, {"COORDINATE_SYSTEM": "lmn"})
 
-    # In the units of the positions per s (none)
+    # In the units of the positions per s
     if _units(r_mms[0]) is not None:
         v_str_xyz.attrs["UNITS"] = _ratio(_units(r_mms[0]), "s")
 

@@ -46,7 +46,12 @@ def user_config_path(file_name: str, package_cfg_path: str) -> str:
 def atomic_write(path: str, content) -> None:
     r"""Writes `content` (bytes or str) to `path` through a temporary file in
     the same directory, so that no reader sees a partial file."""
-    mode = "wb" if isinstance(content, bytes) else "w"
+
+    if isinstance(content, bytes):
+        mode = "wb"
+    else:
+        mode = "w"
+
     handle, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".part")
 
     try:
@@ -74,7 +79,9 @@ def write_config(path: str, config: dict) -> None:
 
 def local_data_dir(path: str) -> str:
     r"""Local data directory of the configuration file `path` (MAVEN, SolO)."""
-    return os.path.normpath(read_config(path)["local_data_dir"])
+    out = os.path.normpath(read_config(path)["local_data_dir"])
+
+    return out
 
 
 def set_local_data_dir(config_path, data_dir: str) -> None:

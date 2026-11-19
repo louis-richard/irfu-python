@@ -88,7 +88,7 @@ def feeps_active_eyes(var, tint, mms_id):
         sensors["top"] = [6, 7, 8]
         sensors["bottom"] = [6, 7, 8]
 
-    # In the forms of time_clip (numpy warned for "Z" and a time series)
+    # tint in the forms of time_clip
     start_day = _time_interval(tint)[0].astype("datetime64[D]")
 
     # srvy mode, after 16 August 2017

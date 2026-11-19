@@ -16,6 +16,7 @@ from pyrfu.pyrf.ts_vec_xyz import ts_vec_xyz
 def _like(inp: DataArray, data: NDArray[np.float64]) -> DataArray:
     r"""Time series of data like inp: a vector of 3 components as ts_vec_xyz,
     with the attributes of inp, the others as inp."""
+
     if data.ndim == 2 and data.shape[1] == 3:
         return ts_vec_xyz(inp.time.data, data, dict(inp.attrs))
 
@@ -49,13 +50,14 @@ def mean_field(inp: DataArray, deg: int) -> tuple[DataArray, DataArray]:
         If input is not a xarray.DataArray.
 
     """
+
     # Checking input
     if not isinstance(inp, xr.DataArray):
         raise TypeError("Input must be a xarray.DataArray")
 
     # Extracting time (in seconds since the first sample) and data
     time: TimeArray = inp.time.data
-    # Double precision, one column per component (a scalar raised IndexError)
+    # Double precision, one column per component
     data: NDArray[np.float64] = inp.data.astype(np.float64).reshape(len(inp), -1)
     time_sec: NDArray[np.float64] = _seconds(time, time[0])
 
@@ -63,8 +65,7 @@ def mean_field(inp: DataArray, deg: int) -> tuple[DataArray, DataArray]:
     inp_mean: NDArray[np.float64] = np.full_like(data, np.nan, dtype=np.float64)
 
     for i in range(data.shape[1]):
-        # Polynomial fit (the time is mapped onto [-1, 1], so that the fit stays
-        # well-conditioned for long time series and high degrees)
+        # Polynomial fit (time mapped onto [-1, 1] for a well-conditioned fit)
         idx = np.isfinite(data[:, i])
 
         if np.sum(idx) <= deg:
@@ -78,7 +79,7 @@ def mean_field(inp: DataArray, deg: int) -> tuple[DataArray, DataArray]:
     # Wave field
     inp_wave: NDArray[np.float64] = data - inp_mean
 
-    # Time series, with the attributes of inp (they had none)
+    # Time series, with the attributes of inp
     inp_mean_ts: DataArray = _like(inp, inp_mean.reshape(inp.shape))
     inp_wave_ts: DataArray = _like(inp, inp_wave.reshape(inp.shape))
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import warnings
 from datetime import timedelta
-
-# Built-in imports
 from typing import Literal
 
 # 3rd party imports
@@ -23,12 +22,12 @@ def _construct_url_json_list(tint, mms_id, product, lasp_url):
     https://lasp.colorado.edu/mms/sdc/team/about/how-to/
     """
 
-    # In the forms of time_clip (a time series failed)
+    # Time interval, in the forms of time_clip
     tint = iso86012datetime(np.array(_time_interval(tint)))
     start_date = (tint[0] - timedelta(days=1)).strftime("%Y-%m-%d")
     end_date = (tint[1] + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    # lasp_url ends with "/" (it was doubled)
+    # lasp_url ends with "/"
     url = f"{lasp_url}file_info/ancillary"
     url = f"{url}?start_date={start_date}&end_date={end_date}"
     url = f"{url}&sc_id={_sc_name(product, mms_id)}"

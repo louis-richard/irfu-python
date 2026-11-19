@@ -35,6 +35,7 @@ _GLOBAL_METHODS = ("quadratic", "cubic")
 def _guess_sampling_frequency(ref_time):
     r"""Sampling frequency of the time line (in seconds), from the median time
     step (robust to an irregular first interval)."""
+
     d_t = np.median(np.diff(ref_time))
 
     if not np.isfinite(d_t) or d_t <= 0:
@@ -49,6 +50,7 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     without samples, or with a NaN, gives NaN. With thresh, the points farther
     than thresh * std from the mean of the window are disregarded.
     """
+
     inp_data = np.asarray(inp_data, dtype=np.float64)
     shape = inp_data.shape[1:]
     data = inp_data.reshape(len(inp_data), -1)
@@ -99,10 +101,11 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     return out_data.reshape(len(ref_time), *shape)
 
 
-def _interp_finite(inp_time, inp_data, ref_time, method):
+def _interp_finite(inp_time, inp_data, ref_time, method, fill_value):
     r"""Interpolation of each component through its finite samples (NaN for
     a component without any), as MATLAB interp1 with "spline" or "pchip"
     (Interp1DStripNaN); a NaN would spread to all the times otherwise."""
+
     data = np.asarray(inp_data, dtype=np.float64).reshape(len(inp_time), -1)
     out_data = np.full((len(ref_time), data.shape[1]), np.nan)
 
@@ -114,7 +117,8 @@ def _interp_finite(inp_time, inp_data, ref_time, method):
                 inp_time[finite],
                 data[finite, k],
                 kind=method,
-                fill_value="extrapolate",
+                bounds_error=False,
+                fill_value=fill_value,
             )(ref_time)
 
     return out_data.reshape(len(ref_time), *np.shape(inp_data)[1:])
@@ -123,15 +127,16 @@ def _interp_finite(inp_time, inp_data, ref_time, method):
 def _resampled_like(inp, out_data, time):
     r"""DataArray of out_data at the times time, with the dimensions, the
     dimension coordinates and the attributes of inp. A dimension without
-    coordinate (e.g. dims ["time", "comp"], coords time only) raised
-    ValueError."""
+    coordinate (e.g. dims ["time", "comp"], coords time only) is
+    allowed."""
+
     coords = {inp.dims[0]: time}
     coords.update({k: inp.coords[k].data for k in inp.dims[1:] if k in inp.coords})
 
     return xr.DataArray(out_data, coords=coords, dims=inp.dims, attrs=inp.attrs)
 
 
-def _resample_dataarray(inp, ref, method, f_s, window, thresh):
+def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
     r"""Resample for time series (xarray.DataArray)"""
 
     flag_do = "check"
@@ -148,8 +153,9 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
 
     # Both datetime64 (checked in resample) or both numeric
     if np.issubdtype(inp.time.dtype, np.datetime64):
-        # Integer nanoseconds for the averaging windows, float seconds otherwise
-        inp_time_ns, ref_time_ns = _ns(inp.time.data), _ns(ref.time.data)
+        # Integer ns for the averaging windows, float seconds otherwise
+        inp_time_ns = _ns(inp.time.data)
+        ref_time_ns = _ns(ref.time.data)
         inp_time = _seconds(inp.time.data, inp.time.data[0])
         ref_time = _seconds(ref.time.data, inp.time.data[0])
     elif np.issubdtype(inp.time.dtype, np.number) and np.issubdtype(
@@ -197,16 +203,22 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh):
             return _resampled_like(inp, inp.data.copy(), ref.coords["time"].data)
 
         # Extrapolation outside the time range of inp with the interpolant,
-        # as irf_resamp (MATLAB interp1 with 'extrap')
+        # as irf_resamp (MATLAB interp1 with 'extrap'), or NaN there
+        if extrapolate:
+            fill_value = "extrapolate"
+        else:
+            fill_value = np.nan
+
         if method in _GLOBAL_METHODS and not np.all(np.isfinite(inp.data)):
-            out_data = _interp_finite(inp_time, inp.data, ref_time, method)
+            out_data = _interp_finite(inp_time, inp.data, ref_time, method, fill_value)
         else:
             tck = interpolate.interp1d(
                 inp_time,
                 inp.data,
                 kind=method,
                 axis=0,
-                fill_value="extrapolate",
+                bounds_error=False,
+                fill_value=fill_value,
             )
             out_data = tck(ref_time)
 
@@ -225,8 +237,7 @@ def _resample_dataset(inp, ref, **kwargs):
     out_dict = {**out_dict, **{k: inp[k] for k in ndepnd_zvars}}
 
     # The per-time attributes are resampled, the others kept, with the rule of
-    # time_clip (any array as long as time was resampled: the energy tables of
-    # 32 channels with 32 times, and a 0-d array raised IndexError)
+    # time_clip (_is_time_attr)
     out_attrs = {}
 
     for k in sorted(inp.attrs):
@@ -257,6 +268,8 @@ def resample(
     f_s: float | None = None,
     window: int | None = None,
     thresh: float = 0,
+    *,
+    extrapolate: bool = True,
 ):
     r"""Resample inp to the time line of ref. If sampling of X is more than two
     times higher than Y, we average X, otherwise we interpolate X.
@@ -283,6 +296,12 @@ def resample(
     thresh : float, Optional
         Points farther than thresh * STD from the mean of an averaging window are
         disregarded (per component). Default is 0 (all points are used).
+    extrapolate : bool, Optional
+        Extrapolate the interpolation outside the time range of inp with the
+        interpolant, as irf_resamp. False gives NaN at the reference times
+        outside the time range of the samples (of the finite samples of each
+        component with "quadratic" or "cubic"). Default is True. Averages
+        are NaN where a window has no samples in both cases.
 
     Returns
     -------
@@ -310,8 +329,8 @@ def resample(
       of the wave numbers of `pyrfu.mms.fk_power_spectrum` on a 1 s burst
       interval).
     * Interpolation extrapolates outside the time range of inp with the
-      interpolant (linearly with "linear"): clip ref to the time range of inp
-      (e.g., with time_clip) if this is not wanted.
+      interpolant (linearly with "linear"); ``extrapolate=False`` gives NaN
+      there instead.
     * With "quadratic" or "cubic", whose interpolant depends on all the
       samples, each component is interpolated through its finite samples, as
       MATLAB interp1 ("spline"): NaN samples are skipped. With "linear" or
@@ -344,14 +363,17 @@ def resample(
         raise TypeError("inp must be a xarray.DataArray or xarray.Dataset")
 
     if method and method not in _METHODS:
-        hint = ' (MATLAB "spline" is "cubic")' if method == "spline" else ""
+        if method == "spline":
+            hint = ' (MATLAB "spline" is "cubic")'
+        else:
+            hint = ""
+
         raise ValueError(
             f"method must be one of {', '.join(_METHODS)}, not {method!r}{hint}"
         )
 
     # Both datetime64 or both numeric, checked before the times are cast to
-    # datetime64[ns] (numeric ref times became 1970 epochs: values
-    # extrapolated decades away, or a RuntimeError on the sampling)
+    # datetime64[ns] (numeric times would be read as 1970 epochs)
     is_datetime = [np.issubdtype(x.time.dtype, np.datetime64) for x in [inp, ref]]
 
     if is_datetime[0] != is_datetime[1]:
@@ -363,7 +385,13 @@ def resample(
         ref = ref.assign_coords(time=ref.time.astype("datetime64[ns]"))
 
     # Define options for resampling
-    options = {"method": method, "f_s": f_s, "window": window, "thresh": thresh}
+    options = {
+        "method": method,
+        "f_s": f_s,
+        "window": window,
+        "thresh": thresh,
+        "extrapolate": extrapolate,
+    }
 
     if isinstance(inp, xr.DataArray):
         out = _resample_dataarray(inp, ref, **options)

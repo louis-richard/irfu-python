@@ -32,10 +32,11 @@ def dist_append(inp0, inp1):
     Notes
     -----
     The time series have to be in the correct time order. The energy widths
-    (``delta_energy_plus``, ``delta_energy_minus``) and the half widths of the
-    accumulations (``delta_time_minus``, ``delta_time_plus``) are joined when
-    both inputs have them, and left out otherwise (``mms.get_dist`` gives None
-    energy widths for files without them).
+    (``delta_energy_plus``, ``delta_energy_minus``), the half widths of the
+    accumulations (``delta_time_minus``, ``delta_time_plus``) and the FPI
+    compression indicator (``compressionloss``) are joined when both inputs
+    have them, and left out otherwise (``mms.get_dist`` gives None energy
+    widths for files without them).
 
     """
 
@@ -49,15 +50,16 @@ def dist_append(inp0, inp1):
     if not isinstance(inp0, xr.Dataset):
         raise TypeError("inp0 must be a xarray.Dataset")
 
-    # A skymap without records has no data nor energy tables: keep the other one
+    # A skymap without records has no data nor energy tables: keep the other
+    # one
     if inp0.sizes["time"] == 0:
         return inp1
 
     if inp1.sizes["time"] == 0:
         return inp0
 
-    # Global attributes (copy: the stacked delta energies must not overwrite the
-    # caller's)
+    # Global attributes (copy: the stacked delta energies must not overwrite
+    # the caller's)
     glob_attrs = dict(inp0.attrs)
 
     # Stack coordinates
@@ -77,15 +79,15 @@ def dist_append(inp0, inp1):
     data = np.vstack([inp0.data, inp1.data])
     data_attrs = dict(inp0.data.attrs)
 
-    # Energy widths (time, energy) and half widths of the accumulations (time,),
-    # joined when both have them, left out otherwise (a missing key raised
-    # KeyError, a None from get_dist AttributeError, and the half widths of
-    # inp0 alone were kept)
+    # Energy widths (time, energy), half widths of the accumulations (time,)
+    # and compression indicator (time,), joined when both have them, left out
+    # otherwise
     for key in [
         "delta_energy_plus",
         "delta_energy_minus",
         "delta_time_minus",
         "delta_time_plus",
+        "compressionloss",
     ]:
         values = [inp0.attrs.get(key), inp1.attrs.get(key)]
 

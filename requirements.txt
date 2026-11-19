@@ -1,6 +1,5 @@
 boto3>=1.35.0
 botocore>=1.35.0
-geopack>=1.0.10
 keyring>=25.5.0
 keyrings.alt>=5.0.2
 matplotlib>=3.9.0

@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib.pyplot as plt
-
 # 3rd party imports
+import matplotlib.pyplot as plt
 import numpy as np
 
 # Local imports
@@ -33,8 +32,7 @@ def mms_pl_config(r_mms):
 
     """
 
-    # Mean position of each spacecraft and relative to the center [km]. One
-    # NaN sample left the 3d panel empty
+    # Mean positions, ignoring NaNs, and relative to the center [km]
     r_xyz = np.vstack([np.nanmean(r_xyz.data, axis=0) for r_xyz in r_mms])
     delta_r = r_xyz - np.nanmean(r_xyz, axis=0)
 

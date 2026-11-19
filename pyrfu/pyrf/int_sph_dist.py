@@ -1,22 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 import random
 from math import asin, cos, sin, sqrt
-
-# Built-in imports
 from typing import Literal
 
-# Third party imports
+# 3rd party imports
 import numba
 import numpy as np
 
 # Implementation notes (numba kernel _mc_project):
-# - one accumulator per worker thread, (n_threads, bins), summed at the end:
-#   a shared accumulator under numba.prange loses updates when two threads
-#   add to the same bin; the number of threads is passed in from Python
-#   (numba.get_num_threads() inside a cache=True function disables its disk
-#   cache);
+# - one accumulator per chunk of speeds (speed i in chunk i % n_chunks, one
+#   chunk per worker thread), summed in order at the end: a shared
+#   accumulator under numba.prange loses updates when two threads add to the
+#   same bin, and accumulators per thread (numba.get_thread_id) sum the speeds
+#   in an order that depends on the scheduling; the number of threads is
+#   passed in from Python (numba.get_num_threads() inside a cache=True
+#   function disables its disk cache);
+# - with a seed, numba's generator (random.seed has no effect on it from
+#   Python) is seeded at each speed with the seed of that speed, so that the
+#   particles of a speed do not depend on the thread that draws them: the
+#   same seed gives the same result for the same number of threads;
 # - the bins of the projection grid follow MATLAB's discretize, as
 #   irf_int_sph_dist: edges[k] <= v < edges[k + 1], the last bin closed on
 #   both ends (np.searchsorted side="right", minus 1); on a grid uniform to
@@ -48,6 +53,7 @@ def int_sph_dist(
     velocity_grid_edges=None,
     d_phi=None,
     d_theta=None,
+    seed: int | None = None,
 ):
     r"""Integrate a spherical distribution function to a line/plane.
 
@@ -114,6 +120,12 @@ def int_sph_dist(
         Azimuth and elevation widths of the instrument bins (rad). Default is
         the median spacing of `phi` and `theta` (required with a single bin,
         which has no spacing).
+    seed : int
+        Seed of the Monte-Carlo particles (a non-negative integer): the same
+        seed gives the same result (bit for bit with the same number of numba
+        threads). Default is None, a different draw at each call
+        (``random.seed`` and ``numpy.random.seed`` do not reach the numba
+        generator).
 
     Raises
     ------
@@ -121,7 +133,8 @@ def int_sph_dist(
         If the speed widths are negative or extend below zero speed, if only
         one of `d_v_m` and `d_v_p` is given, if `weight` is not one of the
         above, if a cartesian projection grid is not uniform, or if `phi` or
-        `theta` has a single bin without `d_phi` or `d_theta`.
+        `theta` has a single bin without `d_phi` or `d_theta`, or if `seed`
+        is not a non-negative integer.
     NotImplementedError
         If the projection is not a 1d polar, or a 2d or 3d cartesian one.
 
@@ -136,8 +149,7 @@ def int_sph_dist(
 
     """
 
-    # Non-finite values are empty bins (otherwise NaNs spread to the projected
-    # bins, and with a weighting make the whole projection 0)
+    # Non-finite values are empty bins (NaNs would spread to the projection)
     vdf = np.where(np.isfinite(vdf), vdf, 0.0)
 
     # Coordinates system transformation matrix
@@ -155,9 +167,7 @@ def int_sph_dist(
     # Define the rotation matrix from original to primed frame
     r_mat = np.transpose(np.stack([x_phat, y_phat, z_phat]), [1, 0])
 
-    # Number of Monte Carlo iterations and how number of MC points is
-    # weighted to data.
-    # Another weight (e.g. "linear") was taken as None
+    # Check the weighting of the number of Monte Carlo particles
     if weight not in (None, "lin", "log"):
         raise ValueError(f'weight must be None, "lin" or "log", not {weight!r}')
 
@@ -174,8 +184,6 @@ def int_sph_dist(
 
     # Azimuthal and elevation angles steps. Assumed to be constant
     # if not provided. A single bin has no spacing to take its width from
-    # (the median of an empty spacing was NaN: NaN and zeros in the result,
-    # as irfu-matlab)
     for name, angles, widths in [("phi", phi, d_phi), ("theta", theta, d_theta)]:
         if widths is None and np.size(angles) < 2:
             raise ValueError(f"{name} has a single bin: give its width d_{name}")
@@ -186,9 +194,8 @@ def int_sph_dist(
     if d_theta is None:
         d_theta = np.abs(np.median(np.diff(theta))) * np.ones_like(theta)
 
-    # Speed widths below (d_v_m) and above (d_v_p) the speed of each instrument
-    # bin. The Monte-Carlo particles are drawn uniformly in [v - d_v_m, v + d_v_p].
-    # One of them alone was ignored
+    # Speed widths below (d_v_m) and above (d_v_p) the speed of each bin: the
+    # Monte-Carlo particles are drawn uniformly in [v - d_v_m, v + d_v_p]
     if (d_v_m is None) != (d_v_p is None):
         raise ValueError("d_v_m and d_v_p must be given together")
 
@@ -210,8 +217,7 @@ def int_sph_dist(
     d_v = d_v_m + d_v_p
 
     # A polar projection is 1d without the azimuthal grid of the projection
-    # plane; the supported projections are 1d polar, 2d and 3d cartesian (the
-    # azimuthal grid width of the 2d and 3d polar ones was computed, unused)
+    # plane; the supported projections are 1d polar, 2d and 3d cartesian
     if projection_base == "pol" and phi_grid is None:
         projection_dim = "1d"
 
@@ -247,6 +253,9 @@ def int_sph_dist(
     # Weighting of number of Monte Carlo particles
     n_mc_mat = _mc_particles(vdf, n_mc, weight)
 
+    # One seed per speed (none: an empty array, numba's generator as it is)
+    speed_seeds = _speed_seeds(seed, len(velocity))
+
     # Element of the projection grid: the speed width of each bin of the 1d
     # polar grid, the volume of the bins of the cartesian grids
     if projection_base == "pol":
@@ -256,7 +265,10 @@ def int_sph_dist(
 
     # The grid indices computed on a cartesian grid uniform to near machine
     # precision, searched otherwise (see the implementation notes)
-    v_step = _uniform_step(velocity_grid_edges) if n_dim > 1 else 0.0
+    if n_dim > 1:
+        v_step = _uniform_step(velocity_grid_edges)
+    else:
+        v_step = 0.0
 
     f_g = _mc_project(
         vdf,
@@ -275,6 +287,7 @@ def int_sph_dist(
         r_mat,
         v_step,
         n_dim,
+        speed_seeds,
         numba.get_num_threads(),
     )
     f_g = f_g.reshape((len(velocity_grid),) * n_dim)
@@ -311,6 +324,7 @@ def _mc_particles(vdf, n_mc, weight):
     r"""Number of Monte-Carlo particles in each bin of vdf: n_mc in every bin
     with data (None), or n_mc on average in proportion to vdf ("lin") or to
     1 + ln(vdf / min(vdf)) ("log")."""
+
     n_sum = n_mc * np.sum(vdf != 0)  # total number of Monte Carlo particles
 
     if weight == "lin":
@@ -334,6 +348,21 @@ def _mc_particles(vdf, n_mc, weight):
     return n_mc_mat.astype(int)
 
 
+def _speed_seeds(seed, n_v):
+    r"""Seeds of the Monte-Carlo particles of the n_v speeds from `seed`
+    (int64, from numpy's SeedSequence), or an empty array without seed."""
+
+    if seed is None:
+        return np.zeros(0, dtype=np.int64)
+
+    is_int = isinstance(seed, (int, np.integer)) and not isinstance(seed, bool)
+
+    if not is_int or seed < 0:
+        raise ValueError(f"seed must be a non-negative integer, not {seed!r}")
+
+    return np.random.SeedSequence(int(seed)).generate_state(n_v).astype(np.int64)
+
+
 def _speed_bin_edges(velocity):
     r"""Default edges of the instrument speed bins.
 
@@ -354,6 +383,7 @@ def _speed_bin_edges(velocity):
         Edges of the speed bins, shape (len(velocity) + 1,).
 
     """
+
     velocity = np.asarray(velocity, dtype=np.float64)
 
     if len(velocity) < 2:
@@ -382,6 +412,7 @@ def _check_speed_widths(velocity, d_v_m, d_v_p):
         i.e., the opposite direction).
 
     """
+
     n_v = len(velocity)
 
     if d_v_m.shape != (n_v,) or d_v_p.shape != (n_v,):
@@ -421,6 +452,7 @@ def _grid_index(value, edges, v_step):
     grid), MATLAB's discretize convention (see the implementation notes):
     computed and checked against the edges for v_step > 0, searched
     otherwise."""
+
     n_g = len(edges) - 1
 
     if v_step > 0.0:
@@ -457,7 +489,8 @@ def _mc_project(
     r_mat,
     v_step,
     n_dim,
-    n_threads,
+    speed_seeds,
+    n_chunks,
 ):
     r"""Monte-Carlo projection of a skymap onto a grid, flattened: 1d polar
     (n_dim = 1: the speed along the first axis, the transverse speed limited
@@ -490,8 +523,10 @@ def _mc_project(
         Width of the bins of a uniform grid (index arithmetic), or 0.0.
     n_dim : int
         Dimension of the projection.
-    n_threads : int
-        Number of worker threads.
+    speed_seeds : numpy.ndarray
+        Seed of the particles of each speed, or empty (no seeding).
+    n_chunks : int
+        Number of chunks of speeds (the number of worker threads).
 
     Returns
     -------
@@ -499,6 +534,7 @@ def _mc_project(
         Projected distribution, (n_g ** n_dim,) with n_g bins on each axis.
 
     """
+
     n_v, n_ph, n_th = vdf.shape
     n_vg = len(vg_edges) - 1
 
@@ -508,86 +544,97 @@ def _mc_project(
     sin_theta_1_arr = np.sin(theta - 0.5 * d_theta)
     d_sin_theta_arr = np.sin(theta + 0.5 * d_theta) - sin_theta_1_arr
 
-    f_g_threads = np.zeros((n_threads, n_vg**n_dim))
+    f_g_chunks = np.zeros((n_chunks, n_vg**n_dim))
 
-    for i in numba.prange(n_v):
-        tid = numba.get_thread_id()
+    for c in numba.prange(n_chunks):
+        for i in range(c, n_v, n_chunks):
+            if len(speed_seeds) > 0:
+                random.seed(int(speed_seeds[i]))
 
-        for j in range(n_ph):
-            for k in range(n_th):
-                n_mc_ijk = n_mc[i, j, k]
+            for j in range(n_ph):
+                for k in range(n_th):
+                    n_mc_ijk = n_mc[i, j, k]
 
-                if vdf[i][j][k] == 0.0:
-                    continue
+                    if vdf[i][j][k] == 0.0:
+                        continue
 
-                dtau_ijk = v2[i] * cos_theta[k] * d_v[i] * d_phi[j] * d_theta[k]
-                c_ijk = dtau_ijk / n_mc_ijk
-                f_ijk = vdf[i, j, k]
+                    dtau_ijk = v2[i] * cos_theta[k] * d_v[i] * d_phi[j] * d_theta[k]
+                    c_ijk = dtau_ijk / n_mc_ijk
+                    f_ijk = vdf[i, j, k]
 
-                for l_mc in range(n_mc_ijk):
-                    # Speed, azimuth and elevation of the particle (the first
-                    # at the centre of the bin)
-                    if l_mc == 0:
-                        d_v_mc = 0.0
-                        d_phi_mc = 0.0
-                    else:
-                        d_v_mc = random.random() * d_v[i] - d_v_m[i]
-                        d_phi_mc = (random.random() - 0.5) * d_phi[j]
+                    for l_mc in range(n_mc_ijk):
+                        # Speed and azimuth, the first particle at the centre
+                        if l_mc == 0:
+                            d_v_mc = 0.0
+                            d_phi_mc = 0.0
+                        else:
+                            d_v_mc = random.random() * d_v[i] - d_v_m[i]
+                            d_phi_mc = (random.random() - 0.5) * d_phi[j]
 
-                    v_mc = v[i] + d_v_mc
-                    phi_mc = phi[j] + d_phi_mc
+                        v_mc = v[i] + d_v_mc
+                        phi_mc = phi[j] + d_phi_mc
 
-                    # Uniform in sin(elevation): uniform in solid angle
-                    if l_mc == 0:
-                        theta_mc = theta[k]
-                    else:
-                        sin_theta_mc = (
-                            sin_theta_1_arr[k] + random.random() * d_sin_theta_arr[k]
+                        # Uniform in sin(elevation): uniform in solid angle
+                        if l_mc == 0:
+                            theta_mc = theta[k]
+                        else:
+                            sin_theta_mc = (
+                                sin_theta_1_arr[k]
+                                + random.random() * d_sin_theta_arr[k]
+                            )
+                            theta_mc = asin(sin_theta_mc)
+
+                        v_x = v_mc * cos(theta_mc) * cos(phi_mc)
+                        v_y = v_mc * cos(theta_mc) * sin(phi_mc)
+                        v_z = v_mc * sin(theta_mc)
+
+                        # Velocity in the primed coordinate system
+                        v_x_p = (
+                            r_mat[0, 0] * v_x + r_mat[1, 0] * v_y + r_mat[2, 0] * v_z
                         )
-                        theta_mc = asin(sin_theta_mc)
+                        v_y_p = (
+                            r_mat[0, 1] * v_x + r_mat[1, 1] * v_y + r_mat[2, 1] * v_z
+                        )
+                        v_z_p = (
+                            r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
+                        )
 
-                    v_x = v_mc * cos(theta_mc) * cos(phi_mc)
-                    v_y = v_mc * cos(theta_mc) * sin(phi_mc)
-                    v_z = v_mc * sin(theta_mc)
+                        # Transverse (1d) or out-of-plane speed, and the angle
+                        # from the projection axis or plane, within limits
+                        if n_dim == 1:
+                            v_z_p = sqrt(v_y_p**2 + v_z_p**2)
 
-                    # Velocity in the primed coordinate system
-                    v_x_p = r_mat[0, 0] * v_x + r_mat[1, 0] * v_y + r_mat[2, 0] * v_z
-                    v_y_p = r_mat[0, 1] * v_x + r_mat[1, 1] * v_y + r_mat[2, 1] * v_z
-                    v_z_p = r_mat[0, 2] * v_x + r_mat[1, 2] * v_y + r_mat[2, 2] * v_z
+                        alpha = asin(v_z_p / v_mc)
 
-                    # Transverse speed (1d) or out-of-plane speed, and the
-                    # angle from the projection axis or plane, within limits
-                    if n_dim == 1:
-                        v_z_p = sqrt(v_y_p**2 + v_z_p**2)
+                        use_point = v_lim[0] <= v_z_p < v_lim[1]
+                        use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
 
-                    alpha = asin(v_z_p / v_mc)
+                        # Particles out of the grid
+                        if v_x_p > vg_edges[-1] or v_x_p < vg_edges[0]:
+                            continue
 
-                    use_point = v_lim[0] <= v_z_p < v_lim[1]
-                    use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
+                        if n_dim > 1 and (v_y_p > vg_edges[-1] or v_y_p < vg_edges[0]):
+                            continue
 
-                    # Particles out of the grid
-                    if v_x_p > vg_edges[-1] or v_x_p < vg_edges[0]:
-                        continue
+                        if n_dim > 2 and (v_z_p > vg_edges[-1] or v_z_p < vg_edges[0]):
+                            continue
 
-                    if n_dim > 1 and (v_y_p > vg_edges[-1] or v_y_p < vg_edges[0]):
-                        continue
+                        # Flat index of the bin (x, y, z), C order
+                        i_vxg = _grid_index(v_x_p, vg_edges, v_step)
+                        idx = i_vxg
 
-                    if n_dim > 2 and (v_z_p > vg_edges[-1] or v_z_p < vg_edges[0]):
-                        continue
+                        if n_dim > 1:
+                            idx = idx * n_vg + _grid_index(v_y_p, vg_edges, v_step)
 
-                    # Flat index of the bin (x, y, z), C order
-                    i_vxg = _grid_index(v_x_p, vg_edges, v_step)
-                    idx = i_vxg
+                        if n_dim > 2:
+                            idx = idx * n_vg + _grid_index(v_z_p, vg_edges, v_step)
 
-                    if n_dim > 1:
-                        idx = idx * n_vg + _grid_index(v_y_p, vg_edges, v_step)
+                        if n_dim == 1:
+                            d_a = d_a_grid[i_vxg]
+                        else:
+                            d_a = d_a_grid[0]
 
-                    if n_dim > 2:
-                        idx = idx * n_vg + _grid_index(v_z_p, vg_edges, v_step)
+                        if use_point:
+                            f_g_chunks[c, idx] += f_ijk * c_ijk / d_a
 
-                    d_a = d_a_grid[i_vxg] if n_dim == 1 else d_a_grid[0]
-
-                    if use_point:
-                        f_g_threads[tid, idx] += f_ijk * c_ijk / d_a
-
-    return f_g_threads.sum(axis=0)
+    return f_g_chunks.sum(axis=0)

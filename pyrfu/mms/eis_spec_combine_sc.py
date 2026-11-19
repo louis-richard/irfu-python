@@ -22,6 +22,7 @@ def _idx_closest(lst0, lst1):
 def _nearest(t_ref, t_inp, tol):
     r"""Index in t_inp of the time nearest to each time of t_ref, -1 if it is
     more than tol away (times sorted, in ns)."""
+
     out = np.full(len(t_ref), -1)
 
     if len(t_inp) == 0:
@@ -42,6 +43,7 @@ def _paired_samples(ref, inp):
     none): for full-resolution spectra (with sectors), the same sector nearest
     in time within half a spin, as the sector gives the look direction;
     otherwise (spin averages), the nearest time within half a time step."""
+
     t_ref = _ns(ref.time.data)
     t_inp = _ns(inp.time.data)
     d_t = np.median(np.diff(t_ref)) if len(t_ref) > 1 else np.inf
@@ -49,7 +51,8 @@ def _paired_samples(ref, inp):
     if "sector" not in ref.coords or "sector" not in inp.coords:
         return _nearest(t_ref, t_inp, d_t / 2)
 
-    sec_ref, sec_inp = ref.sector.data, inp.sector.data
+    sec_ref = ref.sector.data
+    sec_inp = inp.sector.data
 
     # Half a spin: the samples of a spin have different sectors
     tol = len(np.unique(sec_ref)) * d_t / 2
@@ -58,7 +61,7 @@ def _paired_samples(ref, inp):
     for sector in np.unique(sec_ref):
         i_ref = np.flatnonzero(sec_ref == sector)
         i_inp = np.flatnonzero(sec_inp == sector)
-        # None for a sector without samples in inp (IndexError)
+        # None for a sector without samples in inp
         idx = _nearest(t_ref[i_ref], t_inp[i_inp], tol)
         out[i_ref[idx >= 0]] = i_inp[idx[idx >= 0]]
 
@@ -67,10 +70,10 @@ def _paired_samples(ref, inp):
 
 def _combined_attrs(omni_vars, method):
     r"""Attributes of the combined spectrum: those with the same value on all
-    the spacecraft (those of the reference spacecraft labelled it, e.g.
-    MMS4), the global attributes common to their files, the name and
+    the spacecraft, the global attributes common to their files, the name and
     description of the combination (``mms#_`` -> ``mmsx_``, as SPEDAS), and
     SCALEMAX the spacecraft maxima combined as the data."""
+
     attrs_list = [dict(inp.attrs) for inp in omni_vars]
     attrs = _common_attrs(attrs_list, skip=("GLOBAL",))
 
@@ -97,9 +100,10 @@ def _combined_attrs(omni_vars, method):
     except (KeyError, TypeError, ValueError):
         pass
     else:
-        attrs["SCALEMAX"] = (
-            scale_max.sum(axis=0) if method == "sum" else scale_max.mean(axis=0)
-        )
+        if method == "sum":
+            attrs["SCALEMAX"] = scale_max.sum(axis=0)
+        else:
+            attrs["SCALEMAX"] = scale_max.mean(axis=0)
 
     return attrs
 
@@ -184,7 +188,7 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     if method.lower() not in ["mean", "sum"]:
         raise ValueError(f"method must be mean or sum, not {method}")
 
-    # The units (and species) of the reference spacecraft were taken
+    # Same units and species for all the spacecraft
     _check_same_units(omni_vars, "spectra")
     _check_same_attrs(omni_vars, ["species"], "spectra")
 
@@ -199,7 +203,7 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
     # time x energy x spacecraft
     omni_spec_data = np.full([nt_ref, ne_ref, len(omni_vars)], np.nan)
 
-    # Paired samples (they were paired by index) at the closest channels
+    # Paired samples at the closest channels
     for i_p, flux_ in enumerate(omni_vars):
         idx_closest = _idx_closest(flux_.energy.data, ener_refprobe.energy.data)
         idx_time = _paired_samples(time_refprobe, flux_)
@@ -230,8 +234,7 @@ def eis_spec_combine_sc(omni_vars, method: str = "mean"):
         if key in time_refprobe.coords:
             omni_spec = omni_spec.assign_coords({key: time_refprobe[key]})
 
-    # Energy widths of the energies of the output (they were read as
-    # energy_dplus and energy_dminus: KeyError)
+    # Energy widths of the energies of the output
     for key in ["delta_energy_plus", "delta_energy_minus"]:
         if key in ener_refprobe.attrs:
             omni_spec.attrs[key] = ener_refprobe.attrs[key]

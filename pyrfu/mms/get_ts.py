@@ -21,8 +21,7 @@ from .get_variable import _pycdfpp_attributes_to_dict
 
 logger = logging.getLogger(__name__)
 
-# Time types of the epochs converted to datetime64 (CDF_EPOCH and CDF_EPOCH16
-# epochs were left as structured arrays, and raised KeyError)
+# Time types of the epochs converted to datetime64
 _EPOCH_TYPES = (DataType.CDF_TIME_TT2000, DataType.CDF_EPOCH, DataType.CDF_EPOCH16)
 
 
@@ -48,7 +47,7 @@ def _shift_epochs(file, epoch):
 
         delta_keys = [delta_minus_key, delta_plus_key]
 
-        # The variable and its units in the warnings (" units are not clear")
+        # Units of the delta variables (s or ms), assumed s otherwise
         for i, (delta_key, delta_var) in enumerate(zip(delta_keys, delta_vars)):
             if isinstance(delta_var["attrs"], dict) and "UNITS" in delta_var["attrs"]:
                 units = delta_var["attrs"]["UNITS"]
@@ -63,8 +62,8 @@ def _shift_epochs(file, epoch):
 
         flag_minus, flag_plus = flags_vars
 
-        # Shift to the centre of [epoch - delta_minus, epoch + delta_plus] and half
-        # width of the accumulation, as mms.variable2ts in irfu-matlab
+        # Shift to the centre of [epoch - delta_minus, epoch + delta_plus] and
+        # half width of the accumulation, as mms.variable2ts in irfu-matlab
         t_offset, t_diff = [
             _timedelta(np.round(delta, 1) / 2e3)
             for delta in [
@@ -78,9 +77,9 @@ def _shift_epochs(file, epoch):
         # Half width of the accumulation
         half_width = np.mean(t_diff)
 
-        # If the accumulation does not match the sampling period, assume that the
-        # epochs are start times and use half the sampling period (needs at least
-        # two records, otherwise keep the delta variables)
+        # If the accumulation does not match the sampling period, assume that
+        # the epochs are start times and use half the sampling period (needs at
+        # least two records, otherwise keep the delta variables)
         if len(epoch["data"]) > 1:
             t_diff_data = np.median(np.diff(epoch["data"])) / 2
 
@@ -185,8 +184,8 @@ def _get_depend(file, cdf_name, dep_num=1):
         raise KeyError(f"no DEPEND_{dep_num:d}/REPRESENTATION_{dep_num:d} attributes")
 
     # Components, of a vector or of a vector and its magnitude (HPCA vperp,
-    # vparallel and B: "x,y,z,total", which raised KeyError): the magnitude is
-    # removed from the data, as for FGM
+    # vparallel and B: "x,y,z,total"): the magnitude is removed from the data,
+    # as for FGM
     if depend_key in ["x,y,z", "x,y,z,total"]:
         out["data"] = np.array(["x", "y", "z"])
 
@@ -197,7 +196,8 @@ def _get_depend(file, cdf_name, dep_num=1):
         if len(out["data"]) == 1:
             out["data"] = out["data"][0]
 
-        # Vector and magnitude (e.g. FGM): the magnitude is removed from the data
+        # Vector and magnitude (e.g. FGM): the magnitude is removed from the
+        # data
         if (
             out["data"].ndim == 1
             and len(out["data"]) == 4
@@ -224,8 +224,9 @@ def _get_depend(file, cdf_name, dep_num=1):
 
 def _mask_fill(data, fill_val):
     r"""Floating-point data with the values equal to FILLVAL set to NaN, as
-    irfu-matlab mms.variable2ts and pySPEDAS (the moments of the HPCA species
-    without data were -1e31); integer data (flags, counts) unchanged."""
+    irfu-matlab mms.variable2ts and pySPEDAS (e.g. -1e31 for the moments of
+    the HPCA species without data); integer data (flags, counts) unchanged."""
+
     if fill_val is None or not np.issubdtype(data.dtype, np.floating):
         return data
 
@@ -245,7 +246,8 @@ def _record_varying_axis(out, dim, table, depend_attrs):
     energies) is a table per record, `table` (time, n), clipped as `out`: a
     DataArray with that axis if it is the same at all times, else a Dataset
     as ``pyrf.ts_spectr`` (the data (time, idx0) and the coordinate `dim`
-    (time, idx0); the first table labelled every record before)."""
+    (time, idx0))."""
+
     if len(table) == 0 or np.all(table == table[0]):
         if len(table):
             out = out.assign_coords({dim: table[0]})
@@ -268,9 +270,10 @@ def _record_varying_axis(out, dim, table, depend_attrs):
 
 def _unique_labels(depends):
     r"""Dimension names of the depends made distinct: a label used by more
-    than one depend gets the number of its DEPEND (the blank labels of
-    DEPEND_1 and DEPEND_3 of the HPCA azimuths gave the duplicate dimensions
-    ('time', '_', 'comp', '_'), on which xarray selects both or raises)."""
+    than one depend gets the number of its DEPEND (e.g. the blank labels of
+    DEPEND_1 and DEPEND_3 of the HPCA azimuths: xarray selects both or raises
+    on duplicate dimensions such as ('time', '_', 'comp', '_'))."""
+
     labels = [dep["attrs"]["LABLAXIS"] if dep else None for dep in depends]
 
     for i, (dep, label) in enumerate(zip(depends, labels), start=1):
@@ -317,8 +320,8 @@ def get_ts(
 
     """
 
-    # Time interval, in the forms of time_clip (a tuple, datetime.datetime
-    # and a time series raised TypeError), checked before reading the file
+    # Time interval, in the forms of time_clip, checked before reading the
+    # file
     if tint is None:
         tint = ["1995-10-06T18:50:00.000000000", "2200-10-06T18:50:00.000000000"]
 
@@ -341,8 +344,8 @@ def get_ts(
     time = _get_epochs(file, cdf_name)
 
     # Dimensions of the variable, with the records: a DEPEND of a dimension
-    # the variable does not have labels nothing (HPCA data_quality, 1-D with
-    # the DEPEND_1 of the anodes, raised ValueError)
+    # the variable does not have labels nothing (e.g. HPCA data_quality, 1-D
+    # with the DEPEND_1 of the anodes)
     n_dims = len(file[cdf_name].shape)
 
     if "DEPEND_1" in var_attrs or "REPRESENTATION_1" in var_attrs:
@@ -455,7 +458,7 @@ def get_ts(
         out = _record_varying_axis(out, dims[1], table, coords_attrs[1])
 
     if is_nrv:
-        # writable copy of the broadcast (read-only) data
+        # Writable copy of the broadcast (read-only) data
         out = out.copy()
 
     return out

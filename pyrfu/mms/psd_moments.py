@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import logging
-
 # Built-in imports
+import logging
 from typing import Literal
 
 # 3rd party imports
@@ -38,7 +37,10 @@ def _midpoint_kernels(phi, theta):
     # degrees, phi (time, phi), theta (theta,).
     phi = np.deg2rad(np.asarray(phi, dtype=np.float64))[:, :, np.newaxis]
     theta = np.deg2rad(np.asarray(theta, dtype=np.float64))[np.newaxis, np.newaxis, :]
-    c_p, s_p, c_t, s_t = np.cos(phi), np.sin(phi), np.cos(theta), np.sin(theta)
+    c_p = np.cos(phi)
+    s_p = np.sin(phi)
+    c_t = np.cos(theta)
+    s_t = np.sin(theta)
     kernels = [
         s_t,
         -c_p * s_t**2,
@@ -62,8 +64,8 @@ def _moments(angular_sums, energy_correct, delta_v, used, p_mass):
     energy, 10, see _midpoint_kernels) and the energy sums over the `used`
     channels with the relativistic speeds, the Lorentz factor (momentum flux
     gamma m v v) and the kinetic energy over m v^2 / 2 (energy flux), which
-    depend on (time, energy) only (a numba kernel, three times, on energies
-    whose non-relativistic speed was the relativistic one)."""
+    depend on (time, energy) only."""
+
     eps = constants.elementary_charge * energy_correct / (p_mass * constants.c**2)
 
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -110,8 +112,10 @@ def _exact_kernels(
     i_cs = (np.sin(phi_b) ** 2 - np.sin(phi_a) ** 2) / 2
 
     # integrals over theta of sin, sin^2, sin cos, sin^3, sin cos^2, sin^2 cos
-    c_a, c_b = np.cos(theta_a), np.cos(theta_b)
-    s_a, s_b = np.sin(theta_a), np.sin(theta_b)
+    c_a = np.cos(theta_a)
+    c_b = np.cos(theta_b)
+    s_a = np.sin(theta_a)
+    s_b = np.sin(theta_b)
     j_s = c_a - c_b
     j_ss = (theta_b - theta_a) / 2 - (np.sin(2 * theta_b) - np.sin(2 * theta_a)) / 4
     j_sc = (s_b**2 - s_a**2) / 2
@@ -176,6 +180,7 @@ def _first_channel_mask(vdf, n_e, first_channel):
     r"""Channels from a time series of first channels (e.g. the recommended
     energy index of the FPI partial moments) to the last, as a boolean (time,
     energy) array."""
+
     if not np.array_equal(first_channel.time.data, vdf.time.data):
         # Nearest sample: the indices are integers, not to be interpolated
         first_channel = first_channel.sel(time=vdf.time.data, method="nearest")
@@ -194,13 +199,15 @@ def _first_channel_mask(vdf, n_e, first_channel):
 def _energy_mask(vdf, energy, energy_range, en_channels):
     r"""Energy channels to integrate over at each time step, as a boolean
     (time, energy) array, from the energy_range or en_channels options."""
+
     n_t, n_e = energy.shape
 
     if energy_range is not None and en_channels is not None:
         raise ValueError("Use either energy_range or en_channels, not both")
 
     if energy_range is None:
-        en_channels = [0, n_e] if en_channels is None else en_channels
+        if en_channels is None:
+            en_channels = [0, n_e]
 
         if isinstance(en_channels, xr.DataArray):
             return _first_channel_mask(vdf, n_e, en_channels)
@@ -262,6 +269,7 @@ def _psd_si(vdf):
     in place), from the units of `vdf` (``UNITS``, s^3/cm^6 if
     missing; differential fluxes as irfu-matlab PDist.convertto): that of the
     FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)."""
+
     if "UNITS" not in vdf.data.attrs:
         vdf = vdf.copy()
         vdf["data"] = vdf.data.copy()
@@ -273,8 +281,9 @@ def _psd_si(vdf):
 def _partial_moments_mask(vdf, mask, shape):
     r"""The 0/1 (or boolean) array `partial_moments` of the bins used, of the
     shape of the data and, for a DataArray, at the times of `vdf`. A wrong
-    mask raises ValueError: it was only logged (INFO) and the full moments
-    were returned, as irfu-matlab."""
+    mask raises ValueError (irfu-matlab logs it and returns the full
+    moments)."""
+
     if isinstance(mask, xr.DataArray):
         if "time" in mask.coords and not np.array_equal(mask.time.data, vdf.time.data):
             raise ValueError("partial_moments must be at the times of vdf")
@@ -340,7 +349,9 @@ def _pitch_angle_weights(vdf, b_xyz, pitch_angle_range, method):
     theta_sub = np.rad2deg(np.arccos(cos_lower - sub * (cos_lower - cos_upper)))
     theta_sub = theta_sub.ravel()
 
-    n_t, n_ph, n_th = len(vdf.time), vdf.data.shape[2], vdf.data.shape[3]
+    n_t = len(vdf.time)
+    n_ph = vdf.data.shape[2]
+    n_th = vdf.data.shape[3]
     weights = np.zeros((n_t, n_ph, n_th))
 
     # Time chunks: the sub-grid is _N_SUB^2 times the angular grid
@@ -390,18 +401,20 @@ def psd_moments(
     Returns
     -------
     n_psd : xarray.DataArray
-        Time series of the number density (1rst moment).
+        Time series of the number density (cm^-3).
     v_psd : xarray.DataArray
-        Time series of the bulk velocity (2nd moment). NaN where the density
+        Time series of the bulk velocity (km/s). NaN where the density
         is zero, as the pressure, temperature and heat flux.
     p_psd : xarray.DataArray
-        Time series of the pressure tensor (3rd moment).
+        Time series of the pressure tensor (nPa), in the frame of the bulk
+        velocity.
     p2_psd : xarray.DataArray
-        Time series of the pressure tensor.
+        Time series of the momentum flux tensor (nPa), the pressure tensor
+        plus m n V V.
     t_psd : xarray.DataArray
-        Time series of the temperature tensor.
+        Time series of the temperature tensor (eV).
     h_psd : xarray.DataArray
-        Time series of the heat flux vector
+        Time series of the heat flux vector (mW/m^2).
 
     Other Parameters
     ----------------
@@ -564,11 +577,14 @@ def psd_moments(
 
     theta = vdf.theta.data
 
-    # Mass and charge of the species (ValueError if not supported). All the
-    # ions were protons and the species not starting with "e" or "i" raised
-    # AssertionError.
-    p_mass, is_electron = _mass(vdf), _charge_sign(vdf) < 0.0
-    charge = 1.0 if is_electron else _charge(vdf)
+    # Mass and charge of the species (ValueError if not supported)
+    p_mass = _mass(vdf)
+    is_electron = _charge_sign(vdf) < 0.0
+
+    if is_electron:
+        charge = 1.0
+    else:
+        charge = _charge(vdf)
 
     # Relativistic speeds, momentum flux and kinetic energy, for all the
     # species: the relativistic phase-space density in SI units (s^3/m^6)
@@ -591,7 +607,7 @@ def psd_moments(
 
     use_energy = _energy_mask(vdf, energy, energy_range, en_channels)
 
-    # The bins of partial_moments (a wrong mask gave the full moments)
+    # The bins of partial_moments
     if partial_moments is not None:
         mask = _partial_moments_mask(vdf, partial_moments, vdf_data.shape)
         vdf_data = vdf_data * mask
@@ -799,7 +815,7 @@ def psd_moments(
     t_psd *= k_b / q_e
     h_psd *= 1e3
 
-    # Time series, with their units (they had none)
+    # Time series, with their units
     time = vdf.time.data
     return (
         ts_scalar(time, n_psd, {"UNITS": "cm^-3"}),

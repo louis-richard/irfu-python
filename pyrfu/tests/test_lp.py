@@ -15,8 +15,8 @@ from ..lp.photo_current import surface_materials
 
 class ThermalCurrentTestCase(unittest.TestCase):
     def test_thermal_current_probe_type_case(self):
-        # "Sphere" passed the check but gave the cylinder current (up to 25 %
-        # different at 10 V)
+        # Probe type case-insensitive: "Sphere" gives the sphere current (up to
+        # 25 % different from the cylinder one at 10 V)
         u = np.array([-10.0, 0.0, 10.0])
         args = (1e7, 1e5, constants.electron_mass, 0.0, -1, u, 1.0)
         sphere = lp.thermal_current(*args, "sphere")
@@ -26,7 +26,7 @@ class ThermalCurrentTestCase(unittest.TestCase):
             np.testing.assert_array_equal(lp.thermal_current(*args, p_type), expected)
 
     def test_thermal_current_probe_type_invalid(self):
-        # ValueError (AssertionError; with python -O, computed as a cylinder)
+        # ValueError, not an assert (also with python -O)
         with self.assertRaisesRegex(ValueError, "p_type"):
             lp.thermal_current(
                 1e7, 1e5, constants.electron_mass, 0.0, -1, 0.0, 1.0, "disk"
@@ -74,8 +74,8 @@ class ThermalCurrentTestCase(unittest.TestCase):
             np.testing.assert_allclose(result, expected, rtol=1e-12)
 
     def test_thermal_current_no_plasma(self):
-        # No density or temperature: no current, as irfu-matlab (it was
-        # None); no charge: no current
+        # No density or temperature: no current, as irfu-matlab; no charge: no
+        # current
         args = (1e5, 9.109e-31, 0.0, -1, np.zeros(3), 0.1, "sphere")
         np.testing.assert_array_equal(lp.thermal_current(0.0, *args), np.zeros(3))
         np.testing.assert_array_equal(
@@ -121,8 +121,7 @@ class LangmuirProbeTestCase(unittest.TestCase):
 
     def test_langmuir_probe_irfu_matlab(self):
         # Type, areas, capacitance and photoemission as irfu-matlab (epsilon_0
-        # of scipy): the wire area was 0, the wire capacitance raised
-        # TypeError, and the photoemission was None
+        # of scipy)
         for name, (kwargs, areas, capacitance) in self.MATLAB.items():
             probe = lp.LangmuirProbe(name, **kwargs)
             self.assertEqual(probe.probe_type, "wire" if name == "stazer" else name)
@@ -145,8 +144,7 @@ class LangmuirProbeTestCase(unittest.TestCase):
             lp.LangmuirProbe("disk", r_wire=0.01, l_wire=0.005)
 
     def test_langmuir_probe_inputs(self):
-        # A stazer of two radii (the check compared the radii with 2), not
-        # three; no probe (ZeroDivisionError): no type, NaN ratios; the
+        # A stazer of two radii, not three; no probe: no type, NaN ratios; the
         # photoemission given
         with self.assertRaisesRegex(ValueError, "length 1"):
             lp.LangmuirProbe("p", r_wire=[1e-3, 2e-3, 3e-3], l_wire=10.0)
@@ -167,7 +165,8 @@ class LangmuirProbeTestCase(unittest.TestCase):
 
 class PhotoCurrentTestCase(unittest.TestCase):
     # Area 2 m^2 at 0.5 AU: 8 times the photocurrent of 1 m^2 at 1 AU
-    area, distance = 2.0, 0.5
+    area = 2.0
+    distance = 0.5
     u = np.array([-5.0, 0.0, 1.0])
 
     def test_photo_current_material(self):
@@ -204,8 +203,8 @@ class PhotoCurrentTestCase(unittest.TestCase):
         self.assertTrue(logs.records[0].getMessage().startswith("cluster: Io= 25.00"))
 
     def test_photo_current_zero_area(self):
-        # A zero area with an array of potentials gives zeros ("truth value of
-        # an array is ambiguous"); some arguments only raise ValueError
+        # A zero area with an array of potentials gives zeros; some arguments
+        # only raise ValueError
         result = lp.photo_current(0.0, self.u, self.distance, "cluster")
         np.testing.assert_array_equal(result, np.zeros(len(self.u)))
 

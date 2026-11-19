@@ -68,7 +68,7 @@ def histogram(inp, bins=100, y_range=None, weights=None, density=True):
         raise ValueError("inp must be a scalar time series")
 
     # Finite samples only, as numpy.histogram with a range and MATLAB
-    # histcounts (a NaN or an inf made the automatic range undefined)
+    # histcounts
     finite = np.isfinite(inp.data)
 
     if not np.any(finite):
@@ -88,7 +88,13 @@ def histogram(inp, bins=100, y_range=None, weights=None, density=True):
 
     # Counts (dimensionless) or a density per unit of inp; weights of unknown
     # units without UNITS
-    units = _ratio("", _units(inp)) if density else ("" if weights is None else None)
+    if density:
+        units = _ratio("", _units(inp))
+    elif weights is None:
+        units = ""
+    else:
+        units = None
+
     out = xr.DataArray(
         hist, coords=[bin_center], dims=["bins"], attrs=_attrs({}, units)
     )

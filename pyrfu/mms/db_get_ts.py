@@ -11,6 +11,7 @@ import numpy as np
 from pycdfpp import load
 from xarray import DataArray
 
+# Local imports
 from pyrfu.mms.get_data import (
     _file_label,
     _get_file_content_sources,
@@ -18,8 +19,6 @@ from pyrfu.mms.get_data import (
     _resolve_source,
 )
 from pyrfu.mms.get_ts import get_ts
-
-# Local imports
 from pyrfu.pyrf.ts_append import ts_append
 
 logger = logging.getLogger(__name__)
@@ -42,6 +41,7 @@ def _split_dataset_name(dataset_name: str) -> tuple[str, Mapping[str, str]]:
         Dictionary containing the instrument, telemetry mode, level, and data type.
 
     """
+
     dataset = dataset_name.split("_")
 
     # Index of the MMS spacecraft
@@ -50,7 +50,10 @@ def _split_dataset_name(dataset_name: str) -> tuple[str, Mapping[str, str]]:
     var = {"inst": dataset[1], "tmmode": dataset[2], "lev": dataset[3]}
 
     # Data type (empty for datasets without one, e.g., mms1_fgm_srvy_l2)
-    var["dtype"] = dataset[4] if len(dataset) > 4 else ""
+    if len(dataset) > 4:
+        var["dtype"] = dataset[4]
+    else:
+        var["dtype"] = ""
 
     return probe, var
 
@@ -73,6 +76,7 @@ def _db_get_ts_dict(
     their first record in the first file that has them, without time.
 
     """
+
     mms_id, var = _split_dataset_name(dataset_name)
     resource = _resolve_source(source)
 
@@ -113,7 +117,10 @@ def _db_get_ts_dict(
                 )
                 raise
 
-            out[cdf_name] = ts_append(out[cdf_name], ts) if cdf_name in out else ts
+            if cdf_name in out:
+                out[cdf_name] = ts_append(out[cdf_name], ts)
+            else:
+                out[cdf_name] = ts
 
     return out | support
 
@@ -160,6 +167,7 @@ def db_get_ts(
         If the source is not supported.
 
     """
+
     out = _db_get_ts_dict(dataset_name, [cdf_name], tint, verbose, data_path, source)
 
     return out[cdf_name]

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 from xarray import Dataset
 
@@ -35,9 +35,12 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
         energy widths (``delta_energy_minus`` and ``delta_energy_plus``, time
         x energy) are averaged over each window, and the accumulation half
         widths (``delta_time_minus`` and ``delta_time_plus``) span it, when
-        `vdf` has them.
+        `vdf` has them. The compression indicator (``compressionloss``, 0
+        lossless, 1 lossy) of each window is its largest: an average is lossy
+        if one of its distributions is.
 
     """
+
     # Check input type
     if not isinstance(vdf, Dataset):
         raise TypeError("vdf must be a xarray.Dataset")
@@ -45,7 +48,7 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
     if n_pts is not None and (not isinstance(n_pts, int) or isinstance(n_pts, bool)):
         raise TypeError("n_pts must be an integer or None")
 
-    # More points than distributions raised "need at least one array to stack"
+    # No more points than distributions
     if n_pts is not None and not 1 <= n_pts <= len(vdf.time):
         raise ValueError(
             f"n_pts must be between 1 and the number of distributions ({len(vdf.time)})"
@@ -101,10 +104,8 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
     for k in vdf:
         vdf_avg[k].attrs = vdf[k].attrs
 
-    # Energy widths (time, energy) averaged over each window; without them
-    # (get_dist leaves them out) or per channel (energy,), as they are (they
-    # raised KeyError or TypeError, and widths per channel were sliced as
-    # times)
+    # Energy widths (time, energy) averaged over each window; left as they
+    # are when missing (get_dist leaves them out) or per channel (energy,)
     for k in ["delta_energy_minus", "delta_energy_plus"]:
         if vdf.attrs.get(k) is None:
             continue
@@ -115,6 +116,14 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
             vdf_avg.attrs[k] = np.stack(
                 [np.nanmean(widths[i_l:i_r], axis=0) for i_l, i_r in bounds]
             )
+
+    # Compression indicator (per time): lossy if one of the distributions is
+    loss = vdf.attrs.get("compressionloss")
+
+    if isinstance(loss, np.ndarray) and loss.ndim == 1 and len(loss) == n_vdf:
+        vdf_avg.attrs["compressionloss"] = np.array(
+            [np.max(loss[i_l:i_r]) for i_l, i_r in bounds]
+        )
 
     # Half widths of the accumulations: from the start of the first sample of
     # each window to the end of the last

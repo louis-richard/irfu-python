@@ -5,7 +5,7 @@
 import numpy as np
 
 # Local imports
-from pyrfu.mms._internal.vdf_bins import _check_same_bins, _like
+from pyrfu.mms._internal.vdf_bins import _check_same_bins, _like, _units, _values
 
 
 def vdf_error(vdf, counts):
@@ -17,11 +17,12 @@ def vdf_error(vdf, counts):
 
     Parameters
     ----------
-    vdf : xarray.Dataset
-        Skymap distribution (or its time average).
-    counts : xarray.Dataset
-        Its counts (``vdf_counts``, or their sum over the same windows), at
-        the same times.
+    vdf : xarray.Dataset or xarray.DataArray
+        Skymap distribution (or its time average), or a spectrum, e.g. the
+        FEEPS omni-directional intensity (`pyrfu.mms.feeps_omni`).
+    counts : xarray.Dataset or xarray.DataArray
+        Its counts (``vdf_counts``, or their sum over the same windows; for
+        FEEPS, the "counts" of `pyrfu.mms.feeps_omni`), at the same times.
 
     Returns
     -------
@@ -32,13 +33,23 @@ def vdf_error(vdf, counts):
     Raises
     ------
     TypeError
-        If `vdf` or `counts` is not a xarray.Dataset.
+        If `vdf` and `counts` are not both xarray.Dataset or both
+        xarray.DataArray.
     ValueError
         If `counts` does not have the times and the shape of `vdf`.
 
     See Also
     --------
     pyrfu.mms.vdf_counts, pyrfu.mms.vdf_one_count, pyrfu.pyrf.average_vdf
+
+    Notes
+    -----
+    The FPI fast survey distributions are lossy compressed (attribute
+    ``compressionloss`` of `get_dist`): their counts are not Poisson where
+    they are low, and do not go below a floor of about 2 per bin (Barrie et
+    al., 2017; see `get_dist`). The errors of the bins with fewer true counts
+    are then wrong; those of the burst distributions, mostly lossless, are
+    not.
 
     Examples
     --------
@@ -51,14 +62,17 @@ def vdf_error(vdf, counts):
     >>> err_avg = mms.vdf_error(vdf_avg, pyrf.average_vdf(counts_i, 5, method="sum"))
 
     """
+
     _check_same_bins(vdf, counts, "counts")
 
-    f_data = np.asarray(vdf.data.data, dtype=np.float64)
-    n_counts = np.asarray(counts.data.data, dtype=np.float64)
+    f_data = np.asarray(_values(vdf), dtype=np.float64)
+    n_counts = np.asarray(_values(counts), dtype=np.float64)
 
     with np.errstate(divide="ignore", invalid="ignore"):
         f_err = np.where(n_counts > 0.0, f_data / np.sqrt(n_counts), 0.0)
 
     f_err = np.where(np.isnan(f_data) | np.isnan(n_counts), np.nan, f_err)
 
-    return _like(vdf, f_err, vdf.data.attrs.get("UNITS"))
+    out = _like(vdf, f_err, _units(vdf))
+
+    return out

@@ -118,6 +118,7 @@ def c_4_j(
     >>> j_xyz, _, b_xyz, _, _, _ = pyrf.c_4_j(r_mms, b_mms)
 
     """
+
     # Check inputs
     for name, inp in [("r_list", r_list), ("b_list", b_list)]:
         if not isinstance(inp, (list, tuple)):
@@ -141,8 +142,7 @@ def c_4_j(
     b_avg = avg_4sc(b_list)
 
     # Positions and fields at the times of the first field and the reciprocal
-    # vectors, once for the three derivatives (three c_4_grad calls resampled
-    # them and computed the reciprocal vectors three times), as c_4_grad
+    # vectors, once for the three derivatives, as c_4_grad
     r_list = [resample(r, b_list[0]) for r in r_list]
     b_list = [resample(b, b_list[0]) for b in b_list]
     k_s = np.stack([k.data for k in c_4_k(r_list)])
@@ -171,7 +171,7 @@ def c_4_j(
     div_pb = div_t_shear.copy()
     div_pb.data -= jxb.data
 
-    # SI units (they had none)
+    # SI units
     for out, units in zip(
         [j, div_b, jxb, div_t_shear, div_pb],
         ["A/m^2", "A/m^2", "N/m^3", "N/m^3", "N/m^3"],

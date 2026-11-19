@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 
 def _power_map(power, rows, cols, n_rows, num_k):
     r"""Power summed in the bins (rows, cols) of an (n_rows, num_k) map, the
-    samples added in their order (the three numba kernels, a clipped
-    histogram)."""
+    samples added in their order."""
+
     flat = rows * num_k + cols
     out = np.bincount(flat.ravel(), weights=power.ravel(), minlength=n_rows * num_k)
     return out.reshape(n_rows, num_k)
@@ -32,7 +32,8 @@ def _power_map(power, rows, cols, n_rows, num_k):
 
 def _weighted_mean_std(x, weights):
     r"""Mean and standard deviation of `x` weighted by `weights`, NaN weights
-    left out (written for each of the seven averages)."""
+    left out."""
+
     avg = np.nansum(x * weights) / np.nansum(weights)
     std = np.sqrt(np.nansum((x - avg) ** 2 * weights) / np.nansum(weights))
     return avg, std
@@ -42,8 +43,8 @@ def _average_windows(n_t: int, cav: int):
     r"""Start indices and time positions of the contiguous windows of `cav`
     samples over which the cross spectra are averaged: the sample before the
     centre of the window for an even `cav` (as irfu-matlab), its centre for an
-    odd one (the windows were then one sample short, and one sample in each
-    window was not used)."""
+    odd one."""
+
     starts = np.arange(n_t // cav) * cav
     return starts, starts + (cav - 1) // 2
 
@@ -220,12 +221,11 @@ def fk_power_spectrum_4sc(
     r = [resample(r[i], av_times).data for i in range(4)]
 
     def window_mean(x):
-        # Average over each window of cav samples (one loop over the windows
-        # before)
+        # Average over each window of cav samples
         return np.nanmean(x[: n_av * cav].reshape(n_av, cav, num_f), axis=1)
 
-    # Cross spectra of the pairs 12, 13, 14, 23, 24 and 34 (six copies before)
-    # and power, averaged over the windows
+    # Cross spectra of the pairs 12, 13, 14, 23, 24 and 34 and power, averaged
+    # over the windows
     pairs = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
     cross = np.stack([window_mean(w_s[i] * np.conj(w_s[j])) for i, j in pairs])
     power_avg = window_mean(fk_power)
@@ -260,11 +260,8 @@ def fk_power_spectrum_4sc(
 
     k_x, k_y, k_z = [np.zeros((n_av, num_f)) for _ in range(3)]
 
-    # One linalg.solve call per averaging window (was one per (window,
-    # frequency) pair). dr depends only on ii, so scipy factors it once and
-    # solves all the finite right-hand sides (stacked as columns) in that
-    # single call: the same LAPACK routine and factorization as one solve
-    # per column.
+    # One linalg.solve call per averaging window: dr depends only on ii, and
+    # the finite right-hand sides (frequencies) are stacked as columns
     for ii in range(n_av):
         dr = np.array(
             [
@@ -410,7 +407,7 @@ def fk_power_spectrum_4sc(
     out = xr.Dataset(out_dict, attrs=attrs)
 
     # Normalised powers, wave numbers (2 pi / lambda) in 1/m, as irfu-matlab,
-    # and frequencies in Hz (none)
+    # and frequencies in Hz
     for var_name in out.data_vars:
         out[var_name].attrs["UNITS"] = ""
 

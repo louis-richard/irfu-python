@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import warnings
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
 from scipy import constants, interpolate
 
 # Local imports
+from pyrfu._core.deprecation import deprecated
 from pyrfu.pyrf.cart2sph import cart2sph
 from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.sph2cart import sph2cart
@@ -135,12 +133,21 @@ def _interp_skymap_cart(vdf, energy, phi, theta, grid_cart):
     return out_data
 
 
+@deprecated(
+    "2.5.0",
+    "3.0.0",
+    "pyrfu.mms.vdf_shift",
+    "It always uses the proton mass, and the transformed skymap is rotated by "
+    "180 degrees in azimuth: only the omni-directional spectra of proton skymaps "
+    "from pyrfu.mms.eis_skymap are correct, and the results are wrong for FPI "
+    "skymaps.",
+)
 def vdf_frame_transformation(vdf, v_gse):
     r"""Move the skymap into the desired frame associated with the bulk
     velocity `v_gse`.
 
     .. deprecated:: 2.5.0
-        `vdf_frame_transformation` will be removed in 3.0; use
+        `vdf_frame_transformation` will be removed in pyrfu 3.0.0; use
         :func:`pyrfu.mms.vdf_shift` instead. It always uses the proton mass,
         and the transformed skymap is rotated by 180 degrees in azimuth. Only
         the omni-directional spectra of proton skymaps in the angle convention
@@ -170,16 +177,6 @@ def vdf_frame_transformation(vdf, v_gse):
     _interp_skymap_cart.py, _interp_skymap_sphe.py
 
     """
-
-    warnings.warn(
-        "vdf_frame_transformation is deprecated and will be removed in 3.0; use "
-        "pyrfu.mms.vdf_shift instead. It always uses the proton mass, and the "
-        "transformed skymap is rotated by 180 degrees in azimuth: only the "
-        "omni-directional spectra of proton skymaps from pyrfu.mms.eis_skymap are "
-        "correct, and the results are wrong for FPI skymaps.",
-        FutureWarning,
-        stacklevel=2,
-    )
 
     v_gse = resample(v_gse, vdf.time)
     theta = vdf.theta.data
@@ -219,6 +216,13 @@ def vdf_frame_transformation(vdf, v_gse):
     return out
 
 
+@deprecated(
+    "2.5.0",
+    "3.0.0",
+    "pyrfu.mms.reduce",
+    "It always uses the proton mass, its outputs have the vx and vy axes swapped, "
+    "and it is wrong for axes other than the coordinate axes.",
+)
 def vdf_reduce(
     vdf,
     tint,
@@ -234,7 +238,7 @@ def vdf_reduce(
     "1d").
 
     .. deprecated:: 2.5.0
-        `vdf_reduce` will be removed in a future version; use
+        `vdf_reduce` will be removed in pyrfu 3.0.0; use
         :func:`pyrfu.mms.reduce` instead. It always uses the proton mass, its
         "1d" and "2d" outputs have the vx and vy axes swapped, and it is wrong
         for axes other than the coordinate axes.
@@ -266,15 +270,6 @@ def vdf_reduce(
         Reduced distribution.
 
     """
-
-    warnings.warn(
-        "vdf_reduce is deprecated and will be removed in a future version; use "
-        "pyrfu.mms.reduce instead. It always uses the proton mass, its outputs have "
-        "the vx and vy axes swapped, and it is wrong for axes other than the "
-        "coordinate axes.",
-        FutureWarning,
-        stacklevel=2,
-    )
 
     if v_int is None:
         v_int = [-1e6, 1e6]

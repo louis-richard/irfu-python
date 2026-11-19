@@ -60,6 +60,13 @@ def feeps_flat_field_corrections(inp_alle):
     are set to NaN, so that they are not averaged as zeros. IDL SPEDAS
     multiplies them by 0, and pyspedas leaves them uncorrected.
 
+    The factors are applied whatever the units, as IDL SPEDAS: to the
+    intensities, the count rates, the intensity errors and the counts. The
+    corrected counts are then not integers; the one-count level (intensity /
+    counts) is unchanged, and the errors are those of the corrected intensity
+    errors ("fluxerr" of `pyrfu.mms.get_feeps_alleyes`), not intensity /
+    sqrt(corrected counts).
+
     """
 
     # Spacecraft index
@@ -75,7 +82,7 @@ def feeps_flat_field_corrections(inp_alle):
         sensor, eye = sensors_eye.split("-")
         correction = g_corr.get(f"mms{mms_id}-{sensor[:3]}{int(eye)}", 1.0)
 
-        # a gain of 0 means no calibration: NaN rather than zeros
+        # A gain of 0 means no calibration: NaN rather than zeros
         if correction == 0:
             correction = np.nan
 

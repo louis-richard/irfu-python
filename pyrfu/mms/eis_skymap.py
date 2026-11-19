@@ -4,9 +4,8 @@
 # 3rd party imports
 import numpy as np
 
-from ..pyrf.ts_skymap import ts_skymap
-
 # Local imports
+from ..pyrf.ts_skymap import ts_skymap
 from .vdf_convert import _DPF, vdf_convert
 
 
@@ -31,9 +30,9 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
     Raises
     ------
     ValueError
-        With `to_psd`, if `inp_ang_ang` is not a differential particle flux
-        (``UNITS``), as :func:`pyrfu.mms.feeps_skymap` (KeyError without
-        ``UNITS``).
+        With `to_psd`, if the ``UNITS`` of `inp_ang_ang` are not those of a
+        differential particle flux, or missing, as
+        :func:`pyrfu.mms.feeps_skymap`.
 
     See Also
     --------
@@ -41,7 +40,7 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
 
     """
 
-    # Units of the distribution, none without (KeyError)
+    # Units of the distribution, None without
     units = inp_ang_ang.attrs.get("UNITS")
 
     if to_psd and str(units).lower() not in _DPF:
@@ -67,9 +66,9 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
     }
     coords_attrs["energy"]["UNITS"] = "eV"
 
-    # The global attributes of the files, none without (KeyError)
+    # The global attributes of the files, if any
     glob_attrs = inp_ang_ang.attrs.get("GLOBAL", {})
-    # Energy widths in eV, as the energies (they were left in keV)
+    # Energy widths in eV, as the energies
     glob_attrs = {
         "delta_energy_plus": 1e3 * np.asarray(inp_ang_ang.attrs["delta_energy_plus"]),
         "delta_energy_minus": 1e3 * np.asarray(inp_ang_ang.attrs["delta_energy_minus"]),
@@ -77,8 +76,9 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
         **glob_attrs,
     }
 
-    # Same energy table at all times (a single time raised IndexError)
-    energy0, energy1 = energy[0, :], energy[0, :]
+    # Same energy table at all times
+    energy0 = energy[0, :]
+    energy1 = energy[0, :]
     e_step_table = np.zeros(len(time_data))
 
     out = ts_skymap(
@@ -99,8 +99,7 @@ def eis_skymap(inp_ang_ang, to_psd: bool = True):
 
     out.energy.data *= 1e3
 
-    # Phase-space density in s^3/cm^6, as FPI and feeps_skymap (it was in
-    # s^3/m^6, from dpf2psd)
+    # Phase-space density in s^3/cm^6, as FPI and feeps_skymap
     if to_psd:
         out = vdf_convert(out, "s^3/cm^6")
 

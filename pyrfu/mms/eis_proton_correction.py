@@ -12,6 +12,7 @@ from pyrfu.mms._internal.epd import _check_flux
 def _phxtof_calibration(energy, alpha, beta, gamma):
     r"""Pulse Height x Time Of Flight correction model from EPD Data Product
     Guide"""
+
     return 1 / (0.5 * (1 + alpha * (np.tanh((energy - beta) / gamma) + 1)))
 
 
@@ -100,8 +101,8 @@ def eis_proton_correction(flux_eis):
             out_dict[scope] = flux_eis[scope].copy()
             out_dict[scope].data *= eis_corr
 
-        # With the attributes of the Dataset (lost: the energy widths, on which
-        # eis_omni then eis_moments raised, and the species)
+        # With the attributes of the Dataset (energy widths and species, needed
+        # by eis_omni and eis_moments)
         flux_eis_corr = xr.Dataset(out_dict, attrs=dict(flux_eis.attrs))
     else:
         # Apply correction to omni-directional energy spectrum

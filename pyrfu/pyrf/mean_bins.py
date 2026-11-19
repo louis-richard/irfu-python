@@ -36,7 +36,7 @@ def _bin_stat(inp0, inp1, bins, func):
         "bins": (x_edge[:-1] + x_edge[1:]) / 2,
     }
 
-    # The statistics in the units of inp1, the bins in those of inp0 (none)
+    # The statistics in the units of inp1, the bins in those of inp0
     out = xr.Dataset(out_dict)
 
     for name, inp in [("data", inp1), ("sigma", inp1), ("bins", inp0)]:

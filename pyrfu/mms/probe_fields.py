@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 from xarray import DataArray, Dataset
@@ -171,7 +172,8 @@ def probe_fields(
     v_1, v_2, v_3, v_4, v_5, v_6 = pot.T
 
     # Spacecraft potential estimated by each spin-plane boom
-    v_sc12, v_sc34 = (v_1 + v_2) / 2, (v_3 + v_4) / 2
+    v_sc12 = (v_1 + v_2) / 2
+    v_sc34 = (v_3 + v_4) / 2
     v_sc = (v_sc12 + v_sc34) / 2
 
     # Single-probe fields (mV/m): each probe against the estimate of the

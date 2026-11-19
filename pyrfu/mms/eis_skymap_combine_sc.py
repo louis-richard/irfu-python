@@ -7,9 +7,8 @@ import warnings
 # 3rd party imports
 import numpy as np
 
-from pyrfu._core.time import _ns
-
 # Local imports
+from pyrfu._core.time import _ns
 from pyrfu.mms._internal.epd import _common_attrs
 
 from ..pyrf.ts_skymap import ts_skymap
@@ -62,6 +61,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
     pyrfu.mms.eis_spec_combine_sc, pyrfu.mms.eis_spec_combine_sc
 
     """
+
     if method.lower() not in ["mean", "sum"]:
         raise ValueError(f"method must be mean or sum, not {method}")
 
@@ -92,7 +92,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
         np.nan,
     )
 
-    # Nearest skymaps and closest channels (they were paired by index)
+    # Nearest skymaps and closest channels
     for i_s, skymap in enumerate(skymaps):
         t_sky = _ns(skymap.time.data)
         idx_time = _nearest(t_ref, t_sky, d_t / 2)
@@ -109,7 +109,7 @@ def eis_skymap_combine_sc(skymaps, method: str = "mean"):
             # Average the four spacecraft
             allmms_skymap_avg = np.nanmean(allmms_skymap, axis=-1)
         else:
-            # Sum the four spacecraft, NaN without data (it was 0)
+            # Sum the four spacecraft, NaN without data
             allmms_skymap_avg = np.nansum(allmms_skymap, axis=-1)
             allmms_skymap_avg[np.all(np.isnan(allmms_skymap), axis=-1)] = np.nan
 

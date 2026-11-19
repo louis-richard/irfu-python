@@ -189,10 +189,10 @@ class CacheReadTestCase(_CacheTestCase):
 
     def test_read(self):
         # Fetched once, then from the cache, in the layout of the SDC; the
-        # sub-directory of the source is for the user only (all the levels
-        # below were 0755: os.makedirs gives its mode to the last one), the
-        # cache directory is left as it is (here readable by the group, in
-        # the private temporary directory of the test); a read is a use
+        # sub-directory of the source is for the user only (os.makedirs gives
+        # its mode to the last level only), the cache directory is left as it
+        # is (here readable by the group, in the private temporary directory
+        # of the test); a read is a use
         os.makedirs(self.dir, mode=0o740)
         os.chmod(self.dir, 0o740)
         fetch = mock.Mock(return_value=b"cdf")

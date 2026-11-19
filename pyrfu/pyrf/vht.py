@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 import logging
 
+# 3rd party imports
 import numpy as np
 
 # Local imports
@@ -68,7 +69,10 @@ def vht(e, b, no_ez: bool = False):
         b = resample(b, e)
 
     # assume only Ex and Ey: put z component to 0 when using only Ex and Ey
-    n_comp = 2 if no_ez else 3
+    if no_ez:
+        n_comp = 2
+    else:
+        n_comp = 3
 
     # Samples where E and B are finite, used for all the averages
     valid = np.all(np.isfinite(b.data), axis=1)

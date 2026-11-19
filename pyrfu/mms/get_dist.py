@@ -50,7 +50,44 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
         ``delta_time_minus`` and ``delta_time_plus`` (time,), as the
         irfu-matlab ``dt_minus`` and ``dt_plus``. The energy widths of the
         channels are ``delta_energy_minus`` and ``delta_energy_plus``, when
-        the file has them.
+        the file has them. The attribute ``compressionloss`` (time,) is the
+        compression indicator of each distribution of the file: 0 lossless, 1
+        lossy, when the file has it: one per distribution in burst mode, the
+        indicator of the file for all its distributions in fast survey
+        (`pyrfu.pyrf.resample` interpolates it as the other per-time
+        attributes, to a fraction between 0 and 1).
+
+    Notes
+    -----
+    The FPI distributions are compressed on board (CCSDS 122.0 wavelet
+    compression, Barrie et al., 2017 [1]_). The fast survey distributions, the
+    sums of 4.5 s of burst distributions, are compressed 16.7 times and are
+    always lossy (``compressionloss`` 1): their counts are not Poisson where
+    they are low, and do not go below a floor of about 2 counts per bin
+    ("noise floor" of Barrie et al., 2017; artifacts of 2 to 3 counts, da
+    Silva et al., 2020 [2]_). On 2017-07-11 (MMS3 electrons, plasma sheet), the
+    fast survey omni-directional spectrum is 1.7 to 2.8 times the burst one
+    at 21 and 27.5 keV, where the true counts are below 2 per bin and 4.5 s.
+    In five plasma-sheet intervals of 2017 (MMS3 electrons), the fast survey
+    density is within 1 % of that of the burst distributions averaged over
+    the same 4.5 s, the temperature within about 1 % (6.5 % in a tenuous, hot
+    interval), the heat flux 7 to 23 % higher (median) and the bulk velocity
+    has a spin tone of 20 to 120 km/s.
+    Most burst distributions are lossless since late 2016 (about 95 % of
+    them, da Silva et al., 2020). The counts, errors and one-count levels of
+    the low-count bins (`vdf_counts`, `vdf_error`, `vdf_one_count`,
+    `psd_moments_err`) are then those of the burst distributions.
+
+    References
+    ----------
+    .. [1] Barrie, A. C., et al. (2017), Performance of a space-based wavelet
+       compressor for plasma count data on the MMS Fast Plasma Investigation,
+       J. Geophys. Res. Space Physics, 122, 765-779,
+       doi:10.1002/2016JA022645.
+    .. [2] da Silva, D., et al. (2020), Neural network repair of lossy
+       compression artifacts in the September 2015 to March 2016 duration of
+       the MMS/FPI data set, J. Geophys. Res. Space Physics, 125,
+       e2019JA027181, doi:10.1029/2019JA027181.
 
     """
 
@@ -65,8 +102,7 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
             "Couldn't get the particle species from file name!!",
         )
 
-    # Time interval, in the forms of time_clip (a tuple, datetime.datetime
-    # and a time series raised TypeError), checked before reading the file
+    # Time interval (forms of time_clip), checked before reading the file
     if tint is None:
         tint = ["1995-10-06T18:50:00.000000000", "2200-10-06T18:50:00.000000000"]
 
@@ -102,8 +138,8 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
     dist = np.transpose(file[cdf_name].values, [0, 3, 1, 2])
     _, n_energy, n_phi, n_theta = dist.shape
 
-    # Tables of one record (non-record-varying) or of all records; reshaped
-    # rather than squeezed, which made those of a single record 1-D
+    # Tables of one record (non-record-varying) or of all records, reshaped
+    # (squeeze would make those of a single record 1-D)
     phi = file[depends_keys[1]].values.reshape(-1, n_phi)
     theta = file[depends_keys[2]].values.reshape(n_theta)
     energy = file[depends_keys[3]].values.reshape(-1, n_energy)
@@ -152,11 +188,25 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
 
     d_en_name = _fpi_name(cdf_name, "energy_delta")
 
-    # Energy widths, left out of the files without them (they were None, which
-    # the routines that check for the attribute, e.g. reduce, took as given)
+    # Energy widths, left out (not None) for the files without them, as the
+    # routines, e.g. reduce, check for the attribute
     if d_en_name in z_vars:
         glob_attrs["delta_energy_plus"] = file[d_en_name].values
         glob_attrs["delta_energy_minus"] = file[d_en_name].values
+
+    # Compression indicator of each distribution: 0 lossless, 1 lossy; one
+    # per record in burst, one per file (non-record-varying, "at survey-start
+    # time") in fast survey, then for all its distributions
+    compression_name = _fpi_name(cdf_name, "compressionloss")
+
+    if compression_name in z_vars and times.size:
+        loss = np.asarray(file[compression_name].values).ravel()
+
+        if loss.size == 1:
+            loss = np.full(len(times), loss[0], dtype=loss.dtype)
+
+        if loss.size == len(times):
+            glob_attrs["compressionloss"] = loss
 
     # Half widths of the accumulation (s) around the (centred) times, as
     # irfu-matlab dt_minus and dt_plus

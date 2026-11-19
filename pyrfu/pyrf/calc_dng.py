@@ -71,6 +71,7 @@ def calc_dng(p_xyz: DataArray) -> DataArray:
     >>> d_ng_e = pyrf.calc_dng(p_fac_e_pp)
 
     """
+
     # Check input type
     if not isinstance(p_xyz, xr.DataArray):
         raise TypeError("p_xyz must be a xarray.DataArray")

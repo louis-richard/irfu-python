@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -16,7 +17,8 @@ def _movmean(inp, n_mov_mean):
     # the ends): a window length k (centred, k // 2 back and (k - 1) // 2
     # forward) or [back, forward]
     if np.ndim(n_mov_mean) == 0:
-        back, forward = int(n_mov_mean) // 2, (int(n_mov_mean) - 1) // 2
+        back = int(n_mov_mean) // 2
+        forward = (int(n_mov_mean) - 1) // 2
     else:
         back, forward = (int(n) for n in n_mov_mean)
 
@@ -77,6 +79,7 @@ def vdf_find_low_counts(
     >>> vdf_i = mms.vdf_mask(vdf_i, below=e_low)
 
     """
+
     if output not in ["energy", "mat"]:
         raise ValueError(f"Invalid output {output}: energy or mat")
 

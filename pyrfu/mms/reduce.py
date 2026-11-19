@@ -4,7 +4,7 @@
 # Built-in imports
 import numbers
 
-# Third party imports
+# 3rd party imports
 import numpy as np
 import tqdm
 import xarray as xr
@@ -23,6 +23,7 @@ from pyrfu.pyrf.ts_scalar import ts_scalar
 def _energy_widths(vdf, key):
     r"""Energy widths of the channels (time, energy): the attribute `key`, the
     same at all times if given per channel (e.g. the EIS skymaps), else 0."""
+
     shape = (len(vdf.time.data), len(vdf.idx0.data))
     widths = np.asarray(vdf.attrs.get(key, 0.0), dtype=np.float64)
 
@@ -36,6 +37,7 @@ def _energy_widths(vdf, key):
 def _angle_widths(vdf, theta, tint):
     r"""Polar bands and azimuthal widths of the bins from the delta_theta_* and
     delta_phi_* attributes (degrees), or None if the distribution has none."""
+
     keys = ["delta_theta_minus", "delta_theta_plus"]
     keys += ["delta_phi_minus", "delta_phi_plus"]
 
@@ -63,6 +65,20 @@ def _angle_widths(vdf, theta, tint):
     }
 
 
+def _time_seed(seed, i_t):
+    r"""Seed of the Monte-Carlo particles at the time i_t from `seed` (None
+    without seed): one per time, so that the Monte-Carlo noise of the times is
+    independent."""
+
+    if seed is None:
+        return None
+
+    if isinstance(seed, bool) or not isinstance(seed, (int, np.integer)) or seed < 0:
+        raise ValueError(f"seed must be a non-negative integer, not {seed!r}")
+
+    return int(np.random.SeedSequence([int(seed), i_t]).generate_state(1)[0])
+
+
 def reduce(
     vdf,
     xyz,
@@ -80,6 +96,7 @@ def reduce(
     v_int=(-np.inf, np.inf),
     a_int=(-180.0, 180.0),
     verbose=True,
+    seed: int | None = None,
 ):
     r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
 
@@ -128,6 +145,11 @@ def reduce(
         default).
     verbose : bool, Optional
         Show a progress bar. Default True.
+    seed : int, Optional
+        Seed of the Monte-Carlo particles (a non-negative integer), a
+        different one at each time derived from it: the same seed gives the
+        same result (bit for bit with the same number of numba threads).
+        Default is None, a different draw at each call.
 
     Returns
     -------
@@ -174,7 +196,8 @@ def reduce(
     """
 
     # Make sure the projection dimension and base are correct
-    base, dim = base.lower(), dim.lower()
+    base = base.lower()
+    dim = dim.lower()
 
     if base not in ["cart", "pol"]:
         raise ValueError(f'base must be "pol" or "cart", not {base!r}')
@@ -186,17 +209,16 @@ def reduce(
 
     # Clip the distribution. If no time interval provided use the entire
     # time series.
-    # Note: irfu-matlab does the rotation matrix first and then time clip but here
-    # we do time clip first to save computation time if the time interval is
-    # smaller than the VDF time series.
+    # Note: irfu-matlab does the rotation matrix first and then time clip but
+    # here we do time clip first to save computation time if the time interval
+    # is smaller than the VDF time series.
     vdf_time = vdf.time
     if tint is None:
         tint = list(datetime642iso8601(vdf_time.data[[0, -1]]))
 
     vdf_time = time_clip(vdf_time, tint)
     vdf_energy = time_clip(vdf.energy, tint).copy()
-    # Azimuths of each time, or of all times (1-D: time_clip raised
-    # AttributeError)
+    # Azimuths of each time, or of all times (1-D, not clipped)
     vdf_phi = vdf.phi.copy()
 
     if "time" in vdf_phi.dims:
@@ -236,7 +258,6 @@ def reduce(
 
     # The relativistic phase-space density, integrated with the relativistic
     # speeds: that of the FPI, HPCA and EIS files times 2 gamma^5 / (gamma + 1)
-    # (it was integrated as it is, slightly inconsistent for the electrons)
     if not _is_relativistic(vdf):
         energy_tv = np.asarray(vdf_energy.data, dtype=np.float64)
         energy_tv = np.broadcast_to(energy_tv, vdf_data.shape[:2])
@@ -257,7 +278,7 @@ def reduce(
         # If matrix, tile to VDF timeline
         xyz = np.tile(xyz, (n_t, 1, 1))
     elif isinstance(xyz, np.ndarray) and xyz.ndim == 3:
-        # One matrix per time (TypeError)
+        # One matrix per time
         if xyz.shape != (n_t, 3, 3):
             raise ValueError(
                 f"xyz must be (n_t, 3, 3) with the {n_t} times of the "
@@ -284,7 +305,8 @@ def reduce(
 
     # Read the keyword arguments
     # Velocity projection grid and edges
-    velocity_grid, velocity_grid_edges = vg, vg_edges
+    velocity_grid = vg
+    velocity_grid_edges = vg_edges
 
     # azimuthal angle of projection plane (phi is (time, phi) in burst mode)
     n_phi_grid = vdf_phi.shape[-1]
@@ -314,8 +336,7 @@ def reduce(
     else:
         raise TypeError("Invalid lower_e_lim!!")
 
-    # Mass of the species of the VDF (attribute "species"); it was the proton
-    # mass for all the ions (and other species than "ions" raised)
+    # Mass of the species of the VDF (attribute "species")
     m_p = _mass(vdf)
 
     # Maximum speed of the instrument (relativistically correct): the upper
@@ -338,7 +359,10 @@ def reduce(
     else:
         n_vg = 100
         if base == "pol":
-            n_vg = 2 * n_en if ndim == 1 else n_en
+            if ndim == 1:
+                n_vg = 2 * n_en
+            else:
+                n_vg = n_en
 
     # Initialize output arrays
     f_g = np.zeros([n_t, *[n_vg] * ndim])
@@ -349,9 +373,8 @@ def reduce(
     computed = np.zeros(n_t, dtype=bool)
 
     for i_t in tqdm.tqdm(range(n_t), ncols=60, disable=not verbose):
-        # 3d data matrix for time index
-        # (energy, phi, theta) of the time (np.squeeze, as MATLAB's squeeze,
-        # also removed a single azimuth or polar bin: ValueError)
+        # 3d data matrix (energy, phi, theta) for time index, not squeezed (a
+        # single azimuth or polar bin is kept)
         f_3d = vdf_data.data[i_t]  # s^3/m^6
         f_3d = f_3d.astype(np.float64).copy()  # Convert to float64
 
@@ -371,7 +394,7 @@ def reduce(
 
         f_3d[: above[0]] = 0.0
 
-        # Energy at infinity, E + q V (the ions lost e V)
+        # Energy at infinity, E + q V
         energy += q_sc_pot[i_t]
         energy[energy < 0] = 0.0
 
@@ -436,6 +459,7 @@ def reduce(
             "projection_dim": dim,
             "projection_base": base,
             "velocity_grid_edges": velocity_grid_edges,
+            "seed": _time_seed(seed, i_t),
             **speed_widths,
             **angle_options,
         }
@@ -467,7 +491,7 @@ def reduce(
     ]
     dims = ["time", *[f"v{chr(120 + i)}" for i in range(ndim)]]
     # SI units, s^3/m^6 integrated over 3 - ndim velocity components in m/s;
-    # velocities in km/s (none)
+    # velocities in km/s
     out = xr.DataArray(
         f_g,
         coords=coords,

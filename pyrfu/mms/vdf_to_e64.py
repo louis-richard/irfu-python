@@ -39,6 +39,7 @@ def vdf_to_e64(vdf_e32):
     (``energy0`` equal to ``energy1``) is returned unchanged.
 
     """
+
     energy0 = vdf_e32.attrs.get("energy0")
     energy1 = vdf_e32.attrs.get("energy1")
 
@@ -64,8 +65,8 @@ def vdf_to_e64(vdf_e32):
         k: dict(vdf_e32[k].attrs) for k in ["time", "energy", "phi", "theta"]
     }
 
-    # Global attributes (copy: the 64-channel delta energies must not overwrite the
-    # caller's)
+    # Global attributes (copy: the 64-channel delta energies must not overwrite
+    # the caller's)
     glob_attrs = dict(vdf_e32.attrs)
 
     # Half widths of the accumulations: from the start of the first sample of
@@ -94,9 +95,8 @@ def vdf_to_e64(vdf_e32):
         energy_minus = 10**log10_energy_minus
         delta_energy_plus = energy_plus - energy_r
         delta_energy_minus = abs(energy_minus - energy_r)
-        # Outer edges (top and bottom channels) from the 32-channel widths. The
-        # arrays are (time, energy): [-1] and [0] overwrote time steps. The
-        # widths of the input are (time, energy) or (energy,) (IndexError)
+        # Outer edges (top and bottom channels, at all times) from the
+        # 32-channel widths, (time, energy) or (energy,)
         delta_energy_plus[:, -1] = np.max(
             np.asarray(vdf_e32.attrs["delta_energy_plus"])[..., -1]
         )

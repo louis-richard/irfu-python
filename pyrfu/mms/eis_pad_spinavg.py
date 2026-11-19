@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# 3rd party imports
+# Built-in imports
 from typing import Literal
 
+# 3rd party imports
 import numpy as np
 import xarray as xr
 
@@ -51,13 +52,14 @@ def eis_pad_spinavg(inp, spin_nums, method: Literal["mean", "sum"] | None = None
     pyrfu.mms.get_eis_allt, pyrfu.mms.eis_pad
 
     """
+
     if method is None:
         method = inp.attrs.get("method", "mean")
 
     if method not in ["mean", "sum"]:
         raise ValueError(f"method must be 'mean' or 'sum', not {method!r}")
 
-    # On the times of inp (a PAD of a sub-interval was misaligned silently)
+    # spin_nums must be on the times of inp
     same_times = len(spin_nums) == len(inp.time)
 
     if same_times and "time" in getattr(spin_nums, "coords", {}):

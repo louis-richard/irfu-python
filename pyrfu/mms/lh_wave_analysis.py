@@ -168,8 +168,7 @@ def lh_wave_analysis(
     # cos(theta) e_1 + sin(theta) e_2. That potential is linear in (cos theta,
     # sin theta), phi_1 cos(theta) + phi_2 sin(theta), so that the
     # correlations of all the directions follow from sums of phi_1, phi_2 and
-    # phi_B (the potential and the time_clip were computed for each of the 361
-    # directions)
+    # phi_B
     dt_e_fac = calc_dt(e_fac)
     thetas = np.linspace(0, 2 * np.pi, 361)
 
@@ -179,9 +178,11 @@ def lh_wave_analysis(
         ).data
         for k in range(2)
     ]
-    phi_1, phi_2 = phi_1 - np.mean(phi_1), phi_2 - np.mean(phi_2)
+    phi_1 = phi_1 - np.mean(phi_1)
+    phi_2 = phi_2 - np.mean(phi_2)
 
-    cos_t, sin_t = np.cos(thetas), np.sin(thetas)
+    cos_t = np.cos(thetas)
+    sin_t = np.sin(thetas)
     corrs = cos_t * np.sum(phi_bs.data * phi_1) + sin_t * np.sum(phi_bs.data * phi_2)
     corrs /= np.sqrt(
         np.sum(phi_bs.data**2)

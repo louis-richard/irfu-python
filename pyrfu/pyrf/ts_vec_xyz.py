@@ -43,6 +43,7 @@ def ts_vec_xyz(
         length.
 
     """
+
     # Check input type
     if not isinstance(time, np.ndarray):
         raise TypeError("time must be a numpy.ndarray")

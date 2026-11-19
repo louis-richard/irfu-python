@@ -18,7 +18,7 @@ from . import generate_timeline
 @ddt
 class IgrfTestCase(unittest.TestCase):
     def test_igrf_datetime64(self):
-        # datetime64 times as their unix seconds (UFuncTypeError)
+        # Times in datetime64 as their unix seconds
         time = np.datetime64("2019-01-01T00:00:00", "ns") + np.arange(
             3
         ) * np.timedelta64(1, "h")
@@ -90,10 +90,11 @@ class IgrfTestCase(unittest.TestCase):
 @ddt
 class MagnetopauseNormalTestCase(unittest.TestCase):
     def test_magnetopause_normal_pressure_mach(self):
-        # p_sw <= 0 (ZeroDivisionError) and a bow shock at M_A <= 1 (the
-        # Farris and Russell standoff diverges at 1, negative below: -37.9 RE
-        # at 0.8) raise ValueError
-        r_mp, r_bs = np.array([10.0, 2.0, 0.0]), np.array([20.0, 2.0, 0.0])
+        # p_sw <= 0 and a bow shock at M_A <= 1 (the Farris and Russell
+        # standoff diverges at 1, negative below: -37.9 RE at 0.8) raise
+        # ValueError
+        r_mp = np.array([10.0, 2.0, 0.0])
+        r_bs = np.array([20.0, 2.0, 0.0])
 
         for model in ["mp_shue1997", "mp_shue1998", "bs97", "bs98"]:
             with self.subTest(model=model), self.assertRaisesRegex(ValueError, "p_sw"):
@@ -146,7 +147,7 @@ class MagnetopauseNormalTestCase(unittest.TestCase):
 
     def test_magnetopause_normal_axisymmetric(self):
         # The model is symmetric about the x axis: the distance depends only
-        # on x and sqrt(y**2 + z**2), and the normal is a unit vector.
+        # on x and sqrt(y**2 + z**2), and the normal is a unit vector
         for r_gsm in [[8.0, 5.0, 0.0], [8.0, 0.0, 5.0], [8.0, 3.0, -4.0]]:
             result = models.magnetopause_normal(np.array(r_gsm), -2.0, 2.0)
             self.assertAlmostEqual(result[0], 1.056268, places=5)
@@ -161,7 +162,7 @@ class MagnetopauseNormalTestCase(unittest.TestCase):
 
     def test_magnetopause_normal_bow_shock_values(self):
         # The normal is rotated about the x axis with the position, including
-        # in the z = 0 plane and on the x axis.
+        # in the z = 0 plane and on the x axis
         n_vec_0 = [0.99479552, 0.10189149]
         for r_gsm, n_vec in [
             ([20.0, 0.0, 3.0], [n_vec_0[0], 0.0, n_vec_0[1]]),

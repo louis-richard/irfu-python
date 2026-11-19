@@ -71,7 +71,7 @@ def struct_func(inp, scales, order):
 
     _, *comp = [inp.coords[dim].data for dim in inp.dims]
 
-    # One row per scale, even for a single scale (it was squeezed out)
+    # One row per scale, even for a single scale
     result = xr.DataArray(
         np.stack(result).reshape(len(scales), *inp.shape[1:]),
         coords=[scales, *comp],

@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -43,8 +41,8 @@ COEFFS_I: dict[float, dict[str, tuple]] = {
 
 
 def _thresh_e(beta_para: np.ndarray, s: float, alpha: float) -> np.ndarray:
-    # 1 + s * beta_para ** -alpha, NaN for beta_para <= 0 (undefined). The input
-    # is not modified, as it is shared by all the instabilities.
+    # 1 + s * beta_para ** -alpha, NaN for beta_para <= 0 (undefined). The
+    # input is not modified, as it is shared by all the instabilities.
     beta_pos = np.where(beta_para > 0, beta_para, np.nan)
     t_aniso = 1 + s * beta_pos**-alpha
     return t_aniso

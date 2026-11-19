@@ -52,6 +52,7 @@ def colorbar(
         If `where` is not "right", "left", "top" or "bottom".
 
     """
+
     if where not in _RECTS:
         raise ValueError(f"where must be right, left, top or bottom, not {where!r}")
 
@@ -62,7 +63,11 @@ def colorbar(
         mappable, cax=cax, orientation="vertical" if vertical else "horizontal"
     )
 
-    side = cax.yaxis if vertical else cax.xaxis
+    if vertical:
+        side = cax.yaxis
+    else:
+        side = cax.xaxis
+
     side.set_ticks_position(where)
     side.set_label_position(where)
 

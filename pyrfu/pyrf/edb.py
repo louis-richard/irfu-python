@@ -112,8 +112,7 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
 
     b_data = b_bgd.data
     e_data = e_xyz.data.copy()  # Ez is overwritten: don't change the caller's E
-    # Ez is not read (irfu-matlab): set, so that a NaN input Ez is the default
-    # value too (NaN * 0 was NaN)
+    # Ez is not read (irfu-matlab): the default value, even for a NaN input
     e_data[:, -1] = default_value
 
     # Elevation (degrees) of B above the spin plane
@@ -121,7 +120,7 @@ def edb(e_xyz, b_bgd, angle_lim: float = 20.0, flag_method: str = "E.B=0"):
         np.arctan2(b_data[:, 2], np.linalg.norm(b_data[:, :2], axis=1))
     )
 
-    # (in steps on e_data, rounded to its type, as before)
+    # In steps on e_data, rounded to its type
     if flag_method.lower() == "e.b=0":
         # E.B = 0 where B is far enough from the spin plane
         ind = np.abs(b_angle) > angle_lim

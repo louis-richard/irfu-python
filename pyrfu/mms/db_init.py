@@ -32,13 +32,15 @@ def _user_config_path() -> str:
     (e.g. ~/Library/Application Support/pyrfu on macOS, ~/.config/pyrfu on Linux).
     It is created from the package configuration file the first time, and the
     package file is used if the user directory cannot be written."""
+
     return user_config_path("mms_config.json", _PACKAGE_CFG_PATH)
 
 
 def _mms_cfg_path() -> str:
     r"""Path of the MMS configuration: MMS_CFG_PATH if set on the module (e.g.
-    patched), else the user configuration file, created on first use (import
-    pyrfu created it)."""
+    patched), else the user configuration file, created on first use (not at
+    import)."""
+
     return globals().get("MMS_CFG_PATH") or _user_config_path()
 
 
@@ -57,6 +59,7 @@ SDC_SERVICE = "mms-sdc"
 def _secure_keyring():
     r"""System keyring (e.g. macOS Keychain, Windows Credential Locker, Secret
     Service) if one is available, None otherwise."""
+
     backend = keyring.get_keyring()
     backends = backend.backends if isinstance(backend, ChainerBackend) else [backend]
 
@@ -70,8 +73,13 @@ def _get_credential(username: str):
     r"""MMS SDC credential of username, from the system keyring or, for the
     credentials saved by previous versions or without system keyring, from the
     plaintext keyring file."""
+
     secure = _secure_keyring()
-    credential = secure.get_credential(SDC_SERVICE, username) if secure else None
+
+    if secure:
+        credential = secure.get_credential(SDC_SERVICE, username)
+    else:
+        credential = None
 
     if credential is None:
         credential = PlaintextKeyring().get_credential(SDC_SERVICE, username)
@@ -82,6 +90,7 @@ def _get_credential(username: str):
 def _set_password(username: str, password: str) -> None:
     r"""Save the MMS SDC credential in the system keyring, or in the plaintext
     keyring file (with a warning) if there is no system keyring."""
+
     secure = _secure_keyring()
     plaintext = PlaintextKeyring()
 
@@ -119,6 +128,7 @@ def _config_stamp():
     r"""Path, inode, modification time and size of the MMS configuration file
     (path only if it can't be read): the key of the caches of the
     configuration. db_init writes a new file (new inode) every time."""
+
     path = _mms_cfg_path()
 
     try:
@@ -133,6 +143,7 @@ def _read_config() -> dict:
     r"""Current MMS configuration, completed with the default settings: the one
     reader of the configuration file, read again when it changes (e.g., after
     db_init). Returns a copy, so that callers cannot change the cache."""
+
     return copy.deepcopy(_read_config_cached(_config_stamp()))
 
 
@@ -170,6 +181,7 @@ def _set_cache(config, enabled, size, max_age, directory):
     r"""Sets the given cache settings of `config` (checked). A directory is
     saved as an absolute path, so that the cache is the same from every
     working directory."""
+
     if enabled is not None and not isinstance(enabled, bool):
         raise TypeError(f"cache must be True or False, not {enabled!r}")
 
@@ -299,7 +311,11 @@ def db_init(
     >>> mms.db_init(cache=False)
 
     """
-    config = copy.deepcopy(_DEFAULT_CONFIG) if reset else _read_config()
+
+    if reset:
+        config = copy.deepcopy(_DEFAULT_CONFIG)
+    else:
+        config = _read_config()
 
     # Check and set the given settings only
     if default is not None:
@@ -359,6 +375,5 @@ def db_init(
     path = _mms_cfg_path()
     logger.info("Updating MMS data access configuration in %s...", path)
 
-    # At once: a write that fails leaves the previous configuration (a partial
-    # file was read as the default settings)
+    # Write at once: a failed write leaves the previous configuration
     write_config(path, config)

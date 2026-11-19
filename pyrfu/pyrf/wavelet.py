@@ -217,7 +217,7 @@ def wavelet(
         data = data[:, np.newaxis]
 
     # NaN (and inf) samples set to 0 for the FFT and back to NaN in the
-    # output, as irf_wavelet (one NaN made the whole transform NaN)
+    # output, as irf_wavelet
     idx_nan = ~np.isfinite(data)
     data[idx_nan] = 0.0
 
@@ -242,8 +242,7 @@ def wavelet(
             w_w, axis=0, overwrite_x=True, workers=os.cpu_count()
         )
 
-        # Calculate the power spectrum, with the frequencies of the columns
-        # broadcast along time (they were tiled to the size of power)
+        # Calculate the power spectrum, the frequencies broadcast along time
         power2: NDArray[np.float64 | np.complex128]
 
         if return_power:
@@ -283,7 +282,7 @@ def wavelet(
         )
 
     # Units squared per Hz for the power, per square root of Hz for the complex
-    # coefficients (none)
+    # coefficients
     if return_power:
         units = _ratio(_power(_units(inp), 2), "Hz")
     else:

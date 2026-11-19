@@ -9,19 +9,19 @@ import numpy as np
 import xarray as xr
 from scipy import signal
 
-# local imports
+# Local imports
 from pyrfu.pyrf.calc_fs import calc_fs
 
 
 # noinspection PyTupleAssignmentBalance
 def _ellip_coefficients(f_min, f_max, order):
-    # Filters are designed as second-order sections (sos) rather than
-    # transfer-function polynomials (b, a), which are numerically unstable
-    # for high orders and low normalised cutoffs.
+    # Second-order sections, as (b, a) is unstable at high orders, low cutoffs
     sos1, sos2 = [None] * 2
 
     # fact defines the width between stopband and passband
-    r_p, r_s, fact = 0.5, 60, 1.1
+    r_p = 0.5
+    r_s = 60
+    fact = 1.1
 
     if f_min == 0:
         if order == -1:
@@ -62,8 +62,8 @@ def _ellip_coefficients(f_min, f_max, order):
 
 
 def _sos_padlen(sos):
-    # Same padding as MATLAB's filtfilt (and the former (b, a) implementation):
-    # 3 * filter order. Odd orders have one section with b2 = a2 = 0.
+    # Same padding as MATLAB's filtfilt, 3 * filter order (an odd order has one
+    # section with b2 = a2 = 0)
     n_trailing = min(np.sum(sos[:, 2] == 0), np.sum(sos[:, 5] == 0))
     return 3 * (2 * len(sos) - n_trailing)
 
@@ -150,16 +150,15 @@ def filt(inp, f_min: float = 0.0, f_max: float = 0.0, order: int = -1):
     if f_min >= 1.0:
         raise ValueError("f_min must be smaller than the Nyquist frequency!")
 
-    # An upper cutoff at or above the Nyquist frequency is no cutoff at all
-    # (and Wn = 1 is invalid for the elliptic filter design) -> highpass.
+    # Upper cutoff at or above the Nyquist frequency: high-pass (Wn = 1 is
+    # invalid)
     if f_max >= 1.0:
         f_max = 0.0
 
         if f_min == 0.0:
             raise ValueError("f_max >= Nyquist frequency with f_min = 0 does nothing!")
 
-    # A band pass with f_min above f_max filtered everything out (as
-    # irfu-matlab irf_filt)
+    # A band pass needs f_min below f_max
     if 0.0 < f_max <= f_min:
         raise ValueError(
             "f_min must be smaller than f_max for a band pass (f_max=0 for a "
@@ -179,7 +178,7 @@ def filt(inp, f_min: float = 0.0, f_max: float = 0.0, order: int = -1):
     elif len(inp_data.shape) != 2:
         raise ValueError("inp must be 1D, 2D or 3D")
 
-    # use odd padding with padlen = 3 * order for consistency with MATLAB
+    # Use odd padding with padlen = 3 * order for consistency with MATLAB
     out_data = signal.sosfiltfilt(
         sos1, inp_data, axis=0, padtype="odd", padlen=_sos_padlen(sos1)
     )

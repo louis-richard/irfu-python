@@ -8,6 +8,7 @@ import warnings
 import numpy as np
 import xarray as xr
 
+# Local imports
 from pyrfu.mms._internal.psd_units import (
     _factor,
     _is_relativistic,
@@ -23,7 +24,6 @@ from pyrfu.mms._internal.vdf_bins import (
     _theta_edges,
 )
 
-# Local imports
 from ..pyrf.ts_spectr import ts_spectr
 from .vdf_convert import _PSD
 from .vdf_shift import _frame_velocity
@@ -237,7 +237,8 @@ def vdf_omni(
         )
         frame_attrs = {"frame_velocity": v_frame, "coverage": coverage, "n_mc": n_mc}
     else:
-        omni, energy = _omni_spacecraft(vdf, method), vdf.energy.data
+        omni = _omni_spacecraft(vdf, method)
+        energy = vdf.energy.data
 
     # Use global and zVariable attributes
     attrs = {**vdf.data.attrs, **vdf.attrs}

@@ -38,6 +38,7 @@ def copy_files_ancillary(
         configuration (`pyrfu.mms.MMS_CFG_PATH`, set with `mms.db_init`).
 
     """
+
     # Normalize the target path and make sure it exists.
     tar_path = os.path.normpath(tar_path)
 

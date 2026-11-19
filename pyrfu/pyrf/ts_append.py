@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Built-in imports
 from typing import Any, cast
 
 # 3rd party imports
@@ -11,13 +12,10 @@ from xarray import DataArray, Dataset
 # Local imports
 from pyrfu._core.time_attrs import _is_time_attr
 
-# Built-in imports
-
 
 def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
-    # The time-dependent attributes of both inputs (the rule of time_clip: the
-    # energy tables of 32 channels with 32 times were appended) are appended;
-    # the others are those of the first input
+    # The time-dependent attributes of both inputs (the rule of time_clip) are
+    # appended; the others are those of the first input
     out = {}
 
     for k, attr in attrs0.items():
@@ -37,13 +35,16 @@ def _append_attrs(attrs0: dict, attrs1: dict, n_0: int, n_1: int) -> dict:
 
 def _n_times(inp: DataArray | Dataset) -> int:
     # Number of times: the first dimension of a DataArray, "time" of a Dataset
-    return inp.sizes["time"] if isinstance(inp, Dataset) else inp.shape[0]
+    if isinstance(inp, Dataset):
+        return inp.sizes["time"]
+    return inp.shape[0]
 
 
 def _spectrum(inp: DataArray | Dataset):
     r"""The parts of a spectrum: a 2-D DataArray (time, axis) or a Dataset of
     ``ts_spectr`` (the data (time, idx0) and an axis coordinate (time, idx0)):
     data, axis table (time, n), axis name, axis attributes, data attributes."""
+
     if isinstance(inp, Dataset):
         name = next(k for k, v in inp.coords.items() if v.dims == ("time", "idx0"))
         return (
@@ -62,13 +63,15 @@ def _spectrum(inp: DataArray | Dataset):
 def _is_spectra(inp0: DataArray | Dataset, inp1: DataArray | Dataset) -> bool:
     r"""Spectra whose axes differ: a ``ts_spectr`` Dataset, or 2-D numeric
     axes not equal (the axis of the first input labelled both)."""
+
     if isinstance(inp0, Dataset) or isinstance(inp1, Dataset):
         return True
 
     if inp0.ndim != 2 or inp1.ndim != 2 or inp0.dims != inp1.dims:
         return False
 
-    axis0, axis1 = inp0[inp0.dims[1]].data, inp1[inp1.dims[1]].data
+    axis0 = inp0[inp0.dims[1]].data
+    axis1 = inp1[inp1.dims[1]].data
 
     if axis0.dtype.kind not in "iuf" or axis1.dtype.kind not in "iuf":
         return False
@@ -79,9 +82,11 @@ def _is_spectra(inp0: DataArray | Dataset, inp1: DataArray | Dataset) -> bool:
 def _append_spectra(inp0: DataArray | Dataset, inp1: DataArray | Dataset):
     r"""Spectra appended with the axis table of each time: a DataArray if the
     axis is the same at all times, else a Dataset as ``ts_spectr``."""
+
     data0, table0, name, axis_attrs, attrs0 = _spectrum(inp0)
     data1, table1, _, _, attrs1 = _spectrum(inp1)
-    n_0, n_1 = len(data0), len(data1)
+    n_0 = len(data0)
+    n_1 = len(data1)
 
     time = np.hstack([inp0.time.data, inp1.time.data])
     time_attrs = _append_attrs(inp0.time.attrs, inp1.time.attrs, n_0, n_1)
@@ -151,7 +156,8 @@ def ts_append(
         out = _append_spectra(inp0, inp1)
     else:
         # Both with time samples, DataArrays (_is_spectra for any Dataset)
-        inp0, inp1 = cast(DataArray, inp0), cast(DataArray, inp1)
+        inp0 = cast(DataArray, inp0)
+        inp1 = cast(DataArray, inp1)
         out_data: dict[str, Any] = {}
 
         if inp0.data.ndim != 1:
@@ -160,7 +166,8 @@ def ts_append(
         else:
             out_data["data"] = np.hstack([inp0.data, inp1.data])
 
-        n_0, n_1 = inp0.shape[0], inp1.shape[0]
+        n_0 = inp0.shape[0]
+        n_1 = inp1.shape[0]
         out_data["attrs"] = _append_attrs(inp0.attrs, inp1.attrs, n_0, n_1)
 
         depends: list[dict[str, Any]] = [{} for _ in range(len(inp0.dims))]

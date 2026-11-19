@@ -124,7 +124,8 @@ def iplasma_calc(
 
     b_0 = float(b_0) * 1e-9
     n_hplus = float(n_i) * 1e6
-    t_e, t_i = float(t_e), float(t_i)
+    t_e = float(t_e)
+    t_i = float(t_i)
 
     n_i, n_e = [n_hplus] * 2
 

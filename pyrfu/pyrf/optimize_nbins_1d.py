@@ -16,6 +16,7 @@ def _finite_range(x):
 def _bin_indices(x, x_min, x_max, n_bins):
     r"""Bin of each sample of x in n_bins equal bins of [x_min, x_max] (the last
     one closed), computed as numpy.histogram."""
+
     edges = np.linspace(x_min, x_max, n_bins + 1)
     indices = ((x - x_min) / (x_max - x_min) * n_bins).astype(np.intp)
     indices[indices == n_bins] -= 1
@@ -63,12 +64,12 @@ def optimize_nbins_1d(x, n_min: int = 1, n_max: int = 100):
             of a time histogram Neural Computation (2007) Vol. 19(6), 1503-1527
     """
 
-    # Finite samples (NaN made the range NaN)
+    # Finite samples only
     x = np.asarray(x, dtype=np.float64).ravel()
     x = x[np.isfinite(x)]
     x_min, x_max = _finite_range(x)
 
-    # #of Bins, n_max included (it was left out)
+    # #of Bins, n_max included
     ns_x = np.arange(n_min, n_max + 1)
 
     # Bin size vector

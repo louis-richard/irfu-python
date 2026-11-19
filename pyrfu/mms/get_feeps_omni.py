@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Local imports
 from .feeps_omni import feeps_omni
 from .feeps_remove_bad_data import feeps_remove_bad_data
 from .feeps_remove_sun import feeps_remove_sun
 from .feeps_spin_avg import feeps_spin_avg
 from .feeps_split_integral_ch import feeps_split_integral_ch
-
-# Local imports
 from .get_feeps_alleyes import get_feeps_alleyes
 
 
@@ -28,7 +27,12 @@ def get_feeps_omni(
     ----------
     tar_var : str
         Key of the target variable like
-        {data_unit}{specie}_{data_rate}_{data_lvl}, e.g. "fluxe_srvy_l2".
+        {data_unit}{specie}_{data_rate}_{data_lvl}, e.g. "fluxe_srvy_l2", with
+        the units of `pyrfu.mms.get_feeps_alleyes`. The eyes (and the samples
+        of a spin) are combined according to the units (`pyrfu.mms.feeps_omni`,
+        `pyrfu.mms.feeps_spin_avg`): the intensities and count rates averaged,
+        the counts ("counts") summed, the intensity errors ("fluxerr") as the
+        errors of the mean.
     tint : array_like or xarray.DataArray
         Time interval: the start and stop times as ISO 8601 str, datetime64
         or datetime.datetime, or a time series (its first and last times), as
