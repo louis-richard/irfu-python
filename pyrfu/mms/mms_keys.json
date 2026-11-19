@@ -18,8 +18,28 @@
     }
   },
   "aspoc": {
+    "ebeam1_aspoc_srvy_l2": {
+      "cdf_name": "asp1_energy",
+      "dtype": ""
+    },
+    "ebeam2_aspoc_srvy_l2": {
+      "cdf_name": "asp2_energy",
+      "dtype": ""
+    },
+    "ionc1_aspoc_srvy_l2": {
+      "cdf_name": "asp1_ionc",
+      "dtype": ""
+    },
+    "ionc2_aspoc_srvy_l2": {
+      "cdf_name": "asp2_ionc",
+      "dtype": ""
+    },
     "ionc_aspoc_srvy_l2": {
       "cdf_name": "aspoc_ionc",
+      "dtype": ""
+    },
+    "status_aspoc_srvy_l2": {
+      "cdf_name": "aspoc_status",
       "dtype": ""
     }
   },

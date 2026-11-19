@@ -343,7 +343,8 @@ def get_data(
     AFG: b_bcs_afg_srvy_l2pre, b_dmpa_afg_srvy_l2pre, b_gse_afg_srvy_l2pre,
     b_gsm_afg_srvy_l2pre
 
-    ASPOC: ionc_aspoc_srvy_l2
+    ASPOC: ebeam1_aspoc_srvy_l2, ebeam2_aspoc_srvy_l2, ionc1_aspoc_srvy_l2,
+    ionc2_aspoc_srvy_l2, ionc_aspoc_srvy_l2, status_aspoc_srvy_l2
 
     DFG: b_bcs_dfg_srvy_l2pre, b_dmpa_dfg_srvy_l2pre, b_gse_dfg_srvy_l2pre,
     b_gsm_dfg_srvy_l2pre
@@ -594,6 +595,11 @@ def get_data(
     +Z and -Z axes of DBCS, ``bhat*_dbcs`` the unit vector of B and
     ``xform*_gse`` the DBCS to GSE matrix used by FPI for the moments (CMAD
     Table 4-8).
+
+    The keys of the levels l2pre, l2a, ql and sitl (AFG, DFG, EDP and FPI)
+    read files of the MMS team, at the SDC with a team login (see
+    `pyrfu.mms.db_init`): they are neither in the public SDC files nor in
+    the public copy of the archive on AWS.
 
     The MEC variables of a field model are in the files of each model (T89
     with Kp, T89 quiet, TS04 dynamic): their keys end with the model, e.g.

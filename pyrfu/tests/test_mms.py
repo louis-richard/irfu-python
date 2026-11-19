@@ -13685,6 +13685,9 @@ class TokenizeTestCase(unittest.TestCase):
         ("stemp_fgm_brst_l2", "fgm_stemp_brst_l2", "", ""),
         ("r_gse_fsm_brst_l3", "fsm_r_gse_brst_l3", "8khz", "gse"),
         ("swde34_dsp_fast_l2", "dsp_swd_E34_Counts", "swd", ""),
+        ("ionc2_aspoc_srvy_l2", "asp2_ionc", "", ""),
+        ("ebeam1_aspoc_srvy_l2", "asp1_energy", "", ""),
+        ("status_aspoc_srvy_l2", "aspoc_status", "", ""),
     )
     @unpack
     def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
@@ -13701,7 +13704,8 @@ class TokenizeTestCase(unittest.TestCase):
         # in ECI and GSE2000, dipole tilt, Sun position, attitude phase, and
         # the field-model variables of the T89 (Kp), T89 quiet and TS04 files;
         # HPCA spin number, MCP and TOF voltages, sweep-averaged B, TOF counts;
-        # FGM sensor temperature; FSM position; DSP solitary wave counts
+        # FGM sensor temperature; FSM position; DSP solitary wave counts; ASPOC
+        # currents, beam energies and status of each unit
         result = mms.tokenize(var_str)
         self.assertEqual(result["cdf_name"], cdf_name)
         self.assertEqual(result["dtype"], dtype)
