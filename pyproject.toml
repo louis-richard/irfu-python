@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyrfu"
-version = "2.6.0"
+version = "2.6.1"
 description = "Python Space Physics (RymdFysik) Utilities"
 readme = "README.rst"
 authors = [{ name = "Louis RICHARD", email = "louis.richard@physics.ox.ac.uk" }]
@@ -243,7 +243,7 @@ module = [
 
 
 [tool.bumpver]
-current_version = "2.6.0"
+current_version = "2.6.1"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message  = "Bump version {old_version} -> {new_version}"
 commit          = true
