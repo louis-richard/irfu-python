@@ -108,24 +108,48 @@
     }
   },
   "edi": {
+    "e_dsl_edi_brst_l2": {
+      "cdf_name": "edi_e_dsl_brst_l2",
+      "dtype": "efield"
+    },
     "e_dsl_edi_srvy_l2": {
       "cdf_name": "edi_e_dsl_srvy_l2",
+      "dtype": "efield"
+    },
+    "e_gse_edi_brst_l2": {
+      "cdf_name": "edi_e_gse_brst_l2",
       "dtype": "efield"
     },
     "e_gse_edi_srvy_l2": {
       "cdf_name": "edi_e_gse_srvy_l2",
       "dtype": "efield"
     },
+    "e_gsm_edi_brst_l2": {
+      "cdf_name": "edi_e_gsm_brst_l2",
+      "dtype": "efield"
+    },
     "e_gsm_edi_srvy_l2": {
       "cdf_name": "edi_e_gsm_srvy_l2",
+      "dtype": "efield"
+    },
+    "vdrift_dsl_edi_brst_l2": {
+      "cdf_name": "edi_vdrift_dsl_brst_l2",
       "dtype": "efield"
     },
     "vdrift_dsl_edi_srvy_l2": {
       "cdf_name": "edi_vdrift_dsl_srvy_l2",
       "dtype": "efield"
     },
+    "vdrift_gse_edi_brst_l2": {
+      "cdf_name": "edi_vdrift_gse_brst_l2",
+      "dtype": "efield"
+    },
     "vdrift_gse_edi_srvy_l2": {
       "cdf_name": "edi_vdrift_gse_srvy_l2",
+      "dtype": "efield"
+    },
+    "vdrift_gsm_edi_brst_l2": {
+      "cdf_name": "edi_vdrift_gsm_brst_l2",
       "dtype": "efield"
     },
     "vdrift_gsm_edi_srvy_l2": {
@@ -254,6 +278,14 @@
       "cdf_name": "edp_dce_slow_l2a",
       "dtype": "dce2d"
     },
+    "eres_dsl_edp_fast_l2": {
+      "cdf_name": "edp_dce_dsl_res_fast_l2",
+      "dtype": "dce"
+    },
+    "eres_dsl_edp_slow_l2": {
+      "cdf_name": "edp_dce_dsl_res_slow_l2",
+      "dtype": "dce"
+    },
     "erre_edp_fast_l2": {
       "cdf_name": "edp_dce_err_fast_l2",
       "dtype": "dce"
@@ -261,6 +293,10 @@
     "erre_edp_slow_l2": {
       "cdf_name": "edp_dce_err_slow_l2",
       "dtype": "dce"
+    },
+    "hfesp_edp_srvy_l2": {
+      "cdf_name": "edp_hfesp_srvy_l2",
+      "dtype": "hfesp"
     },
     "hmfe_dsl_edp_brst_l2": {
       "cdf_name": "edp_hmfe_dsl_brst_l2",

@@ -9712,16 +9712,19 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             result.energy.data[:, 0], [10.0, 10.5, 10.0, 10.5, 10.0, 10.5, 10.0, 10.5]
         )
 
-    def _get_data_local(self, var_str, content, tint):
-        # get_data on one local file of the given content
+    def _get_data_local(self, var_str, contents, tint):
+        # get_data on local files of the given contents
         module = importlib.import_module("pyrfu.mms.get_data")
 
         with tempfile.TemporaryDirectory() as root:
-            path = os.path.join(root, "mms1_fpi_l2_file.cdf")
-            with open(path, "wb") as file:
-                file.write(content)
+            paths = []
+            for i, content in enumerate(contents):
+                path = os.path.join(root, f"mms1_l2_file_{i:d}.cdf")
+                with open(path, "wb") as file:
+                    file.write(content)
+                paths.append(path)
 
-            with mock.patch.object(module, "list_files", return_value=[path]):
+            with mock.patch.object(module, "list_files", return_value=paths):
                 out = mms.get_data(var_str, tint, 1, False, root, source="local")
 
         return out
@@ -9736,7 +9739,7 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
         cdf.add_variable("mms1_dis_avgf1counts_brst", values=np.ones((4, 5)))
         cdf["mms1_dis_avgf1counts_brst"].add_attribute("DEPEND_0", "Epoch")
         result = self._get_data_local(
-            "avgf1countsi_fpi_brst_l2", bytes(pycdfpp.save(cdf)), tint
+            "avgf1countsi_fpi_brst_l2", [bytes(pycdfpp.save(cdf))], tint
         )
         self.assertIsInstance(result, xr.DataArray)
         self.assertTupleEqual(result.shape, (4, 5))
@@ -9749,11 +9752,57 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             name = dep if dep == "Epoch" else f"mms1_des_{dep}_fast"
             cdf["mms1_des_disterr_photo_fast"].add_attribute(f"DEPEND_{i:d}", name)
         result = self._get_data_local(
-            "pdphotoe_fpi_fast_l2", bytes(pycdfpp.save(cdf)), tint
+            "pdphotoe_fpi_fast_l2", [bytes(pycdfpp.save(cdf))], tint
         )
         expected = mms.get_dist(content, "mms1_des_dist_fast", tint)
         self.assertIsInstance(result, xr.Dataset)
         np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+    @staticmethod
+    def _cdf_edi(t_start, n_records, depend_1=None):
+        # In-memory EDI burst efield file with the E field in GSE, or a "null
+        # file" with only the times (no records: EDI not in EFIELD mode), and
+        # optionally a DEPEND_1 of the E field
+        time = np.datetime64(t_start, "ns") + np.arange(max(n_records, 1)) * (
+            np.timedelta64(1, "s")
+        )
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        if n_records:
+            name = "mms1_edi_e_gse_brst_l2"
+            values = np.arange(3.0 * n_records).reshape(n_records, 3)
+            cdf.add_variable(name, values=values)
+            cdf[name].add_attribute("DEPEND_0", "Epoch")
+            if depend_1 is not None:
+                cdf[name].add_attribute("DEPEND_1", depend_1)
+        return bytes(pycdfpp.save(cdf))
+
+    def test_get_data_null_files(self):
+        # The files without the variable (the EDI null files) are skipped with
+        # a warning; KeyError if none has it
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        contents = [
+            self._cdf_edi("2019-09-14T07:54:00", 0),
+            self._cdf_edi("2019-09-14T07:54:10", 4),
+            self._cdf_edi("2019-09-14T07:54:30", 0),
+        ]
+
+        with self.assertLogs("pyrfu.mms.get_data", "WARNING") as logs:
+            result = self._get_data_local("e_gse_edi_brst_l2", contents, tint)
+
+        self.assertEqual(len(logs.records), 2)
+        self.assertIn("file skipped", logs.output[0])
+        np.testing.assert_array_equal(result.data, np.arange(12.0).reshape(4, 3))
+
+        with self.assertRaisesRegex(KeyError, "in none of the files"):
+            self._get_data_local("e_gse_edi_brst_l2", contents[::2], tint)
+
+        # A file with the variable but not its DEPEND_1: the error of get_ts
+        content = self._cdf_edi("2019-09-14T07:54:10", 4, "missing_label")
+        with self.assertRaisesRegex(KeyError, "missing_label"):
+            self._get_data_local("e_gse_edi_brst_l2", [content], tint)
 
     def test_get_ts_append_empty_file(self):
         # As get_data: a file without records, before or after a file with
@@ -13611,6 +13660,10 @@ class TokenizeTestCase(unittest.TestCase):
         ("xforme_gse_fpi_fast_l2", "des_gse_xform_fast", "des-partmoms", "gse"),
         ("avgf1countsi_fpi_brst_l2", "dis_avgf1counts_brst", "dis-dist", ""),
         ("pdphotoe_fpi_fast_l2", "des_disterr_photo_fast", "des-distaux", ""),
+        ("hfesp_edp_srvy_l2", "edp_hfesp_srvy_l2", "hfesp", ""),
+        ("eres_dsl_edp_slow_l2", "edp_dce_dsl_res_slow_l2", "dce", "dsl"),
+        ("e_gsm_edi_brst_l2", "edi_e_gsm_brst_l2", "efield", "gsm"),
+        ("vdrift_dsl_edi_brst_l2", "edi_vdrift_dsl_brst_l2", "efield", "dsl"),
     )
     @unpack
     def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
@@ -13622,7 +13675,8 @@ class TokenizeTestCase(unittest.TestCase):
         # SCM survey and high-speed burst waveforms; FPI directional and
         # field-aligned spectra, the potential, B direction and GSE matrix of
         # the partial moments, the average one-count level and the DES
-        # photoelectron model (distaux files)
+        # photoelectron model (distaux files); EDP HF spectra and DCE residual;
+        # EDI burst E field and drift velocity
         result = mms.tokenize(var_str)
         self.assertEqual(result["cdf_name"], cdf_name)
         self.assertEqual(result["dtype"], dtype)

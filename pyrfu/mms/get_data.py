@@ -17,6 +17,7 @@ from botocore.exceptions import (
     ReadTimeoutError,
     ResponseStreamingError,
 )
+from pycdfpp import load
 from requests.sessions import Session
 from xarray import DataArray, Dataset
 
@@ -74,6 +75,23 @@ def _is_skymap(cdf_name: str) -> bool:
     series."""
 
     return cdf_name.split("_")[2] in ("dist", "disterr")
+
+
+def _read(reader, file_content, cdf_name, tint):
+    r"""Time series or distribution `cdf_name` of a file, read with `reader`
+    (`get_ts` or `get_dist`), or None if the file does not have the variable
+    (e.g. the EDI burst files of the intervals without EFIELD mode, "null
+    files" with only the times)."""
+
+    try:
+        out = reader(file_content, cdf_name, tint)
+    except KeyError:
+        if cdf_name in load(file_content):
+            raise
+
+        out = None
+
+    return out
 
 
 def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
@@ -336,8 +354,10 @@ def get_data(
     epsdx_dsp_slow_l2, epsdy_dsp_fast_l2, epsdy_dsp_slow_l2, epsdz_dsp_fast_l2,
     epsdz_dsp_slow_l2
 
-    EDI: e_dsl_edi_srvy_l2, e_gse_edi_srvy_l2, e_gsm_edi_srvy_l2,
-    vdrift_dsl_edi_srvy_l2, vdrift_gse_edi_srvy_l2, vdrift_gsm_edi_srvy_l2
+    EDI: e_dsl_edi_brst_l2, e_dsl_edi_srvy_l2, e_gse_edi_brst_l2, e_gse_edi_srvy_l2,
+    e_gsm_edi_brst_l2, e_gsm_edi_srvy_l2, vdrift_dsl_edi_brst_l2,
+    vdrift_dsl_edi_srvy_l2, vdrift_gse_edi_brst_l2, vdrift_gse_edi_srvy_l2,
+    vdrift_gsm_edi_brst_l2, vdrift_gsm_edi_srvy_l2
 
     EDP: bitmaske_edp_brst_l2, bitmaske_edp_fast_l2, bitmaske_edp_slow_l2,
     bitmaskv_edp_brst_l2, bitmaskv_edp_fast_l2, bitmaskv_edp_slow_l2,
@@ -347,13 +367,14 @@ def get_data(
     e_dsl_edp_slow_l2pre, e_gse_edp_brst_l2, e_gse_edp_fast_l2, e_gse_edp_slow_l2,
     e_par_edp_brst_l2, e_par_edp_brst_l2pre, e_par_edp_fast_l2, e_par_edp_fast_l2pre,
     e_par_edp_slow_l2, e_par_edp_slow_l2pre, e_ssc_edp_brst_l2a, e_ssc_edp_fast_l2a,
-    e_ssc_edp_slow_l2a, erre_edp_fast_l2, erre_edp_slow_l2, hmfe_dsl_edp_brst_l2,
-    hmfe_par_edp_brst_l2, phase_edp_fast_l2a, phase_edp_slow_l2a, qualitye_edp_brst_l2,
-    qualitye_edp_fast_l2, qualitye_edp_slow_l2, qualityv_edp_brst_l2,
-    qualityv_edp_fast_l2, qualityv_edp_slow_l2, sdev12_edp_fast_l2a,
-    sdev12_edp_slow_l2a, sdev34_edp_fast_l2a, sdev34_edp_slow_l2a, v6_edp_brst_l2,
-    v6_edp_fast_l2, v6_edp_slow_l2, v_edp_brst_l2, v_edp_fast_l2, v_edp_fast_sitl,
-    v_edp_slow_l2, v_edp_slow_sitl, vpsp_edp_brst_l2, vpsp_edp_fast_l2, vpsp_edp_slow_l2
+    e_ssc_edp_slow_l2a, eres_dsl_edp_fast_l2, eres_dsl_edp_slow_l2, erre_edp_fast_l2,
+    erre_edp_slow_l2, hfesp_edp_srvy_l2, hmfe_dsl_edp_brst_l2, hmfe_par_edp_brst_l2,
+    phase_edp_fast_l2a, phase_edp_slow_l2a, qualitye_edp_brst_l2, qualitye_edp_fast_l2,
+    qualitye_edp_slow_l2, qualityv_edp_brst_l2, qualityv_edp_fast_l2,
+    qualityv_edp_slow_l2, sdev12_edp_fast_l2a, sdev12_edp_slow_l2a, sdev34_edp_fast_l2a,
+    sdev34_edp_slow_l2a, v6_edp_brst_l2, v6_edp_fast_l2, v6_edp_slow_l2, v_edp_brst_l2,
+    v_edp_fast_l2, v_edp_fast_sitl, v_edp_slow_l2, v_edp_slow_sitl, vpsp_edp_brst_l2,
+    vpsp_edp_fast_l2, vpsp_edp_slow_l2
 
     FGM: b_bcs_fgm_brst_l2, b_bcs_fgm_srvy_l2, b_dmpa_fgm_brst_l2, b_dmpa_fgm_srvy_l2,
     b_gse_fgm_brst_l2, b_gse_fgm_srvy_l2, b_gsm_fgm_brst_l2, b_gsm_fgm_srvy_l2,
@@ -511,6 +532,8 @@ def get_data(
     ------
     FileNotFoundError
         If no file of the variable covers the time interval.
+    KeyError
+        If none of the files has the variable.
     ValueError
         If `source` is not "local", "sdc", "aws" or "default".
 
@@ -530,6 +553,11 @@ def get_data(
     +Z and -Z axes of DBCS, ``bhat*_dbcs`` the unit vector of B and
     ``xform*_gse`` the DBCS to GSE matrix used by FPI for the moments (CMAD
     Table 4-8).
+
+    The files without the variable are skipped, with a warning: e.g. the EDI
+    burst files of the intervals without EFIELD mode, "null files" with only
+    the times (the 67982 MMS1 burst efield files of version 0.0.0, and files
+    of later versions, e.g. on 2015-09-14).
 
     The HPCA velocities in GSM (``v*_gsm_hpca_*``) are those of the files,
     the DBCS velocities rotated from GSE to GSM as if DBCS were GSE: the
@@ -585,16 +613,27 @@ def get_data(
     if verbose:
         logger.info("Loading %s...", cdf_name)
 
+    # The skymaps of the FPI distribution files with get_dist, the other
+    # variables with get_ts
+    if "-dist" in var["dtype"] and _is_skymap(cdf_name):
+        reader, append = get_dist, dist_append
+    else:
+        reader, append = get_ts, ts_append
+
     for file_name in file_names:
         file_content = _get_file_content_sources(
             source, file_name, sdc_session, headers
         )
+        data = _read(reader, file_content, cdf_name, tint)
 
-        if "-dist" in var["dtype"] and _is_skymap(cdf_name):
-            out = dist_append(out, get_dist(file_content, cdf_name, tint))
-
+        if data is None:
+            logger.warning(
+                "%s is not in %s: file skipped", cdf_name, _file_label(file_name)
+            )
         else:
-            out = ts_append(out, get_ts(file_content, cdf_name, tint))
+            out = append(out, data)
 
-    # Not None: at least one file was read
+    if out is None:
+        raise KeyError(f"{cdf_name} is in none of the files of {var_str}")
+
     return cast(DataArray | Dataset, out)
