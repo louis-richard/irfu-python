@@ -422,6 +422,46 @@
     }
   },
   "fpi": {
+    "avgf1countse_fpi_brst_l2": {
+      "cdf_name": "des_avgf1counts_brst",
+      "dtype": "des-dist"
+    },
+    "avgf1countse_fpi_fast_l2": {
+      "cdf_name": "des_avgf1counts_fast",
+      "dtype": "des-dist"
+    },
+    "avgf1countsi_fpi_brst_l2": {
+      "cdf_name": "dis_avgf1counts_brst",
+      "dtype": "dis-dist"
+    },
+    "avgf1countsi_fpi_fast_l2": {
+      "cdf_name": "dis_avgf1counts_fast",
+      "dtype": "dis-dist"
+    },
+    "bhate_dbcs_fpi_brst_l2": {
+      "cdf_name": "des_bhat_dbcs_brst",
+      "dtype": "des-partmoms"
+    },
+    "bhate_dbcs_fpi_fast_l2": {
+      "cdf_name": "des_bhat_dbcs_fast",
+      "dtype": "des-partmoms"
+    },
+    "bhati_dbcs_fpi_brst_l2": {
+      "cdf_name": "dis_bhat_dbcs_brst",
+      "dtype": "dis-partmoms"
+    },
+    "bhati_dbcs_fpi_fast_l2": {
+      "cdf_name": "dis_bhat_dbcs_fast",
+      "dtype": "dis-partmoms"
+    },
+    "defantie_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_anti_brst",
+      "dtype": "des-moms"
+    },
+    "defantie_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_anti_fast",
+      "dtype": "des-moms"
+    },
     "defbgi_fpi_brst_l2": {
       "cdf_name": "dis_spectr_bg_brst",
       "dtype": "dis-moms"
@@ -448,6 +488,118 @@
     },
     "defi_fpi_fast_l2": {
       "cdf_name": "dis_energyspectr_omni_fast",
+      "dtype": "dis-moms"
+    },
+    "defmxe_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_mx_brst",
+      "dtype": "des-moms"
+    },
+    "defmxe_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_mx_fast",
+      "dtype": "des-moms"
+    },
+    "defmxi_fpi_brst_l2": {
+      "cdf_name": "dis_energyspectr_mx_brst",
+      "dtype": "dis-moms"
+    },
+    "defmxi_fpi_fast_l2": {
+      "cdf_name": "dis_energyspectr_mx_fast",
+      "dtype": "dis-moms"
+    },
+    "defmye_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_my_brst",
+      "dtype": "des-moms"
+    },
+    "defmye_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_my_fast",
+      "dtype": "des-moms"
+    },
+    "defmyi_fpi_brst_l2": {
+      "cdf_name": "dis_energyspectr_my_brst",
+      "dtype": "dis-moms"
+    },
+    "defmyi_fpi_fast_l2": {
+      "cdf_name": "dis_energyspectr_my_fast",
+      "dtype": "dis-moms"
+    },
+    "defmze_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_mz_brst",
+      "dtype": "des-moms"
+    },
+    "defmze_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_mz_fast",
+      "dtype": "des-moms"
+    },
+    "defmzi_fpi_brst_l2": {
+      "cdf_name": "dis_energyspectr_mz_brst",
+      "dtype": "dis-moms"
+    },
+    "defmzi_fpi_fast_l2": {
+      "cdf_name": "dis_energyspectr_mz_fast",
+      "dtype": "dis-moms"
+    },
+    "defpare_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_par_brst",
+      "dtype": "des-moms"
+    },
+    "defpare_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_par_fast",
+      "dtype": "des-moms"
+    },
+    "defperpe_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_perp_brst",
+      "dtype": "des-moms"
+    },
+    "defperpe_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_perp_fast",
+      "dtype": "des-moms"
+    },
+    "defpxe_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_px_brst",
+      "dtype": "des-moms"
+    },
+    "defpxe_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_px_fast",
+      "dtype": "des-moms"
+    },
+    "defpxi_fpi_brst_l2": {
+      "cdf_name": "dis_energyspectr_px_brst",
+      "dtype": "dis-moms"
+    },
+    "defpxi_fpi_fast_l2": {
+      "cdf_name": "dis_energyspectr_px_fast",
+      "dtype": "dis-moms"
+    },
+    "defpye_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_py_brst",
+      "dtype": "des-moms"
+    },
+    "defpye_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_py_fast",
+      "dtype": "des-moms"
+    },
+    "defpyi_fpi_brst_l2": {
+      "cdf_name": "dis_energyspectr_py_brst",
+      "dtype": "dis-moms"
+    },
+    "defpyi_fpi_fast_l2": {
+      "cdf_name": "dis_energyspectr_py_fast",
+      "dtype": "dis-moms"
+    },
+    "defpze_fpi_brst_l2": {
+      "cdf_name": "des_energyspectr_pz_brst",
+      "dtype": "des-moms"
+    },
+    "defpze_fpi_fast_l2": {
+      "cdf_name": "des_energyspectr_pz_fast",
+      "dtype": "des-moms"
+    },
+    "defpzi_fpi_brst_l2": {
+      "cdf_name": "dis_energyspectr_pz_brst",
+      "dtype": "dis-moms"
+    },
+    "defpzi_fpi_fast_l2": {
+      "cdf_name": "dis_energyspectr_pz_fast",
       "dtype": "dis-moms"
     },
     "errne_fpi_brst_l2": {
@@ -834,6 +986,14 @@
       "cdf_name": "dis_dist_fast",
       "dtype": "dis-dist"
     },
+    "pdphotoe_fpi_brst_l2": {
+      "cdf_name": "des_disterr_photo_brst",
+      "dtype": "des-distaux"
+    },
+    "pdphotoe_fpi_fast_l2": {
+      "cdf_name": "des_disterr_photo_fast",
+      "dtype": "des-distaux"
+    },
     "pe_dbcs_fpi_brst_l2": {
       "cdf_name": "des_prestensor_dbcs_brst",
       "dtype": "des-moms"
@@ -913,6 +1073,22 @@
     "qi_gse_fpi_fast_l2": {
       "cdf_name": "dis_heatq_gse_fast",
       "dtype": "dis-moms"
+    },
+    "scpmeane_fpi_brst_l2": {
+      "cdf_name": "des_scpmean_brst",
+      "dtype": "des-partmoms"
+    },
+    "scpmeane_fpi_fast_l2": {
+      "cdf_name": "des_scpmean_fast",
+      "dtype": "des-partmoms"
+    },
+    "scpmeani_fpi_brst_l2": {
+      "cdf_name": "dis_scpmean_brst",
+      "dtype": "dis-partmoms"
+    },
+    "scpmeani_fpi_fast_l2": {
+      "cdf_name": "dis_scpmean_fast",
+      "dtype": "dis-partmoms"
     },
     "ste_dbcs_fpi_brst_l2": {
       "cdf_name": "des_bulkv_spintone_dbcs_brst",
@@ -1065,6 +1241,22 @@
     "vi_gse_fpi_fast_ql": {
       "cdf_name": "dis_bulkv_gse_fast",
       "dtype": "dis"
+    },
+    "xforme_gse_fpi_brst_l2": {
+      "cdf_name": "des_gse_xform_brst",
+      "dtype": "des-partmoms"
+    },
+    "xforme_gse_fpi_fast_l2": {
+      "cdf_name": "des_gse_xform_fast",
+      "dtype": "des-partmoms"
+    },
+    "xformi_gse_fpi_brst_l2": {
+      "cdf_name": "dis_gse_xform_brst",
+      "dtype": "dis-partmoms"
+    },
+    "xformi_gse_fpi_fast_l2": {
+      "cdf_name": "dis_gse_xform_fast",
+      "dtype": "dis-partmoms"
     }
   },
   "fsm": {

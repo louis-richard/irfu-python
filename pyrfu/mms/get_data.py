@@ -66,6 +66,16 @@ def _var_and_cdf_name(var_str: str, mms_id: str | int) -> tuple[Mapping[str, str
     return var, cdf_name
 
 
+def _is_skymap(cdf_name: str) -> bool:
+    r"""Whether the FPI variable `cdf_name` (with the spacecraft prefix) is a
+    skymap distribution, read by `get_dist`: the distribution, its error and
+    the modelled photoelectron distribution (dist, disterr, disterr_photo).
+    The other variables of the distribution files (e.g. avgf1counts) are time
+    series."""
+
+    return cdf_name.split("_")[2] in ("dist", "disterr")
+
+
 def _listing_key(source: str, tint: list, mms_id: str, var: Mapping) -> dict:
     r"""Key of the listing of the files of `var` in `tint` in the cache: the
     source and its settings (bucket, SDC rights and user), the spacecraft, the
@@ -350,19 +360,29 @@ def get_data(
     flag_fgm_brst_l2, flag_fgm_srvy_l2, r_gse_fgm_brst_l2, r_gse_fgm_srvy_l2,
     r_gsm_fgm_brst_l2, r_gsm_fgm_srvy_l2
 
-    FPI: defbgi_fpi_brst_l2, defbgi_fpi_fast_l2, defe_fpi_brst_l2, defe_fpi_fast_l2,
-    defe_fpi_fast_ql, defi_fpi_brst_l2, defi_fpi_fast_l2, errne_fpi_brst_l2,
-    errne_fpi_fast_l2, errni_fpi_brst_l2, errni_fpi_fast_l2, errpe_fpi_brst_l2,
-    errpe_fpi_fast_l2, errpi_fpi_brst_l2, errpi_fpi_fast_l2, errqe_fpi_brst_l2,
-    errqe_fpi_fast_l2, errqi_fpi_brst_l2, errqi_fpi_fast_l2, errte_fpi_brst_l2,
-    errte_fpi_fast_l2, errti_fpi_brst_l2, errti_fpi_fast_l2, errve_fpi_brst_l2,
-    errve_fpi_fast_l2, errvi_fpi_brst_l2, errvi_fpi_fast_l2, flage_fpi_brst_l2,
-    flage_fpi_fast_l2, flagi_fpi_brst_l2, flagi_fpi_fast_l2, nbgi_fpi_brst_l2,
-    nbgi_fpi_fast_l2, ne_fpi_brst_l2, ne_fpi_fast_l2, ne_fpi_fast_ql,
-    nexthighe_fpi_brst_l2, nexthighe_fpi_fast_l2, nexthighi_fpi_brst_l2,
-    nexthighi_fpi_fast_l2, nextlowe_fpi_brst_l2, nextlowe_fpi_fast_l2,
-    nextlowi_fpi_brst_l2, nextlowi_fpi_fast_l2, ni_fpi_brst_l2, ni_fpi_fast_l2,
-    ni_fpi_fast_ql, padhighene_fpi_brst_l2, padhighene_fpi_fast_l2,
+    FPI: avgf1countse_fpi_brst_l2, avgf1countse_fpi_fast_l2, avgf1countsi_fpi_brst_l2,
+    avgf1countsi_fpi_fast_l2, bhate_dbcs_fpi_brst_l2, bhate_dbcs_fpi_fast_l2,
+    bhati_dbcs_fpi_brst_l2, bhati_dbcs_fpi_fast_l2, defantie_fpi_brst_l2,
+    defantie_fpi_fast_l2, defbgi_fpi_brst_l2, defbgi_fpi_fast_l2, defe_fpi_brst_l2,
+    defe_fpi_fast_l2, defe_fpi_fast_ql, defi_fpi_brst_l2, defi_fpi_fast_l2,
+    defmxe_fpi_brst_l2, defmxe_fpi_fast_l2, defmxi_fpi_brst_l2, defmxi_fpi_fast_l2,
+    defmye_fpi_brst_l2, defmye_fpi_fast_l2, defmyi_fpi_brst_l2, defmyi_fpi_fast_l2,
+    defmze_fpi_brst_l2, defmze_fpi_fast_l2, defmzi_fpi_brst_l2, defmzi_fpi_fast_l2,
+    defpare_fpi_brst_l2, defpare_fpi_fast_l2, defperpe_fpi_brst_l2,
+    defperpe_fpi_fast_l2, defpxe_fpi_brst_l2, defpxe_fpi_fast_l2, defpxi_fpi_brst_l2,
+    defpxi_fpi_fast_l2, defpye_fpi_brst_l2, defpye_fpi_fast_l2, defpyi_fpi_brst_l2,
+    defpyi_fpi_fast_l2, defpze_fpi_brst_l2, defpze_fpi_fast_l2, defpzi_fpi_brst_l2,
+    defpzi_fpi_fast_l2, errne_fpi_brst_l2, errne_fpi_fast_l2, errni_fpi_brst_l2,
+    errni_fpi_fast_l2, errpe_fpi_brst_l2, errpe_fpi_fast_l2, errpi_fpi_brst_l2,
+    errpi_fpi_fast_l2, errqe_fpi_brst_l2, errqe_fpi_fast_l2, errqi_fpi_brst_l2,
+    errqi_fpi_fast_l2, errte_fpi_brst_l2, errte_fpi_fast_l2, errti_fpi_brst_l2,
+    errti_fpi_fast_l2, errve_fpi_brst_l2, errve_fpi_fast_l2, errvi_fpi_brst_l2,
+    errvi_fpi_fast_l2, flage_fpi_brst_l2, flage_fpi_fast_l2, flagi_fpi_brst_l2,
+    flagi_fpi_fast_l2, nbgi_fpi_brst_l2, nbgi_fpi_fast_l2, ne_fpi_brst_l2,
+    ne_fpi_fast_l2, ne_fpi_fast_ql, nexthighe_fpi_brst_l2, nexthighe_fpi_fast_l2,
+    nexthighi_fpi_brst_l2, nexthighi_fpi_fast_l2, nextlowe_fpi_brst_l2,
+    nextlowe_fpi_fast_l2, nextlowi_fpi_brst_l2, nextlowi_fpi_fast_l2, ni_fpi_brst_l2,
+    ni_fpi_fast_l2, ni_fpi_fast_ql, padhighene_fpi_brst_l2, padhighene_fpi_fast_l2,
     padlowene_fpi_brst_l2, padlowene_fpi_fast_l2, padmidene_fpi_brst_l2,
     padmidene_fpi_fast_l2, partidxe_fpi_brst_l2, partidxe_fpi_fast_l2,
     partidxi_fpi_brst_l2, partidxi_fpi_fast_l2, partne_fpi_brst_l2, partne_fpi_fast_l2,
@@ -379,12 +399,14 @@ def get_data(
     partvi_dbcs_fpi_brst_l2, partvi_dbcs_fpi_fast_l2, partvi_gse_fpi_brst_l2,
     partvi_gse_fpi_fast_l2, pbgi_fpi_brst_l2, pbgi_fpi_fast_l2, pde_fpi_brst_l2,
     pde_fpi_fast_l2, pderre_fpi_brst_l2, pderre_fpi_fast_l2, pderri_fpi_brst_l2,
-    pderri_fpi_fast_l2, pdi_fpi_brst_l2, pdi_fpi_fast_l2, pe_dbcs_fpi_brst_l2,
-    pe_dbcs_fpi_fast_l2, pe_dbcs_fpi_fast_ql, pe_gse_fpi_brst_l2, pe_gse_fpi_fast_l2,
-    pe_gse_fpi_fast_ql, pi_dbcs_fpi_brst_l2, pi_dbcs_fpi_fast_l2, pi_dbcs_fpi_fast_ql,
-    pi_gse_fpi_brst_l2, pi_gse_fpi_fast_l2, pi_gse_fpi_fast_ql, qe_dbcs_fpi_brst_l2,
-    qe_dbcs_fpi_fast_l2, qe_gse_fpi_brst_l2, qe_gse_fpi_fast_l2, qi_dbcs_fpi_brst_l2,
-    qi_dbcs_fpi_fast_l2, qi_gse_fpi_brst_l2, qi_gse_fpi_fast_l2, ste_dbcs_fpi_brst_l2,
+    pderri_fpi_fast_l2, pdi_fpi_brst_l2, pdi_fpi_fast_l2, pdphotoe_fpi_brst_l2,
+    pdphotoe_fpi_fast_l2, pe_dbcs_fpi_brst_l2, pe_dbcs_fpi_fast_l2, pe_dbcs_fpi_fast_ql,
+    pe_gse_fpi_brst_l2, pe_gse_fpi_fast_l2, pe_gse_fpi_fast_ql, pi_dbcs_fpi_brst_l2,
+    pi_dbcs_fpi_fast_l2, pi_dbcs_fpi_fast_ql, pi_gse_fpi_brst_l2, pi_gse_fpi_fast_l2,
+    pi_gse_fpi_fast_ql, qe_dbcs_fpi_brst_l2, qe_dbcs_fpi_fast_l2, qe_gse_fpi_brst_l2,
+    qe_gse_fpi_fast_l2, qi_dbcs_fpi_brst_l2, qi_dbcs_fpi_fast_l2, qi_gse_fpi_brst_l2,
+    qi_gse_fpi_fast_l2, scpmeane_fpi_brst_l2, scpmeane_fpi_fast_l2,
+    scpmeani_fpi_brst_l2, scpmeani_fpi_fast_l2, ste_dbcs_fpi_brst_l2,
     ste_dbcs_fpi_fast_l2, ste_gse_fpi_brst_l2, ste_gse_fpi_fast_l2,
     sti_dbcs_fpi_brst_l2, sti_dbcs_fpi_fast_l2, sti_gse_fpi_brst_l2,
     sti_gse_fpi_fast_l2, te_dbcs_fpi_brst_l2, te_dbcs_fpi_fast_l2, te_dbcs_fpi_fast_ql,
@@ -394,7 +416,8 @@ def get_data(
     tperpe_fpi_fast_l2, tperpi_fpi_brst_l2, tperpi_fpi_fast_l2, ve_dbcs_fpi_brst_l2,
     ve_dbcs_fpi_fast_l2, ve_dbcs_fpi_fast_ql, ve_gse_fpi_brst_l2, ve_gse_fpi_fast_l2,
     ve_gse_fpi_fast_ql, vi_dbcs_fpi_brst_l2, vi_dbcs_fpi_fast_l2, vi_dbcs_fpi_fast_ql,
-    vi_gse_fpi_brst_l2, vi_gse_fpi_fast_l2, vi_gse_fpi_fast_ql
+    vi_gse_fpi_brst_l2, vi_gse_fpi_fast_l2, vi_gse_fpi_fast_ql, xforme_gse_fpi_brst_l2,
+    xforme_gse_fpi_fast_l2, xformi_gse_fpi_brst_l2, xformi_gse_fpi_fast_l2
 
     FSM: b_gse_fsm_brst_l3
 
@@ -498,6 +521,16 @@ def get_data(
 
     Notes
     -----
+    The FPI distributions (``pd*``, ``pderr*`` and ``pdphotoe``, the modelled
+    photoelectron distribution of the DES ``distaux`` files) are skymaps, read
+    by `pyrfu.mms.get_dist`. The other variables of the distribution files
+    are time series, e.g. ``avgf1counts*``, the average one-count level of
+    each energy (s^3/cm^6; files of version 3.4 and later). The directional
+    spectra ``def{px,mx,py,my,pz,mz}*`` are those near the +X, -X, +Y, -Y,
+    +Z and -Z axes of DBCS, ``bhat*_dbcs`` the unit vector of B and
+    ``xform*_gse`` the DBCS to GSE matrix used by FPI for the moments (CMAD
+    Table 4-8).
+
     The HPCA velocities in GSM (``v*_gsm_hpca_*``) are those of the files,
     the DBCS velocities rotated from GSE to GSM as if DBCS were GSE: the
     rotation by the tilt of the spin axis (2 to 4 degrees) is missing. For
@@ -557,7 +590,7 @@ def get_data(
             source, file_name, sdc_session, headers
         )
 
-        if "-dist" in var["dtype"]:
+        if "-dist" in var["dtype"] and _is_skymap(cdf_name):
             out = dist_append(out, get_dist(file_content, cdf_name, tint))
 
         else:

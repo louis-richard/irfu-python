@@ -26,6 +26,18 @@ def _first_table(energy, step_table, parity):
     return energy[idx[0] if idx.size else 0, :].copy()
 
 
+def _energy_parity(energy):
+    # Stepping table parity of each record from its energies, for the files
+    # without the parity variable (the DES distaux files): 0 for the table of
+    # the first record, 1 for the other one
+    other = np.any(energy != energy[0], axis=1)
+
+    if np.any(energy[other] != energy[other][:1]):
+        raise ValueError("more than two energy tables without a stepping parity")
+
+    return other.astype(np.uint8)
+
+
 def get_dist(file_path, cdf_name, tint: list | None = None):
     r"""Read field named cdf_name in file and convert to velocity distribution
     function.
@@ -57,8 +69,21 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
         (`pyrfu.pyrf.resample` interpolates it as the other per-time
         attributes, to a fraction between 0 and 1).
 
+    Raises
+    ------
+    ValueError
+        If a burst file without the stepping table parity (the DES
+        ``distaux`` files) has more than two energy tables.
+
     Notes
     -----
+    In burst mode, the energy table of each distribution is given by the
+    stepping table parity of the file (``steptable_parity``). The files
+    without it (the DES ``distaux`` files of the modelled photoelectron
+    distribution, ``disterr_photo``) take it from the energies of each
+    distribution: 0 for the table of the first distribution, 1 for the
+    other one.
+
     The FPI distributions are compressed on board (CCSDS 122.0 wavelet
     compression, Barrie et al., 2017 [1]_). The fast survey distributions, the
     sums of 4.5 s of burst distributions, are compressed 16.7 times and are
@@ -157,7 +182,10 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
         en0_name = _fpi_name(cdf_name, "energy0")
         en1_name = _fpi_name(cdf_name, "energy1")
 
-        step_table = file[e_step_table_name].values
+        if e_step_table_name in z_vars:
+            step_table = file[e_step_table_name].values
+        else:
+            step_table = _energy_parity(np.broadcast_to(energy, (len(times), n_energy)))
 
         if en0_name in z_vars:
             energy0 = file[en0_name].values.reshape(n_energy)

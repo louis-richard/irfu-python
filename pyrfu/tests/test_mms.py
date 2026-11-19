@@ -9705,6 +9705,49 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             result.energy.data[:, 0], [10.0, 10.5, 10.0, 10.5, 10.0, 10.5, 10.0, 10.5]
         )
 
+    def _get_data_local(self, var_str, content, tint):
+        # get_data on one local file of the given content
+        module = importlib.import_module("pyrfu.mms.get_data")
+
+        with tempfile.TemporaryDirectory() as root:
+            path = os.path.join(root, "mms1_fpi_l2_file.cdf")
+            with open(path, "wb") as file:
+                file.write(content)
+
+            with mock.patch.object(module, "list_files", return_value=[path]):
+                out = mms.get_data(var_str, tint, 1, False, root, source="local")
+
+        return out
+
+    def test_get_data_dist_files(self):
+        # The skymaps of the distribution files are read by get_dist, their
+        # other variables (avgf1counts, the average one-count level of each
+        # energy) by get_ts; the DES photoelectron model of the distaux files
+        # is a skymap
+        tint = ["2019-09-14T07:54:09", "2019-09-14T07:54:12"]
+        cdf = pycdfpp.load(_cdf_fpi_dist(4))
+        cdf.add_variable("mms1_dis_avgf1counts_brst", values=np.ones((4, 5)))
+        cdf["mms1_dis_avgf1counts_brst"].add_attribute("DEPEND_0", "Epoch")
+        result = self._get_data_local(
+            "avgf1countsi_fpi_brst_l2", bytes(pycdfpp.save(cdf)), tint
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertTupleEqual(result.shape, (4, 5))
+
+        content = _cdf_fpi_dist(4, "fast", "des")
+        cdf = pycdfpp.load(content)
+        dist = cdf["mms1_des_dist_fast"]
+        cdf.add_variable("mms1_des_disterr_photo_fast", values=dist.values)
+        for i, dep in enumerate(["Epoch", "phi", "theta", "energy"]):
+            name = dep if dep == "Epoch" else f"mms1_des_{dep}_fast"
+            cdf["mms1_des_disterr_photo_fast"].add_attribute(f"DEPEND_{i:d}", name)
+        result = self._get_data_local(
+            "pdphotoe_fpi_fast_l2", bytes(pycdfpp.save(cdf)), tint
+        )
+        expected = mms.get_dist(content, "mms1_des_dist_fast", tint)
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
     def test_get_ts_append_empty_file(self):
         # As get_data: a file without records, before or after a file with
         # data, gives the data and the energies of the latter
@@ -9863,12 +9906,15 @@ def _cdf_fpi_dist(
     energy_nrv=False,
     energy_tables=False,
     compressionloss=None,
+    parity_var=True,
+    energy=None,
 ):
     # In-memory FPI distribution of either mode (non-record-varying phi and
     # theta): energies of the stepping table parity of each record (all 0 in
-    # fast) or a single non-record-varying table, and optionally the energy0
-    # and energy1 variables (twice the energies) and the compression
-    # indicator of each record
+    # fast), a single non-record-varying table or the given energies of each
+    # record, and optionally the energy0 and energy1 variables (twice the
+    # energies), the compression indicator of each record, and in burst no
+    # parity variable (the DES distaux files)
     time = np.datetime64("2019-09-14T07:54:10", "ns") + np.arange(
         n_records
     ) * np.timedelta64(150, "ms")
@@ -9886,7 +9932,9 @@ def _cdf_fpi_dist(
     cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
     cdf.add_variable(names[0], values=np.arange(4.0)[None], is_nrv=True)
     cdf.add_variable(names[1], values=np.arange(3.0)[None], is_nrv=True)
-    if energy_nrv:
+    if energy is not None:
+        cdf.add_variable(names[2], values=np.asarray(energy, dtype=float))
+    elif energy_nrv:
         cdf.add_variable(names[2], values=_FPI_TABLES[:1], is_nrv=True)
     else:
         cdf.add_variable(names[2], values=_FPI_TABLES[parity].reshape(-1, 5))
@@ -9897,7 +9945,7 @@ def _cdf_fpi_dist(
                 values=2 * _FPI_TABLES[i : i + 1],
                 is_nrv=True,
             )
-    if mode == "brst":
+    if mode == "brst" and parity_var:
         cdf.add_variable(f"{pre}_steptable_parity{suf}", values=parity)
     if compressionloss is not None:
         # One per record, or one per file (non-record-varying, the fast
@@ -9929,6 +9977,26 @@ class GetDistTestCase(unittest.TestCase):
         np.testing.assert_array_equal(
             result.energy.data, np.where(np.c_[parity] == 1, table1, table0)
         )
+
+    @data([0, 1, 0, 1], [1, 0, 0, 1], [0, 0, 0, 0])
+    def test_get_dist_no_parity(self, parity):
+        # A burst file without the stepping table parity (the DES distaux
+        # files): the parity of the energies of each record, 0 for the table
+        # of the first record, and the energies of the file
+        expected = mms.get_dist(_cdf_fpi_dist(4, parity=parity), "mms1_dis_dist_brst")
+        content = _cdf_fpi_dist(4, parity=parity, parity_var=False)
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        relative = np.asarray(parity) != parity[0]
+        np.testing.assert_array_equal(result.energy.data, expected.energy.data)
+        np.testing.assert_array_equal(result.attrs["esteptable"], relative)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+    def test_get_dist_no_parity_three_tables(self):
+        # Without the parity, more than two energy tables are an error
+        energy = np.vstack([_FPI_TABLES, 3 * _FPI_TABLES[:1]])
+        content = _cdf_fpi_dist(3, parity=[0, 1, 0], parity_var=False, energy=energy)
+        with self.assertRaisesRegex(ValueError, "more than two energy tables"):
+            mms.get_dist(content, "mms1_dis_dist_brst")
 
     @data(("dis", "ions"), ("des", "electrons"))
     @unpack
@@ -13491,6 +13559,14 @@ class TokenizeTestCase(unittest.TestCase):
         ("vdrift_gse_edi_srvy_l2", "edi_vdrift_gse_srvy_l2", "efield", "gse"),
         ("b_gse_scm_srvy_l2", "scm_acb_gse_scsrvy_srvy_l2", "scsrvy", "gse"),
         ("bschb_gse_scm_brst_l2", "scm_acb_gse_schb_brst_l2", "schb", "gse"),
+        ("defpare_fpi_fast_l2", "des_energyspectr_par_fast", "des-moms", ""),
+        ("defperpe_fpi_brst_l2", "des_energyspectr_perp_brst", "des-moms", ""),
+        ("defmzi_fpi_brst_l2", "dis_energyspectr_mz_brst", "dis-moms", ""),
+        ("scpmeane_fpi_brst_l2", "des_scpmean_brst", "des-partmoms", ""),
+        ("bhati_dbcs_fpi_fast_l2", "dis_bhat_dbcs_fast", "dis-partmoms", "dbcs"),
+        ("xforme_gse_fpi_fast_l2", "des_gse_xform_fast", "des-partmoms", "gse"),
+        ("avgf1countsi_fpi_brst_l2", "dis_avgf1counts_brst", "dis-dist", ""),
+        ("pdphotoe_fpi_fast_l2", "des_disterr_photo_fast", "des-distaux", ""),
     )
     @unpack
     def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
@@ -13499,7 +13575,10 @@ class TokenizeTestCase(unittest.TestCase):
         # densities; EDP quality and bitmask of the dce and scpot files; FGM
         # flag and position; MEC quaternions (ECI to the frame), MLT, L, Kp,
         # Dst; HPCA T_para, T_perp, B; DSP spectra; EDI E and drift velocity;
-        # SCM survey and high-speed burst waveforms
+        # SCM survey and high-speed burst waveforms; FPI directional and
+        # field-aligned spectra, the potential, B direction and GSE matrix of
+        # the partial moments, the average one-count level and the DES
+        # photoelectron model (distaux files)
         result = mms.tokenize(var_str)
         self.assertEqual(result["cdf_name"], cdf_name)
         self.assertEqual(result["dtype"], dtype)
