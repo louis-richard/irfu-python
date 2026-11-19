@@ -215,6 +215,13 @@ def generate_eis(f_s, n_pts, data_rate, dtype, lev, specie, data_unit, mms_id):
     for i, k in enumerate(keys):
         eis_dict[f"t{i:d}"] = generate_spectr(f_s, n_pts, len(energies))
         eis_dict[f"look_t{i:d}"] = generate_ts(f_s, n_pts, tensor_order=1)
+        eis_dict[f"pitch_angle_t{i:d}"] = pyrf.ts_scalar(
+            generate_timeline(f_s, n_pts), np.linspace(0.0, 180.0, n_pts)
+        )
+
+    eis_dict["quality"] = pyrf.ts_scalar(
+        generate_timeline(f_s, n_pts), np.zeros(n_pts, dtype=np.uint32)
+    )
 
     # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
     glob_attrs = {
@@ -10145,7 +10152,8 @@ class GetDistTestCase(unittest.TestCase):
 def _cdf_eis(pref, species, p_num, t_start, n_records=4, energy=(50.0, 80.0, 120.0)):
     # In-memory EIS L2 file named as the reprocessed (v*.100) files, e.g.
     # mms1_epd_eis_brst_l2_extof_proton_P5_flux_t0, with the non-record-varying
-    # energy tables (one record) of the 6 telescopes
+    # energy tables (one record) of the 6 telescopes, their look directions and
+    # pitch angles, and the quality word
     time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
         2500, "ms"
     )
@@ -10161,9 +10169,16 @@ def _cdf_eis(pref, species, p_num, t_start, n_records=4, energy=(50.0, 80.0, 120
         cdf.add_variable(f"{pref}_{name}", values=values)
         cdf[f"{pref}_{name}"].add_attribute("DEPEND_0", "Epoch")
 
+    cdf.add_variable(f"{pref}_quality", values=np.zeros(n_records, dtype=np.uint32))
+    cdf[f"{pref}_quality"].add_attribute("DEPEND_0", "Epoch")
+
     for i in range(6):
         cdf.add_variable(f"{pref}_look_t{i:d}", values=np.ones((n_records, 3)) * i)
         cdf[f"{pref}_look_t{i:d}"].add_attribute("DEPEND_0", "Epoch")
+        cdf.add_variable(
+            f"{pref}_pitch_angle_t{i:d}", values=np.full(n_records, 10.0 * i)
+        )
+        cdf[f"{pref}_pitch_angle_t{i:d}"].add_attribute("DEPEND_0", "Epoch")
 
         for j, specie in enumerate(species):
             energy_name = f"{pref}_{specie}_t{i:d}_energy"
@@ -10252,7 +10267,12 @@ class GetEisAlltTestCase(unittest.TestCase):
                 [
                     "spin",
                     "sector",
-                    *[f"{k}t{i:d}" for k in ["", "look_"] for i in range(6)],
+                    "quality",
+                    *[
+                        f"{k}t{i:d}"
+                        for k in ["", "look_", "pitch_angle_"]
+                        for i in range(6)
+                    ],
                 ]
             ),
         )
@@ -10271,6 +10291,9 @@ class GetEisAlltTestCase(unittest.TestCase):
                 result[f"t{i:d}"].data[:, 0], np.arange(0, 12, 3) + 100 * i + 1000 * j
             )
             np.testing.assert_array_equal(result[f"look_t{i:d}"].data, i)
+            np.testing.assert_array_equal(result[f"pitch_angle_t{i:d}"].data, 10 * i)
+
+        np.testing.assert_array_equal(result["quality"].data, 0)
 
     def test_get_eis_allt_files(self):
         # Two files appended in time and clipped to tint, P# changes but not
