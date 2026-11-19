@@ -96,6 +96,13 @@ def feeps_spin_avg(
     IDL SPEDAS and pyspedas instead average from the second sample of a spin
     to the first sample of the next one, and set the last spin(s) to zero.
 
+    The spins come from the spin sector numbers, as in IDL SPEDAS and
+    pyspedas, not from the spin numbers of the files (``spin``): in burst
+    mode the spin number changes one sample after the sector number wraps
+    around (at sector 1), and in survey mode it gives the last sectors of
+    the spin before the start of a file to the first spin of the file (MMS1
+    and MMS3, 2017-07-11 and 2019-09-14).
+
     """
 
     combine = method or _DEFAULT_METHODS.get(flux_omni.attrs.get("units_name"), "mean")
