@@ -70,12 +70,13 @@ def _var_and_cdf_name(var_str: str, mms_id: str | int) -> tuple[Mapping[str, str
 
 def _is_skymap(cdf_name: str) -> bool:
     r"""Whether the FPI variable `cdf_name` (with the spacecraft prefix) is a
-    skymap distribution, read by `get_dist`: the distribution, its error and
-    the modelled photoelectron distribution (dist, disterr, disterr_photo).
+    skymap distribution, read by `get_dist`: the distribution, its error, the
+    modelled photoelectron distribution and the time offsets of the bins
+    (dist, disterr, disterr_photo, steptimeoffsets).
     The other variables of the distribution files (e.g. avgf1counts) are time
     series."""
 
-    return cdf_name.split("_")[2] in ("dist", "disterr")
+    return cdf_name.split("_")[2] in ("dist", "disterr", "steptimeoffsets")
 
 
 def _read(reader, file_content, cdf_name, tint):
@@ -420,14 +421,23 @@ def get_data(
 
     EDI: counts-q0_edi_brst_l2, counts-q0_edi_srvy_l2, e_dsl_edi_brst_l2,
     e_dsl_edi_srvy_l2, e_gse_edi_brst_l2, e_gse_edi_srvy_l2, e_gsm_edi_brst_l2,
-    e_gsm_edi_srvy_l2, flux-amb-alt-cc_edi_brst_l2, flux-amb-alt-cc_edi_srvy_l2,
-    flux-amb-alt-oc_edi_brst_l2, flux-amb-alt-oc_edi_srvy_l2,
-    flux-amb-alt-oob_edi_brst_l2, flux-amb-alt-oob_edi_srvy_l2,
-    flux-amb-perp-ob_edi_brst_l2, flux-amb-perp-ob_edi_srvy_l2,
-    flux-amb-pm2_edi_brst_l2, flux-amb-pm2_edi_srvy_l2, flux-amb_edi_brst_l2,
-    flux-amb_edi_srvy_l2, vdrift_dsl_edi_brst_l2, vdrift_dsl_edi_srvy_l2,
-    vdrift_gse_edi_brst_l2, vdrift_gse_edi_srvy_l2, vdrift_gsm_edi_brst_l2,
-    vdrift_gsm_edi_srvy_l2
+    e_gsm_edi_srvy_l2, errem_dsl_edi_brst_l2, errem_dsl_edi_srvy_l2,
+    errem_gse_edi_brst_l2, errem_gse_edi_srvy_l2, errem_gsm_edi_brst_l2,
+    errem_gsm_edi_srvy_l2, errep_dsl_edi_brst_l2, errep_dsl_edi_srvy_l2,
+    errep_gse_edi_brst_l2, errep_gse_edi_srvy_l2, errep_gsm_edi_brst_l2,
+    errep_gsm_edi_srvy_l2, errvdriftm_dsl_edi_brst_l2, errvdriftm_dsl_edi_srvy_l2,
+    errvdriftm_gse_edi_brst_l2, errvdriftm_gse_edi_srvy_l2, errvdriftm_gsm_edi_brst_l2,
+    errvdriftm_gsm_edi_srvy_l2, errvdriftp_dsl_edi_brst_l2, errvdriftp_dsl_edi_srvy_l2,
+    errvdriftp_gse_edi_brst_l2, errvdriftp_gse_edi_srvy_l2, errvdriftp_gsm_edi_brst_l2,
+    errvdriftp_gsm_edi_srvy_l2, flux-amb-alt-cc_edi_brst_l2,
+    flux-amb-alt-cc_edi_srvy_l2, flux-amb-alt-oc_edi_brst_l2,
+    flux-amb-alt-oc_edi_srvy_l2, flux-amb-alt-oob_edi_brst_l2,
+    flux-amb-alt-oob_edi_srvy_l2, flux-amb-perp-ob_edi_brst_l2,
+    flux-amb-perp-ob_edi_srvy_l2, flux-amb-pm2_edi_brst_l2, flux-amb-pm2_edi_srvy_l2,
+    flux-amb_edi_brst_l2, flux-amb_edi_srvy_l2, trirchisq_edi_brst_l2,
+    trirchisq_edi_srvy_l2, triweight_edi_brst_l2, triweight_edi_srvy_l2,
+    vdrift_dsl_edi_brst_l2, vdrift_dsl_edi_srvy_l2, vdrift_gse_edi_brst_l2,
+    vdrift_gse_edi_srvy_l2, vdrift_gsm_edi_brst_l2, vdrift_gsm_edi_srvy_l2
 
     EDP: bitmaske_edp_brst_l2, bitmaske_edp_fast_l2, bitmaske_edp_slow_l2,
     bitmaskv_edp_brst_l2, bitmaskv_edp_fast_l2, bitmaskv_edp_slow_l2,
@@ -493,24 +503,25 @@ def get_data(
     partvi_gse_fpi_fast_l2, pbgi_fpi_brst_l2, pbgi_fpi_fast_l2, pde_fpi_brst_l2,
     pde_fpi_fast_l2, pderre_fpi_brst_l2, pderre_fpi_fast_l2, pderri_fpi_brst_l2,
     pderri_fpi_fast_l2, pdi_fpi_brst_l2, pdi_fpi_fast_l2, pdphotoe_fpi_brst_l2,
-    pdphotoe_fpi_fast_l2, pe_dbcs_fpi_brst_l2, pe_dbcs_fpi_fast_l2, pe_dbcs_fpi_fast_ql,
-    pe_gse_fpi_brst_l2, pe_gse_fpi_fast_l2, pe_gse_fpi_fast_ql, pi_dbcs_fpi_brst_l2,
-    pi_dbcs_fpi_fast_l2, pi_dbcs_fpi_fast_ql, pi_gse_fpi_brst_l2, pi_gse_fpi_fast_l2,
-    pi_gse_fpi_fast_ql, qe_dbcs_fpi_brst_l2, qe_dbcs_fpi_fast_l2, qe_gse_fpi_brst_l2,
-    qe_gse_fpi_fast_l2, qi_dbcs_fpi_brst_l2, qi_dbcs_fpi_fast_l2, qi_gse_fpi_brst_l2,
-    qi_gse_fpi_fast_l2, scpmeane_fpi_brst_l2, scpmeane_fpi_fast_l2,
-    scpmeani_fpi_brst_l2, scpmeani_fpi_fast_l2, ste_dbcs_fpi_brst_l2,
-    ste_dbcs_fpi_fast_l2, ste_gse_fpi_brst_l2, ste_gse_fpi_fast_l2,
-    sti_dbcs_fpi_brst_l2, sti_dbcs_fpi_fast_l2, sti_gse_fpi_brst_l2,
-    sti_gse_fpi_fast_l2, te_dbcs_fpi_brst_l2, te_dbcs_fpi_fast_l2, te_dbcs_fpi_fast_ql,
-    te_gse_fpi_brst_l2, te_gse_fpi_fast_l2, te_gse_fpi_fast_ql, ti_dbcs_fpi_brst_l2,
-    ti_dbcs_fpi_fast_l2, ti_gse_fpi_brst_l2, ti_gse_fpi_fast_l2, tparae_fpi_brst_l2,
-    tparae_fpi_fast_l2, tparai_fpi_brst_l2, tparai_fpi_fast_l2, tperpe_fpi_brst_l2,
-    tperpe_fpi_fast_l2, tperpi_fpi_brst_l2, tperpi_fpi_fast_l2, ve_dbcs_fpi_brst_l2,
-    ve_dbcs_fpi_fast_l2, ve_dbcs_fpi_fast_ql, ve_gse_fpi_brst_l2, ve_gse_fpi_fast_l2,
-    ve_gse_fpi_fast_ql, vi_dbcs_fpi_brst_l2, vi_dbcs_fpi_fast_l2, vi_dbcs_fpi_fast_ql,
-    vi_gse_fpi_brst_l2, vi_gse_fpi_fast_l2, vi_gse_fpi_fast_ql, xforme_gse_fpi_brst_l2,
-    xforme_gse_fpi_fast_l2, xformi_gse_fpi_brst_l2, xformi_gse_fpi_fast_l2
+    pdphotoe_fpi_fast_l2, pdtoffe_fpi_brst_l2, pdtoffi_fpi_brst_l2, pe_dbcs_fpi_brst_l2,
+    pe_dbcs_fpi_fast_l2, pe_dbcs_fpi_fast_ql, pe_gse_fpi_brst_l2, pe_gse_fpi_fast_l2,
+    pe_gse_fpi_fast_ql, pi_dbcs_fpi_brst_l2, pi_dbcs_fpi_fast_l2, pi_dbcs_fpi_fast_ql,
+    pi_gse_fpi_brst_l2, pi_gse_fpi_fast_l2, pi_gse_fpi_fast_ql, qe_dbcs_fpi_brst_l2,
+    qe_dbcs_fpi_fast_l2, qe_gse_fpi_brst_l2, qe_gse_fpi_fast_l2, qi_dbcs_fpi_brst_l2,
+    qi_dbcs_fpi_fast_l2, qi_gse_fpi_brst_l2, qi_gse_fpi_fast_l2, scpmeane_fpi_brst_l2,
+    scpmeane_fpi_fast_l2, scpmeani_fpi_brst_l2, scpmeani_fpi_fast_l2,
+    ste_dbcs_fpi_brst_l2, ste_dbcs_fpi_fast_l2, ste_gse_fpi_brst_l2,
+    ste_gse_fpi_fast_l2, sti_dbcs_fpi_brst_l2, sti_dbcs_fpi_fast_l2,
+    sti_gse_fpi_brst_l2, sti_gse_fpi_fast_l2, te_dbcs_fpi_brst_l2, te_dbcs_fpi_fast_l2,
+    te_dbcs_fpi_fast_ql, te_gse_fpi_brst_l2, te_gse_fpi_fast_l2, te_gse_fpi_fast_ql,
+    ti_dbcs_fpi_brst_l2, ti_dbcs_fpi_fast_l2, ti_gse_fpi_brst_l2, ti_gse_fpi_fast_l2,
+    tparae_fpi_brst_l2, tparae_fpi_fast_l2, tparai_fpi_brst_l2, tparai_fpi_fast_l2,
+    tperpe_fpi_brst_l2, tperpe_fpi_fast_l2, tperpi_fpi_brst_l2, tperpi_fpi_fast_l2,
+    ve_dbcs_fpi_brst_l2, ve_dbcs_fpi_fast_l2, ve_dbcs_fpi_fast_ql, ve_gse_fpi_brst_l2,
+    ve_gse_fpi_fast_l2, ve_gse_fpi_fast_ql, vi_dbcs_fpi_brst_l2, vi_dbcs_fpi_fast_l2,
+    vi_dbcs_fpi_fast_ql, vi_gse_fpi_brst_l2, vi_gse_fpi_fast_l2, vi_gse_fpi_fast_ql,
+    xforme_gse_fpi_brst_l2, xforme_gse_fpi_fast_l2, xformi_gse_fpi_brst_l2,
+    xformi_gse_fpi_fast_l2
 
     FSM: b_gse_fsm_brst_l3, r_gse_fsm_brst_l3
 
@@ -655,15 +666,28 @@ def get_data(
 
     Notes
     -----
-    The FPI distributions (``pd*``, ``pderr*`` and ``pdphotoe``, the modelled
-    photoelectron distribution of the DES ``distaux`` files) are skymaps, read
-    by `pyrfu.mms.get_dist`. The other variables of the distribution files
-    are time series, e.g. ``avgf1counts*``, the average one-count level of
-    each energy (s^3/cm^6; files of version 3.4 and later). The directional
+    The FPI distributions (``pd*``, ``pderr*``, ``pdphotoe``, the modelled
+    photoelectron distribution of the DES ``distaux`` files, and ``pdtoff*``,
+    the time offsets of the bins from the time of the distribution, us, burst
+    files of version 3.4 and later) are skymaps, read by
+    `pyrfu.mms.get_dist`. The other variables of the distribution files are
+    time series, e.g. ``avgf1counts*``, the average one-count level of each
+    energy (s^3/cm^6; files of version 3.4 and later): for DIS it is within
+    2 % of the mean one-count level of the bins from the L2 distribution and
+    its error (``vdf_one_count``), for DES 4/3 of it (on 2017-07-11; a
+    question to the FPI team). The directional
     spectra ``def{px,mx,py,my,pz,mz}*`` are those near the +X, -X, +Y, -Y,
     +Z and -Z axes of DBCS, ``bhat*_dbcs`` the unit vector of B and
     ``xform*_gse`` the DBCS to GSE matrix used by FPI for the moments (CMAD
     Table 4-8).
+
+    The EDI uncertainties are the lower and upper errors of the E field and
+    drift velocity (``errem``, ``errep``, ``errvdriftm``, ``errvdriftp``),
+    with the weight of the TRI method in the result (``triweight``, %) and
+    its reduced chi-squared (``trirchisq``).
+
+    The HPCA flux and phase-space density are read with their energies and
+    look directions by `pyrfu.mms.get_hpca_dist` and `pyrfu.mms.hpca_skymap`.
 
     The keys of the levels l2pre, l2a, ql and sitl (AFG, DFG, EDP and FPI)
     read files of the MMS team, at the SDC with a team login (see

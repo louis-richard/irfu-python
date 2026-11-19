@@ -19,10 +19,11 @@ _DEPRECATED_KEYS = {
     for data_rate in ["srvy", "brst"]
 }
 
-# Parameters with keys in mms_keys.json, or kept for keys to come (irfu-matlab
-# names: energyi/e, es12/34, adcoff). Left out for want of data:
-# nbge, pbge, defbge (the FPI background is DIS only), tsi, tse (computed in
-# irfu-matlab: the trace of ti_dbcs or te_dbcs / 3) and epar (the e_par keys)
+# Parameters with keys in mms_keys.json. Left out: nbge, pbge, defbge (the
+# FPI background is DIS only), tsi, tse (computed in irfu-matlab: the trace of
+# ti_dbcs or te_dbcs / 3), epar (the e_par keys), and the irfu-matlab names
+# of files of the MMS team, which could not be checked: energyi/e (FPI ql),
+# es12/34 and adcoff (EDP l2a)
 ALL_PARAMS_SCALARS = [
     "ni",
     "errni",
@@ -49,6 +50,8 @@ ALL_PARAMS_SCALARS = [
     "pderre",
     "pderri",
     "pdphotoe",
+    "pdtoffi",
+    "pdtoffe",
     "avgf1countsi",
     "avgf1countse",
     "v",
@@ -72,8 +75,6 @@ ALL_PARAMS_SCALARS = [
     "defmyi",
     "defpzi",
     "defmzi",
-    "energyi",
-    "energye",
     "sdev12",
     "sdev34",
     "flux-amb-pm2",
@@ -95,6 +96,8 @@ ALL_PARAMS_SCALARS = [
     "ebeam1",
     "ebeam2",
     "status",
+    "triweight",
+    "trirchisq",
     "flagi",
     "flage",
     "nextlowi",
@@ -176,12 +179,14 @@ ALL_PARAMS_VECTORS = [
     "e",
     "hmfe",
     "e2d",
-    "es12",
-    "es34",
     "quat",
     "vdrift",
     "bschb",
     "bsweep",
+    "errem",
+    "errep",
+    "errvdriftm",
+    "errvdriftp",
     "rsun",
     "rmoon",
     "bmodt89d",
@@ -238,7 +243,6 @@ HPCA_PARAMS_SCALARS = [
     "dpfheplusplus",
     "dpfoplus",
     "phase",
-    "adcoff",
     "saz",
     "azimuth",
     "tparahplus",

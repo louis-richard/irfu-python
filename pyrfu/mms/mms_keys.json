@@ -168,6 +168,102 @@
       "cdf_name": "edi_e_gsm_srvy_l2",
       "dtype": "efield"
     },
+    "errem_dsl_edi_brst_l2": {
+      "cdf_name": "edi_e_dsl_delta_minus_brst_l2",
+      "dtype": "efield"
+    },
+    "errem_dsl_edi_srvy_l2": {
+      "cdf_name": "edi_e_dsl_delta_minus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errem_gse_edi_brst_l2": {
+      "cdf_name": "edi_e_gse_delta_minus_brst_l2",
+      "dtype": "efield"
+    },
+    "errem_gse_edi_srvy_l2": {
+      "cdf_name": "edi_e_gse_delta_minus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errem_gsm_edi_brst_l2": {
+      "cdf_name": "edi_e_gsm_delta_minus_brst_l2",
+      "dtype": "efield"
+    },
+    "errem_gsm_edi_srvy_l2": {
+      "cdf_name": "edi_e_gsm_delta_minus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errep_dsl_edi_brst_l2": {
+      "cdf_name": "edi_e_dsl_delta_plus_brst_l2",
+      "dtype": "efield"
+    },
+    "errep_dsl_edi_srvy_l2": {
+      "cdf_name": "edi_e_dsl_delta_plus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errep_gse_edi_brst_l2": {
+      "cdf_name": "edi_e_gse_delta_plus_brst_l2",
+      "dtype": "efield"
+    },
+    "errep_gse_edi_srvy_l2": {
+      "cdf_name": "edi_e_gse_delta_plus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errep_gsm_edi_brst_l2": {
+      "cdf_name": "edi_e_gsm_delta_plus_brst_l2",
+      "dtype": "efield"
+    },
+    "errep_gsm_edi_srvy_l2": {
+      "cdf_name": "edi_e_gsm_delta_plus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errvdriftm_dsl_edi_brst_l2": {
+      "cdf_name": "edi_v_dsl_delta_minus_brst_l2",
+      "dtype": "efield"
+    },
+    "errvdriftm_dsl_edi_srvy_l2": {
+      "cdf_name": "edi_v_dsl_delta_minus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errvdriftm_gse_edi_brst_l2": {
+      "cdf_name": "edi_v_gse_delta_minus_brst_l2",
+      "dtype": "efield"
+    },
+    "errvdriftm_gse_edi_srvy_l2": {
+      "cdf_name": "edi_v_gse_delta_minus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errvdriftm_gsm_edi_brst_l2": {
+      "cdf_name": "edi_v_gsm_delta_minus_brst_l2",
+      "dtype": "efield"
+    },
+    "errvdriftm_gsm_edi_srvy_l2": {
+      "cdf_name": "edi_v_gsm_delta_minus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errvdriftp_dsl_edi_brst_l2": {
+      "cdf_name": "edi_v_dsl_delta_plus_brst_l2",
+      "dtype": "efield"
+    },
+    "errvdriftp_dsl_edi_srvy_l2": {
+      "cdf_name": "edi_v_dsl_delta_plus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errvdriftp_gse_edi_brst_l2": {
+      "cdf_name": "edi_v_gse_delta_plus_brst_l2",
+      "dtype": "efield"
+    },
+    "errvdriftp_gse_edi_srvy_l2": {
+      "cdf_name": "edi_v_gse_delta_plus_srvy_l2",
+      "dtype": "efield"
+    },
+    "errvdriftp_gsm_edi_brst_l2": {
+      "cdf_name": "edi_v_gsm_delta_plus_brst_l2",
+      "dtype": "efield"
+    },
+    "errvdriftp_gsm_edi_srvy_l2": {
+      "cdf_name": "edi_v_gsm_delta_plus_srvy_l2",
+      "dtype": "efield"
+    },
     "flux-amb-alt-cc_edi_brst_l2": {
       "cdf_name": "edi_*",
       "dtype": "amb-alt-cc"
@@ -215,6 +311,22 @@
     "flux-amb_edi_srvy_l2": {
       "cdf_name": "edi_*",
       "dtype": "amb"
+    },
+    "trirchisq_edi_brst_l2": {
+      "cdf_name": "edi_tri_rchisq_brst_l2",
+      "dtype": "efield"
+    },
+    "trirchisq_edi_srvy_l2": {
+      "cdf_name": "edi_tri_rchisq_srvy_l2",
+      "dtype": "efield"
+    },
+    "triweight_edi_brst_l2": {
+      "cdf_name": "edi_tri_weight_brst_l2",
+      "dtype": "efield"
+    },
+    "triweight_edi_srvy_l2": {
+      "cdf_name": "edi_tri_weight_srvy_l2",
+      "dtype": "efield"
     },
     "vdrift_dsl_edi_brst_l2": {
       "cdf_name": "edi_vdrift_dsl_brst_l2",
@@ -1145,6 +1257,14 @@
     "pdphotoe_fpi_fast_l2": {
       "cdf_name": "des_disterr_photo_fast",
       "dtype": "des-distaux"
+    },
+    "pdtoffe_fpi_brst_l2": {
+      "cdf_name": "des_steptimeoffsets_brst",
+      "dtype": "des-dist"
+    },
+    "pdtoffi_fpi_brst_l2": {
+      "cdf_name": "dis_steptimeoffsets_brst",
+      "dtype": "dis-dist"
     },
     "pe_dbcs_fpi_brst_l2": {
       "cdf_name": "des_prestensor_dbcs_brst",

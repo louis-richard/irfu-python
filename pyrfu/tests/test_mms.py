@@ -9763,6 +9763,21 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
         self.assertIsInstance(result, xr.Dataset)
         np.testing.assert_array_equal(result.data.data, expected.data.data)
 
+        # The time offsets of the bins of the burst files: a skymap too
+        content = _cdf_fpi_dist(4)
+        cdf = pycdfpp.load(content)
+        dist = cdf["mms1_dis_dist_brst"]
+        cdf.add_variable("mms1_dis_steptimeoffsets_brst", values=dist.values)
+        for i, dep in enumerate(["Epoch", "phi", "theta", "energy"]):
+            name = dep if dep == "Epoch" else f"mms1_dis_{dep}_brst"
+            cdf["mms1_dis_steptimeoffsets_brst"].add_attribute(f"DEPEND_{i:d}", name)
+        result = self._get_data_local(
+            "pdtoffi_fpi_brst_l2", [bytes(pycdfpp.save(cdf))], tint
+        )
+        expected = mms.get_dist(content, "mms1_dis_dist_brst", tint)
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
     @staticmethod
     def _cdf_edi(t_start, n_records, depend_1=None):
         # In-memory EDI burst efield file with the E field in GSE, or a "null
@@ -13748,6 +13763,10 @@ class TokenizeTestCase(unittest.TestCase):
         ("status_aspoc_srvy_l2", "aspoc_status", "", ""),
         ("flux-amb-pm2_edi_brst_l2", "edi_*", "amb-pm2", ""),
         ("counts-q0_edi_srvy_l2", "edi_*", "q0", ""),
+        ("errem_gse_edi_srvy_l2", "edi_e_gse_delta_minus_srvy_l2", "efield", "gse"),
+        ("errvdriftp_dsl_edi_brst_l2", "edi_v_dsl_delta_plus_brst_l2", "efield", "dsl"),
+        ("triweight_edi_srvy_l2", "edi_tri_weight_srvy_l2", "efield", ""),
+        ("pdtoffi_fpi_brst_l2", "dis_steptimeoffsets_brst", "dis-dist", ""),
     )
     @unpack
     def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
@@ -13766,7 +13785,8 @@ class TokenizeTestCase(unittest.TestCase):
         # HPCA spin number, MCP and TOF voltages, sweep-averaged B, TOF counts;
         # FGM sensor temperature; FSM position; DSP solitary wave counts; ASPOC
         # currents, beam energies and status of each unit; EDI ambient and
-        # quality zero datasets (all the variables of the files)
+        # quality zero datasets (all the variables of the files), EDI errors
+        # and TRI weight; FPI time offsets of the bins
         result = mms.tokenize(var_str)
         self.assertEqual(result["cdf_name"], cdf_name)
         self.assertEqual(result["dtype"], dtype)
@@ -13823,12 +13843,7 @@ class TokenizeTestCase(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "not supported"):
                     mms.tokenize(f"b_gse_hpca_{data_rate}_l2")
 
-    @data(
-        "es12_dsl_edp_fast_l2a",
-        "adcoff_edp_slow_l2a",
-        "phplus_gsm_hpca_brst_l2",
-        "energye_fpi_fast_ql",
-    )
+    @data("phplus_gsm_hpca_brst_l2")
     def test_tokenize_unsupported(self, var_str):
         # Valid parts, but not in mms_keys.json: a clear ValueError, not KeyError
         with self.assertRaisesRegex(ValueError, "not supported"):
@@ -13841,10 +13856,14 @@ class TokenizeTestCase(unittest.TestCase):
         "nbge_fpi_brst_l2",
         "pbge_fpi_fast_l2",
         "defbge_fpi_brst_l2",
+        "es12_dsl_edp_fast_l2a",
+        "adcoff_edp_slow_l2a",
+        "energye_fpi_fast_ql",
     )
     def test_tokenize_removed_parameters(self, var_str):
         # Parameters without data (no FPI DES background, scalar temperatures
-        # computed in irfu-matlab, epar the e_par keys): invalid parameters
+        # computed in irfu-matlab, epar the e_par keys) or of team files that
+        # could not be checked (FPI ql energies, EDP l2a): invalid parameters
         with self.assertRaisesRegex(ValueError, "invalid parameter"):
             mms.tokenize(var_str)
 
