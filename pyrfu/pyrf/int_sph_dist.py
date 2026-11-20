@@ -60,8 +60,9 @@ def int_sph_dist(
     Parameters
     ----------
     vdf : numpy.ndarray
-        Phase-space density skymap. Non-finite values (NaN) are treated as
-        empty bins.
+        Phase-space density skymap. Non-finite values (NaN) have no data and
+        add nothing; without any finite value, the projection is NaN (no
+        data), not 0.
     velocity : numpy.ndarray
         Velocity of the instrument bins,
     phi : numpy.ndarray
@@ -149,7 +150,9 @@ def int_sph_dist(
 
     """
 
-    # Non-finite values are empty bins (NaNs would spread to the projection)
+    # Non-finite values have no data (NaNs would spread to the projection);
+    # without data, the projection is NaN
+    no_data = not np.any(np.isfinite(vdf))
     vdf = np.where(np.isfinite(vdf), vdf, 0.0)
 
     # Coordinates system transformation matrix
@@ -291,6 +294,9 @@ def int_sph_dist(
         numba.get_num_threads(),
     )
     f_g = f_g.reshape((len(velocity_grid),) * n_dim)
+
+    if no_data:
+        f_g = np.full(f_g.shape, np.nan)
 
     if projection_dim == "2d" and projection_base == "cart":
         pst = {

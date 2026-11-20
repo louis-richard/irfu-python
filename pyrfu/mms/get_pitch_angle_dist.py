@@ -33,7 +33,9 @@ def _bin_reduce(data0, finite, in_bin, method, weights):
             row_num = np.einsum("tepk,tpk->tep", finite, in_bin)
             out = np.nanmean(row_sum / row_num, axis=2)
         elif method == "sum":
+            # NaN without a sample with data in the bin
             out = np.einsum("tepk,tpk->te", data0, in_bin)
+            out[np.einsum("tepk,tpk->te", finite, in_bin) == 0] = np.nan
         else:
             sum_w = np.einsum("tepk,tpk,k->te", data0, in_bin, weights)
             out = sum_w / np.einsum("tepk,tpk,k->te", finite, in_bin, weights)
@@ -80,10 +82,11 @@ def get_pitch_angle_dist(
         degrees. Default is 12 bins of 15 degrees.
     meanorsum : {"mean", "sum", "sum_weighted"}
         Method in each bin: "mean" averages over theta, then over phi (as
-        irfu-matlab); "sum" sums the samples (0 for an empty bin); and
-        "sum_weighted" is the mean weighted by the solid angle of the
-        samples (sin theta for the uniform FPI angular grids). Default is
-        "mean".
+        irfu-matlab); "sum" sums the samples; and "sum_weighted" is the mean
+        weighted by the solid angle of the samples (sin theta for the
+        uniform FPI angular grids). The NaN samples have no data and are
+        left out; a bin without data is NaN, for the three methods (see
+        :ref:`api-mms-vdf-nan`). Default is "mean".
 
     Raises
     ------

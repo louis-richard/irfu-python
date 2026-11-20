@@ -285,6 +285,21 @@ class AverageVDFTestCase(unittest.TestCase):
         )
         self.assertIsInstance(result, xr.Dataset)
 
+    def test_average_vdf_no_data(self):
+        # A bin without data in a window is NaN, also for "sum" (it was 0);
+        # the NaN samples are left out of the others
+        vdf = generate_vdf(64.0, 6, [4, 4, 2])
+        vdf.data.data[:] = 1.0
+        vdf.data.data[:3, 0] = np.nan
+        vdf.data.data[3, 1] = np.nan
+
+        for method, full, part in [("mean", 1.0, 1.0), ("sum", 3.0, 2.0)]:
+            with self.subTest(method=method):
+                result = pyrf.average_vdf(vdf, 3, method=method).data.data
+                self.assertTrue(np.all(np.isnan(result[0, 0])))
+                np.testing.assert_array_equal(result[1, 0], full)
+                np.testing.assert_array_equal(result[1, 1], part)
+
     def test_average_vdf_output_meta(self):
         avg_inds = np.arange(1, 99, 3, dtype=int)
         result = pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), 3)
@@ -4984,6 +4999,23 @@ class IntSphDistTestCase(unittest.TestCase):
 
         with self.assertRaises((RuntimeError, NotImplementedError)):
             pyrf.int_sph_dist(vdf, speed, phi, theta, speed_grid, phi_grid, **value)
+
+    @data(
+        {"projection_base": "pol", "projection_dim": "1d"},
+        {"projection_base": "cart", "projection_dim": "2d"},
+    )
+    def test_int_sph_dist_no_data(self, value):
+        # Without any finite value: NaN (no data), not 0
+        args = (
+            np.full((20, 8, 4), np.nan),
+            np.linspace(1, 2, 20),
+            np.arange(8.0) * np.pi / 4,
+            (np.arange(4.0) - 1.5) * np.pi / 8,
+            np.linspace(-2, 2, 41),
+            np.linspace(0, 2 * np.pi, 8, endpoint=False),
+        )
+        result = pyrf.int_sph_dist(*args, n_mc=2, seed=11, **value)["f"]
+        self.assertTrue(np.all(np.isnan(result)))
 
     @data(
         {"projection_base": "pol", "projection_dim": "1d"},

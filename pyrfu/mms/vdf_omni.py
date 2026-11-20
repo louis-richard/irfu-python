@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import warnings
-
 # 3rd party imports
 import numpy as np
 import xarray as xr
@@ -110,21 +107,22 @@ def _omni_frame(vdf, v_frame, energy, n_mc, random_state, sc_pot):
 
 
 def _omni_spacecraft(vdf, method):
-    # Solid-angle weighted mean or sum over the angles (time, energy)
+    # Solid-angle weighted mean or sum over the angles with data (time,
+    # energy); NaN for a channel without data at all angles
     data = vdf.data.data
+    finite = np.isfinite(data)
 
-    with warnings.catch_warnings():
-        # Channels without data at all angles give NaN
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-
+    with np.errstate(divide="ignore", invalid="ignore"):
         if method.lower() == "mean":
             # Solid angles of the (phi, theta) bins (time, phi, theta), from
             # the angular widths of the attributes when present
             solid_angles = _band_solid_angles(vdf)[:, np.newaxis]
-            omni = np.nanmean(np.nanmean(data * solid_angles, axis=3), axis=2)
-            return omni / np.mean(solid_angles, axis=(2, 3))
+            weights = np.where(finite, solid_angles, 0.0)
+            omni = np.sum(np.where(finite, data, 0.0) * weights, axis=(2, 3))
+            return omni / np.sum(weights, axis=(2, 3))
 
-        return np.nansum(np.nansum(data, axis=3), axis=2)
+        omni = np.nansum(data, axis=(2, 3))
+        return np.where(np.any(finite, axis=(2, 3)), omni, np.nan)
 
 
 def vdf_omni(
@@ -187,13 +185,14 @@ def vdf_omni(
 
     Notes
     -----
-    As irfu-matlab PDist.omni, "mean" averages the distribution weighted by
-    the solid angles over theta, then phi, and divides by the mean solid
-    angle; without NaNs, this is the solid-angle weighted mean. The solid
-    angles are those of `vdf_solid_angle`: from the angular widths of the
-    attributes when present (e.g. the polar bands of different widths of the
-    FEEPS skymaps), else from the spacing of the angles. A channel without
-    data at all angles gives NaN ("mean") or 0 ("sum").
+    "mean" is the mean of the distribution weighted by the solid angles of
+    the bins with data, as irfu-matlab PDist.omni without NaN bins
+    (irfu-matlab divides by the mean solid angle of all the bins, which
+    biases the channels with NaN bins). The solid angles are those of
+    `vdf_solid_angle`: from the angular widths of the attributes when present
+    (e.g. the polar bands of different widths of the FEEPS skymaps), else
+    from the spacing of the angles. A channel without data at all angles is
+    NaN, for "mean" and "sum" (see :ref:`api-mms-vdf-nan`).
 
     With `v_frame`, the distribution at speed v in the new frame is the
     spherical mean of `vdf` on the sphere of radius v centred on `v_frame`,

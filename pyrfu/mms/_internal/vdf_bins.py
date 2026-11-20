@@ -23,6 +23,14 @@ def _values(inp):
     return inp.data
 
 
+def _no_data(data):
+    r"""Times of a distribution (first axis) without any finite bin: their
+    integrals and sums are NaN (no data), not 0 (no particles)."""
+
+    data = np.asarray(data)
+    return ~np.any(np.isfinite(data.reshape(len(data), -1)), axis=1)
+
+
 def _units(inp):
     r"""Units of a distribution (of its "data") or of a spectrum."""
     return (inp.data if isinstance(inp, xr.Dataset) else inp).attrs.get("UNITS")

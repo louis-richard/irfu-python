@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import warnings
 from typing import Literal
 
 # 3rd party imports
@@ -26,7 +27,9 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
         output is a skymap with a single time step (at the middle of the
         interval) which can be used as input of the other routines.
     method : {'mean', 'sum'}, Optional
-        Method for averaging. Use 'sum' for counts. Default is 'mean'.
+        Method for averaging. Use 'sum' for counts. Default is 'mean'. The
+        NaN bins have no data and are left out; a bin without data in a
+        window is NaN, for both methods (see :ref:`api-mms-vdf-nan`).
 
     Returns
     -------
@@ -78,9 +81,17 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
 
     func = np.nanmean if method == "mean" else np.nansum
 
-    data_avg = np.stack(
-        [func(vdf.data.data[i_l:i_r, ...], axis=0) for i_l, i_r in bounds]
+    # Mean or sum over the samples with data of each bin, NaN without
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        data_avg = np.stack(
+            [func(vdf.data.data[i_l:i_r, ...], axis=0) for i_l, i_r in bounds]
+        )
+
+    no_data = np.stack(
+        [~np.any(np.isfinite(vdf.data.data[i_l:i_r]), axis=0) for i_l, i_r in bounds]
     )
+    data_avg[no_data] = np.nan
     energy_avg = np.stack(
         [np.nanmean(vdf.energy.data[i_l:i_r], axis=0) for i_l, i_r in bounds]
     )
