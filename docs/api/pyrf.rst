@@ -77,6 +77,7 @@ Vector and tensor operations
 
    dot
    cross
+   ang
    norm
    normalize
    trace
@@ -189,6 +190,7 @@ Plasma parameters
    e_vxb
    edb
    vht
+   walen
    estimate
 
 Pressure tensor, anisotropy and agyrotropy

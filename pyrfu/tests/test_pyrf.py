@@ -55,6 +55,48 @@ from . import generate_data, generate_timeline, generate_ts, generate_vdf
 _NO_SEEDS = np.zeros(0, dtype=np.int64)
 
 
+class AngTestCase(unittest.TestCase):
+    def test_ang_vectors(self):
+        # 0, 90 and 180 degrees, and a small angle of 1e-9 rad, which the
+        # arccosine of the dot product (irfu-matlab) gives as 0
+        x_hat = [1.0, 0.0, 0.0]
+        self.assertEqual(pyrf.ang(x_hat, [2.0, 0.0, 0.0]), 0.0)
+        self.assertEqual(pyrf.ang(x_hat, [0.0, 3.0, 0.0]), 90.0)
+        self.assertEqual(pyrf.ang(x_hat, [-1.0, 0.0, 0.0]), 180.0)
+        np.testing.assert_allclose(
+            pyrf.ang(x_hat, [1.0, 1e-9, 0.0]), np.rad2deg(1e-9), rtol=1e-12
+        )
+
+        # Arrays of vectors, a zero vector without angle
+        result = pyrf.ang([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]], [0.0, 1.0, 0.0])
+        np.testing.assert_allclose(result, [45.0, np.nan])
+
+    def test_ang_time_series(self):
+        # The second time series resampled to the times of the first; a vector
+        # and a time series in either order give a time series
+        time = generate_timeline(1.0, 5)
+        k = np.arange(1.0, 6.0)
+        inp1 = pyrf.ts_vec_xyz(time, np.column_stack([k, 0 * k, 0 * k]))
+        inp2 = pyrf.ts_vec_xyz(
+            time + np.timedelta64(300, "ms"), np.tile([1.0, 0.0, 1.0], (5, 1))
+        )
+
+        result = pyrf.ang(inp1, inp2)
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_array_equal(result.time.data, time)
+        np.testing.assert_allclose(result.data, 45.0)
+        self.assertEqual(result.attrs["UNITS"], "deg")
+
+        for args in [(inp1, [0.0, 1.0, 0.0]), ([0.0, 1.0, 0.0], inp1)]:
+            result = pyrf.ang(*args)
+            np.testing.assert_array_equal(result.time.data, time)
+            np.testing.assert_allclose(result.data, 90.0)
+
+    def test_ang_shape(self):
+        with self.assertRaises(ValueError):
+            pyrf.ang([1.0, 0.0], [0.0, 1.0])
+
+
 @ddt
 class AnisotropyThresholdsTestCase(unittest.TestCase):
     # Ion coefficients for gamma = 0.01 (a, b, beta0)
@@ -9713,6 +9755,103 @@ class VhtValuesTestCase(unittest.TestCase):
 
         np.testing.assert_allclose(np.mean(dv_hts, axis=0), expected, rtol=0.05)
         np.testing.assert_allclose(np.std(v_hts, axis=0), expected, rtol=0.15)
+
+
+def _walen_interval(n_pts=40):
+    # B rotating about x across the interval (a rotational discontinuity), a
+    # varying density, and the Alfven velocity B / sqrt(mu0 n m_p) in km/s
+    time = generate_timeline(1.0, n_pts)
+    phase = np.linspace(0.0, np.pi, n_pts)
+    b_xyz = np.column_stack(
+        [5.0 + 0.0 * phase, 30.0 * np.cos(phase), 30.0 * np.sin(phase)]
+    )
+    n_i = 10.0 + 5.0 * np.sin(phase)
+    rho = 1e6 * n_i * constants.proton_mass
+    v_a = 1e-12 * b_xyz / np.sqrt(constants.mu_0 * rho)[:, None]
+    return time, b_xyz, n_i, v_a, np.array([-200.0, 50.0, 10.0])
+
+
+def _walen_inputs(time, b_xyz, n_i, v_xyz):
+    return (
+        pyrf.ts_vec_xyz(time, v_xyz, {"UNITS": "km/s"}),
+        pyrf.ts_vec_xyz(time, b_xyz, {"UNITS": "nT"}),
+        pyrf.ts_scalar(time, n_i, {"UNITS": "cm^-3"}),
+    )
+
+
+class WalenTestCase(unittest.TestCase):
+    def test_walen_alfvenic(self):
+        # V - V_HT = +-V_A: slope and correlation +-1, no offset; 21.8 km/s
+        # for 1 nT and 1 cm^-3 (irfu-matlab 22)
+        time, b_xyz, n_i, v_a, v_ht = _walen_interval()
+
+        for sign in [1.0, -1.0]:
+            with self.subTest(sign=sign):
+                inputs = _walen_inputs(time, b_xyz, n_i, v_ht + sign * v_a)
+                slope, offset, cc, v_tht, v_a_ts = pyrf.walen(*inputs, v_ht)
+                self.assertAlmostEqual(slope, sign, places=12)
+                self.assertAlmostEqual(offset, 0.0, places=9)
+                self.assertAlmostEqual(cc, sign, places=12)
+                np.testing.assert_allclose(v_a_ts.data, v_a, rtol=1e-12)
+                np.testing.assert_allclose(v_tht.data, sign * v_a, atol=1e-9)
+                np.testing.assert_array_equal(v_tht.time.data, time)
+                self.assertEqual(v_a_ts.attrs["UNITS"], "km/s")
+
+        b_1, n_1, v_1 = np.eye(3)[:2], np.ones(2), np.eye(3)[:2]
+        inputs = _walen_inputs(time[:2], b_1, n_1, v_1)
+        _, _, _, _, v_a_1 = pyrf.walen(*inputs, [0.0, 0.0, 0.0])
+        np.testing.assert_allclose(v_a_1.data[0, 0], 21.812, rtol=1e-4)
+
+    def test_walen_anisotropy(self):
+        # alpha = mu0 (P_par - P_perp) / B^2 = 0.36: V - V_HT = 0.8 V_A has
+        # slope 1 with the pressure tensor, 0.8 without
+        time, b_xyz, n_i, v_a, v_ht = _walen_interval()
+        b_2 = np.sum(b_xyz**2, axis=1)
+        p_perp = 0.1 + 0.0 * b_2
+        p_para = p_perp + 1e-9 * 0.36 * b_2 / constants.mu_0
+        p_fac = np.zeros((len(time), 3, 3))
+        p_fac[:, 0, 0] = p_para
+        p_fac[:, 1, 1] = p_perp
+        p_fac[:, 2, 2] = p_perp
+        p_fac = pyrf.ts_tensor_xyz(time, p_fac, {"UNITS": "nPa"})
+        inputs = _walen_inputs(time, b_xyz, n_i, v_ht + 0.8 * v_a)
+
+        slope, _, cc, _, v_a_ts = pyrf.walen(*inputs, v_ht, p_fac)
+        self.assertAlmostEqual(slope, 1.0, places=12)
+        self.assertAlmostEqual(cc, 1.0, places=12)
+        np.testing.assert_allclose(v_a_ts.data, 0.8 * v_a, rtol=1e-12)
+        self.assertAlmostEqual(pyrf.walen(*inputs, v_ht)[0], 0.8, places=12)
+
+    def test_walen_excluded(self):
+        # The samples without velocity or with alpha >= 1 (no Alfven velocity)
+        # are left out of the fit; B and n resampled to the times of V
+        time, b_xyz, n_i, v_a, v_ht = _walen_interval()
+        v_xyz = v_ht + v_a
+        v_xyz[3] = np.nan
+        v_xyz[10] += 1e3
+        b_2 = np.sum(b_xyz**2, axis=1)
+        p_fac = np.zeros((len(time), 3, 3))
+        p_fac[10, 0, 0] = 1e-9 * 2.0 * b_2[10] / constants.mu_0
+        p_fac = pyrf.ts_tensor_xyz(time, p_fac, {"UNITS": "nPa"})
+        v_xyz, b_ts, n_ts = _walen_inputs(time, b_xyz, n_i, v_xyz)
+        b_ts = b_ts.assign_coords(time=time + np.timedelta64(1, "us"))
+
+        slope, offset, cc, _, v_a_ts = pyrf.walen(v_xyz, b_ts, n_ts, v_ht, p_fac)
+        self.assertAlmostEqual(slope, 1.0, places=6)
+        self.assertAlmostEqual(cc, 1.0, places=9)
+        self.assertAlmostEqual(offset, 0.0, places=3)
+        self.assertTrue(np.all(np.isnan(v_a_ts.data[10])))
+
+    def test_walen_errors(self):
+        time, b_xyz, n_i, v_a, v_ht = _walen_interval()
+        inputs = _walen_inputs(time, b_xyz, n_i, v_ht + v_a)
+
+        with self.assertRaisesRegex(ValueError, "v_ht"):
+            pyrf.walen(*inputs, v_ht[:2])
+
+        inputs = _walen_inputs(time, b_xyz, n_i, np.full_like(v_a, np.nan))
+        with self.assertRaisesRegex(ValueError, "no sample"):
+            pyrf.walen(*inputs, v_ht)
 
 
 class PyrfuLoggingTestCase(unittest.TestCase):

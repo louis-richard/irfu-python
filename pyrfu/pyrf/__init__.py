@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from .ang import ang
 from .anisotropy_thresholds import anisotropy_thresholds
 from .autocorr import autocorr
 from .average_vdf import average_vdf
@@ -109,12 +110,14 @@ from .ts_vec_xyz import ts_vec_xyz
 from .ttns2datetime64 import ttns2datetime64
 from .unix2datetime64 import unix2datetime64
 from .vht import vht
+from .walen import walen
 from .wave_fft import wave_fft
 from .wavelet import wavelet
 from .wavepolarize_means import wavepolarize_means
 from .waverage import waverage
 
 __all__ = [
+    "ang",
     "anisotropy_thresholds",
     "autocorr",
     "average_vdf",
@@ -224,6 +227,7 @@ __all__ = [
     "ttns2datetime64",
     "unix2datetime64",
     "vht",
+    "walen",
     "wave_fft",
     "wavelet",
     "wavepolarize_means",
