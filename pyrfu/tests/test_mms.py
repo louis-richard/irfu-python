@@ -9824,6 +9824,68 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "missing_label"):
             self._get_data_local("e_gse_edi_brst_l2", [content], tint)
 
+    def test_get_data_spacecraft_list(self):
+        # A sequence of spacecraft: the list of their time series, in the same
+        # order, each from the files of its spacecraft
+        module = importlib.import_module("pyrfu.mms.get_data")
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+
+        with tempfile.TemporaryDirectory() as root:
+            paths = {}
+            time = np.datetime64("2019-09-14T07:54:10", "ns") + np.arange(4) * (
+                np.timedelta64(1, "s")
+            )
+            for mms_id in ["1", "2"]:
+                cdf = pycdfpp.CDF()
+                cdf.add_variable(
+                    "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+                )
+                name = f"mms{mms_id}_edi_e_gse_brst_l2"
+                cdf.add_variable(name, values=float(mms_id) * np.ones((4, 3)))
+                cdf[name].add_attribute("DEPEND_0", "Epoch")
+                paths[mms_id] = os.path.join(root, f"mms{mms_id}_edi.cdf")
+                with open(paths[mms_id], "wb") as file:
+                    file.write(bytes(pycdfpp.save(cdf)))
+
+            with mock.patch.object(
+                module, "list_files", side_effect=lambda t, i, *_: [paths[i]]
+            ):
+                result = mms.get_data(
+                    "e_gse_edi_brst_l2", tint, [2, 1], False, root, source="local"
+                )
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+        np.testing.assert_array_equal(result[0].data, 2.0)
+        np.testing.assert_array_equal(result[1].data, 1.0)
+
+    @data([1, 2, 3, 4], (np.int64(3), "4"), range(1, 5))
+    def test_get_data_spacecraft_dispatch(self, mms_ids):
+        # Any sequence of indices (int, numpy int or str): one read per
+        # spacecraft, as str; a single index (int, numpy int or str) gives
+        # its time series; the deprecation warning of a key raised once,
+        # pointing at the caller
+        module = importlib.import_module("pyrfu.mms.get_data")
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+
+        with mock.patch.object(
+            module, "_get_data", side_effect=lambda *a: a[2]
+        ) as read:
+            result = mms.get_data("e_gse_edi_brst_l2", tint, mms_ids)
+            self.assertListEqual(result, [str(i) for i in mms_ids])
+            self.assertEqual(read.call_count, len(mms_ids))
+
+            for mms_id in [np.int64(2), "2", 2]:
+                self.assertEqual(mms.get_data("b_gse_fgm_srvy_l2", tint, mms_id), "2")
+
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                mms.get_data("vhplus_gsm_hpca_srvy_l2", tint, mms_ids)
+
+        future = [w for w in caught if issubclass(w.category, FutureWarning)]
+        self.assertEqual(len(future), 1)
+        self.assertEqual(os.path.basename(future[0].filename), "test_mms.py")
+
     @staticmethod
     def _cdf_edi_amb(t_start, names, n_records=4):
         # In-memory EDI ambient file with the given (name, time base) data

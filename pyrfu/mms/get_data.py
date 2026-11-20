@@ -8,7 +8,8 @@ import os
 import posixpath
 import time
 from collections.abc import Callable, Mapping
-from typing import Any, cast
+from numbers import Integral
+from typing import Any, cast, overload
 
 # 3rd party imports
 import requests
@@ -394,14 +395,36 @@ def _download(remote, sdc_session=None, headers=None) -> bytes:
     return _get_file_content_sources("sdc", remote.url, sdc_session, headers)
 
 
+@overload
 def get_data(
     var_str: str,
     tint: list,
     mms_id: int | str,
+    verbose: bool = ...,
+    data_path: str = ...,
+    source: str = ...,
+) -> DataArray | Dataset: ...
+
+
+@overload
+def get_data(
+    var_str: str,
+    tint: list,
+    mms_id: list[int | str] | tuple[int | str, ...] | range,
+    verbose: bool = ...,
+    data_path: str = ...,
+    source: str = ...,
+) -> list[DataArray | Dataset]: ...
+
+
+def get_data(
+    var_str: str,
+    tint: list,
+    mms_id: int | str | list[int | str] | tuple[int | str, ...] | range,
     verbose: bool = True,
     data_path: str = "",
     source: str = "",
-) -> DataArray | Dataset:
+) -> DataArray | Dataset | list[DataArray | Dataset]:
     r"""Load a variable `var_str`.
 
     AFG: b_bcs_afg_srvy_l2pre, b_dmpa_afg_srvy_l2pre, b_gse_afg_srvy_l2pre,
@@ -628,8 +651,10 @@ def get_data(
         Time interval: the start and stop times as ISO 8601 str, datetime64
         or datetime.datetime, or a time series (its first and last times), as
         `pyrfu.pyrf.time_clip`.
-    mms_id : str or int
-        Index of the target spacecraft.
+    mms_id : int or str or sequence of int or str
+        Index of the target spacecraft, or of several spacecraft (e.g.
+        ``[1, 2, 3, 4]``), whose time series are returned as a list, in the
+        same order.
     verbose : bool, Optional
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
@@ -642,13 +667,14 @@ def get_data(
 
     Returns
     -------
-    out : DataArray or Dataset
+    out : DataArray or Dataset or list
         Time series of the target variable of measured by the target
-        spacecraft over the selected time interval. A spectrum whose axis
-        changes with time (e.g. the FPI burst energy spectra of the early
-        mission, with two alternating energy tables) is a Dataset as
-        `pyrfu.pyrf.ts_spectr`: the data (time, idx0) and the axis (time,
-        idx0).
+        spacecraft over the selected time interval; for several spacecraft,
+        the list of their time series, each on its own times (no
+        resampling). A spectrum whose axis changes with time (e.g. the FPI
+        burst energy spectra of the early mission, with two alternating
+        energy tables) is a Dataset as `pyrfu.pyrf.ts_spectr`: the data
+        (time, idx0) and the axis (time, idx0).
 
     Raises
     ------
@@ -755,13 +781,37 @@ def get_data(
 
     >>> b_xyz = mms.get_data("b_gse_fgm_brst_l2", tint_brst, ic)
 
-    """
+    Load the magnetic field of the four spacecraft
 
-    # Convert mms_id to string
-    mms_id = str(mms_id)
+    >>> b_mms = mms.get_data("b_gse_fgm_brst_l2", tint_brst, [1, 2, 3, 4])
+
+    """
 
     # The HPCA velocities in GSM (deprecated since 2.6.0)
     _warn_deprecated_key(var_str)
+
+    # Several spacecraft (a sequence of indices): the list of their time
+    # series, in the same order
+    if isinstance(mms_id, (str, int, Integral)):
+        out: Any = _get_data(var_str, tint, str(mms_id), verbose, data_path, source)
+    else:
+        out = [
+            _get_data(var_str, tint, str(i), verbose, data_path, source) for i in mms_id
+        ]
+
+    return out
+
+
+def _get_data(
+    var_str: str,
+    tint: list,
+    mms_id: str,
+    verbose: bool,
+    data_path: str,
+    source: str,
+) -> DataArray | Dataset:
+    r"""Time series of the variable `var_str` of the spacecraft `mms_id`
+    (str), see `get_data`."""
 
     var, cdf_name = _var_and_cdf_name(var_str, mms_id)
 
