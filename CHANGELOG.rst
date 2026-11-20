@@ -1,6 +1,110 @@
 Changelog
 =========
 
+2.6.1 (2026-11-19)
+------------------
+
+This release adds the MMS variables of the CMAD that pyrfu could not load:
+240 new ``mms.get_data`` keys for FPI, EDP, EDI (with its ambient and
+quality zero datasets), MEC (with the variables of the three field models),
+HPCA, FGM, FSM, DSP and ASPOC, the quality flags of the FPI distributions,
+and the pitch angles and quality of EIS. ``mms.get_data`` skips the files
+without the variable, such as the EDI burst files of the intervals without
+EFIELD mode.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``mms.get_data`` skips, with a warning, the files that do not have the
+  variable, and raises ``KeyError`` only if none has it: most EDI burst
+  efield files are "null files" with only the times (EDI not in EFIELD
+  mode), on which it raised ``KeyError``.
+- ``mms.get_data`` reads the variables of the FPI distribution files that
+  are not skymaps (e.g. ``avgf1counts``) as time series; they went to
+  ``mms.get_dist``, which failed.
+- ``mms.get_eis_allt`` also returns the pitch angles of the telescopes
+  (``pitch_angle_t0`` to ``pitch_angle_t5``, deg, of the particles, opposite
+  to the look directions) and the quality word (``quality``) of the files.
+  The EIS routines use the telescopes by name and give the same results.
+- ``mms.tokenize`` no longer accepts the parameters ``energyi``,
+  ``energye``, ``es12``, ``es34`` and ``adcoff``, which had no keys (names of
+  team files that could not be checked): "invalid parameter" instead of "not
+  supported", both ``ValueError``.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.get_data`` keys, checked on files of the public archive:
+
+  - FPI: the directional and field-aligned energy spectra
+    (``def{px,mx,py,my,pz,mz}{e,i}``, ``def{par,anti,perp}e``), the
+    spacecraft potential, B direction and DBCS to GSE matrix of the partial
+    moments (``scpmean{e,i}``, ``bhat{e,i}_dbcs``, ``xform{e,i}_gse``), the
+    average one-count level of each energy (``avgf1counts{e,i}``, files of
+    version 3.4 and later) and the modelled DES photoelectron distribution
+    (``pdphotoe``, a skymap of the ``distaux`` files), the time offsets of
+    the bins (``pdtoff{e,i}``, burst files of version 3.4 and later);
+  - EDP: the HF E12 spectral density (``hfesp_edp_srvy_l2``) and the DCE
+    residual (``eres_dsl_edp_{fast,slow}_l2``); EDI: the burst E field and
+    drift velocity (``e_*_edi_brst_l2``, ``vdrift_*_edi_brst_l2``), their
+    lower and upper errors (``errem``, ``errep``, ``errvdriftm``,
+    ``errvdriftp``) and the TRI weight and reduced chi-squared, and the
+    ambient and quality zero datasets (``flux-amb*_edi_*``,
+    ``counts-q0_edi_*``): a Dataset of all the fluxes or counts of the file,
+    their errors and the electron trajectories, with a time dimension per
+    time base of the file;
+  - MEC: positions and velocities in GEO, ECI (a new coordinate system of
+    ``mms.tokenize``) and GSE2000, the velocity in SM, dipole tilt, GMST,
+    geodetic coordinates, Sun and Moon positions, attitude vectors and
+    phases, and the variables of the field models (model B, footpoints, B
+    at the footpoints and the minimum of B, loss cones, field line type) of
+    the T89 (Kp), T89 quiet and TS04 files, with the model at the end of the
+    parameter (e.g. ``bmodts04d_gsm_mec_srvy_l2``);
+  - HPCA: spin number, MCP and TOF voltages, the sweep-averaged B of the ion
+    files (``bsweep_{dmpa,gsm}_hpca_*``; in DMPA as ``b_dmpa_hpca``) and the
+    TOF counts; FGM: range flag, sample rate, sensor and electronics
+    temperatures; FSM: the position; DSP: the solitary wave counts of E12
+    and E34; ASPOC: the current and beam energy of each unit and the status.
+
+- ``mms.get_dist`` keeps the quality flags of the FPI distributions
+  (attribute ``errorflags``, 32 bits: manually flagged interval,
+  overcounting or saturation likely, compression pipeline error), clipped
+  and joined with the times; ``pyrf.average_vdf`` combines them (bitwise
+  or), ``pyrf.resample`` leaves them out.
+- ``mms.get_dist`` reads the burst files without the stepping table parity
+  (the DES ``distaux`` files): the parity is that of the energies.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.get_data``: the keys of the levels l2pre, l2a, ql and sitl read
+  files of the MMS team (SDC login), not in the public archive; the field
+  models of the MEC keys; the E12 and E34 solitary wave counts; the HPCA
+  flux and phase-space density read by ``mms.get_hpca_dist`` and
+  ``mms.hpca_skymap``.
+- ``mms.feeps_spin_avg``: why the spins come from the spin sector numbers,
+  not from the spin numbers of the files (one sample late in burst mode).
+
+Development
+^^^^^^^^^^^
+
+- ``mms.get_dist`` and ``mms.feeps_skymap`` split into helpers, with the
+  same outputs (complexity 22 and 17 down to 6).
+- The random key draws of the tests leave out the deprecated keys.
+
+Known issues
+^^^^^^^^^^^^
+
+- The Kp of the MEC files is 2 on the days checked, also during the storm
+  of 2017-09-08 (Kp about 8): the variables of the T89 model with Kp
+  (``*t89d*``) are then those of the quiet T89 model (``*t89q*``).
+- The DES ``avgf1counts`` is 4/3 of the mean one-count level of the bins
+  from the L2 distribution and its error (DIS within 2 %).
+- The FSM quality flag (``fsm_flag``) has no key: its ``DEPEND_0`` is not
+  the time base of its values in the files.
+- The EDI q0 trajectories of GDU2 are in degrees, although their UNITS say
+  rad.
+
 2.6.0 (2026-11-18)
 ------------------
 

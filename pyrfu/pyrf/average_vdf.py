@@ -37,7 +37,9 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
         widths (``delta_time_minus`` and ``delta_time_plus``) span it, when
         `vdf` has them. The compression indicator (``compressionloss``, 0
         lossless, 1 lossy) of each window is its largest: an average is lossy
-        if one of its distributions is.
+        if one of its distributions is. The FPI quality flags (``errorflags``)
+        of each window are those of its distributions combined (bitwise or):
+        an average has the flags of each of its distributions.
 
     """
 
@@ -123,6 +125,14 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
     if isinstance(loss, np.ndarray) and loss.ndim == 1 and len(loss) == n_vdf:
         vdf_avg.attrs["compressionloss"] = np.array(
             [np.max(loss[i_l:i_r]) for i_l, i_r in bounds]
+        )
+
+    # Quality flags (per time): those of each distribution of the window
+    flags = vdf.attrs.get("errorflags")
+
+    if isinstance(flags, np.ndarray) and flags.ndim == 1 and len(flags) == n_vdf:
+        vdf_avg.attrs["errorflags"] = np.array(
+            [np.bitwise_or.reduce(flags[i_l:i_r]) for i_l, i_r in bounds]
         )
 
     # Half widths of the accumulations: from the start of the first sample of

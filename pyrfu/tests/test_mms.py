@@ -48,6 +48,7 @@ from scipy.special import gammainc
 from .. import mms, pyrf
 from ..mms.feeps_flat_field_corrections import g_corr
 from ..mms.get_ts import get_ts
+from ..mms.tokenize import _DEPRECATED_KEYS
 from . import (
     generate_data,
     generate_defatt,
@@ -215,6 +216,13 @@ def generate_eis(f_s, n_pts, data_rate, dtype, lev, specie, data_unit, mms_id):
     for i, k in enumerate(keys):
         eis_dict[f"t{i:d}"] = generate_spectr(f_s, n_pts, len(energies))
         eis_dict[f"look_t{i:d}"] = generate_ts(f_s, n_pts, tensor_order=1)
+        eis_dict[f"pitch_angle_t{i:d}"] = pyrf.ts_scalar(
+            generate_timeline(f_s, n_pts), np.linspace(0.0, 180.0, n_pts)
+        )
+
+    eis_dict["quality"] = pyrf.ts_scalar(
+        generate_timeline(f_s, n_pts), np.zeros(n_pts, dtype=np.uint32)
+    )
 
     # glob_attrs = {**outdict["spin"].attrs["GLOBAL"], **var}
     glob_attrs = {
@@ -241,9 +249,13 @@ def _mms_keys():
     ) as json_file:
         keys_ = json.load(json_file)
 
-    all_keys = list(
-        np.hstack([list(instrument.keys()) for instrument in keys_.values()])
-    )
+    # The deprecated keys left out (they warn; tested on their own)
+    all_keys = [
+        key
+        for instrument in keys_.values()
+        for key in instrument
+        if key not in _DEPRECATED_KEYS
+    ]
     return all_keys
 
 
@@ -9705,6 +9717,171 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
             result.energy.data[:, 0], [10.0, 10.5, 10.0, 10.5, 10.0, 10.5, 10.0, 10.5]
         )
 
+    def _get_data_local(self, var_str, contents, tint):
+        # get_data on local files of the given contents
+        module = importlib.import_module("pyrfu.mms.get_data")
+
+        with tempfile.TemporaryDirectory() as root:
+            paths = []
+            for i, content in enumerate(contents):
+                path = os.path.join(root, f"mms1_l2_file_{i:d}.cdf")
+                with open(path, "wb") as file:
+                    file.write(content)
+                paths.append(path)
+
+            with mock.patch.object(module, "list_files", return_value=paths):
+                out = mms.get_data(var_str, tint, 1, False, root, source="local")
+
+        return out
+
+    def test_get_data_dist_files(self):
+        # The skymaps of the distribution files are read by get_dist, their
+        # other variables (avgf1counts, the average one-count level of each
+        # energy) by get_ts; the DES photoelectron model of the distaux files
+        # is a skymap
+        tint = ["2019-09-14T07:54:09", "2019-09-14T07:54:12"]
+        cdf = pycdfpp.load(_cdf_fpi_dist(4))
+        cdf.add_variable("mms1_dis_avgf1counts_brst", values=np.ones((4, 5)))
+        cdf["mms1_dis_avgf1counts_brst"].add_attribute("DEPEND_0", "Epoch")
+        result = self._get_data_local(
+            "avgf1countsi_fpi_brst_l2", [bytes(pycdfpp.save(cdf))], tint
+        )
+        self.assertIsInstance(result, xr.DataArray)
+        self.assertTupleEqual(result.shape, (4, 5))
+
+        content = _cdf_fpi_dist(4, "fast", "des")
+        cdf = pycdfpp.load(content)
+        dist = cdf["mms1_des_dist_fast"]
+        cdf.add_variable("mms1_des_disterr_photo_fast", values=dist.values)
+        for i, dep in enumerate(["Epoch", "phi", "theta", "energy"]):
+            name = dep if dep == "Epoch" else f"mms1_des_{dep}_fast"
+            cdf["mms1_des_disterr_photo_fast"].add_attribute(f"DEPEND_{i:d}", name)
+        result = self._get_data_local(
+            "pdphotoe_fpi_fast_l2", [bytes(pycdfpp.save(cdf))], tint
+        )
+        expected = mms.get_dist(content, "mms1_des_dist_fast", tint)
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+        # The time offsets of the bins of the burst files: a skymap too
+        content = _cdf_fpi_dist(4)
+        cdf = pycdfpp.load(content)
+        dist = cdf["mms1_dis_dist_brst"]
+        cdf.add_variable("mms1_dis_steptimeoffsets_brst", values=dist.values)
+        for i, dep in enumerate(["Epoch", "phi", "theta", "energy"]):
+            name = dep if dep == "Epoch" else f"mms1_dis_{dep}_brst"
+            cdf["mms1_dis_steptimeoffsets_brst"].add_attribute(f"DEPEND_{i:d}", name)
+        result = self._get_data_local(
+            "pdtoffi_fpi_brst_l2", [bytes(pycdfpp.save(cdf))], tint
+        )
+        expected = mms.get_dist(content, "mms1_dis_dist_brst", tint)
+        self.assertIsInstance(result, xr.Dataset)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+    @staticmethod
+    def _cdf_edi(t_start, n_records, depend_1=None):
+        # In-memory EDI burst efield file with the E field in GSE, or a "null
+        # file" with only the times (no records: EDI not in EFIELD mode), and
+        # optionally a DEPEND_1 of the E field
+        time = np.datetime64(t_start, "ns") + np.arange(max(n_records, 1)) * (
+            np.timedelta64(1, "s")
+        )
+        cdf = pycdfpp.CDF()
+        cdf.add_variable(
+            "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+        )
+        if n_records:
+            name = "mms1_edi_e_gse_brst_l2"
+            values = np.arange(3.0 * n_records).reshape(n_records, 3)
+            cdf.add_variable(name, values=values)
+            cdf[name].add_attribute("DEPEND_0", "Epoch")
+            if depend_1 is not None:
+                cdf[name].add_attribute("DEPEND_1", depend_1)
+        return bytes(pycdfpp.save(cdf))
+
+    def test_get_data_null_files(self):
+        # The files without the variable (the EDI null files) are skipped with
+        # a warning; KeyError if none has it
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        contents = [
+            self._cdf_edi("2019-09-14T07:54:00", 0),
+            self._cdf_edi("2019-09-14T07:54:10", 4),
+            self._cdf_edi("2019-09-14T07:54:30", 0),
+        ]
+
+        with self.assertLogs("pyrfu.mms.get_data", "WARNING") as logs:
+            result = self._get_data_local("e_gse_edi_brst_l2", contents, tint)
+
+        self.assertEqual(len(logs.records), 2)
+        self.assertIn("file skipped", logs.output[0])
+        np.testing.assert_array_equal(result.data, np.arange(12.0).reshape(4, 3))
+
+        with self.assertRaisesRegex(KeyError, "in none of the files"):
+            self._get_data_local("e_gse_edi_brst_l2", contents[::2], tint)
+
+        # A file with the variable but not its DEPEND_1: the error of get_ts
+        content = self._cdf_edi("2019-09-14T07:54:10", 4, "missing_label")
+        with self.assertRaisesRegex(KeyError, "missing_label"):
+            self._get_data_local("e_gse_edi_brst_l2", [content], tint)
+
+    @staticmethod
+    def _cdf_edi_amb(t_start, names, n_records=4):
+        # In-memory EDI ambient file with the given (name, time base) data
+        # variables of 4 records (a time base per name), their errors (support
+        # data) and a variable without VAR_TYPE
+        cdf = pycdfpp.CDF()
+        t_0 = np.datetime64(t_start, "ns")
+        for base in sorted({base for _, base in names}):
+            time = t_0 + np.arange(n_records) * np.timedelta64(250, "ms")
+            if base == "Epoch_90":
+                time = time + np.timedelta64(125, "ms")
+            cdf.add_variable(
+                base, values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+            )
+        for i, (name, base) in enumerate(names):
+            for full, var_type, scale in [
+                (f"mms1_edi_{name}_srvy_l2", "data", 1.0),
+                (f"mms1_edi_{name}_delta_srvy_l2", "support_data", 0.1),
+            ]:
+                cdf.add_variable(full, values=scale * (np.arange(n_records) + i))
+                cdf[full].add_attribute("DEPEND_0", base)
+                cdf[full].add_attribute("VAR_TYPE", var_type)
+        cdf.add_variable("mms1_edi_label", values=np.ones(n_records))
+        return bytes(pycdfpp.save(cdf))
+
+    def test_get_data_edi_datasets(self):
+        # The keys of the EDI ambient datasets give a Dataset of the data
+        # variables and their errors of the files; a time dimension per time
+        # base when the file has several; the null files skipped; ValueError
+        # when the variables change between files
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+        names = [("flux1_0", "Epoch_0_180"), ("flux1_90_gdu1", "Epoch_90")]
+        contents = [
+            self._cdf_edi_amb("2019-09-14T07:54:00", names),
+            self._cdf_edi("2019-09-14T07:54:10", 0),
+            self._cdf_edi_amb("2019-09-14T07:54:20", names),
+        ]
+        with self.assertLogs("pyrfu.mms.get_data", "WARNING"):
+            result = self._get_data_local("flux-amb-alt-cc_edi_srvy_l2", contents, tint)
+
+        self.assertIsInstance(result, xr.Dataset)
+        self.assertListEqual(
+            sorted(result),
+            ["flux1_0", "flux1_0_delta", "flux1_90_gdu1", "flux1_90_gdu1_delta"],
+        )
+        self.assertTupleEqual(result.flux1_0.dims, ("time_0_180",))
+        self.assertTupleEqual(result.flux1_90_gdu1_delta.dims, ("time_90",))
+        np.testing.assert_array_equal(result.flux1_90_gdu1.data, [1, 2, 3, 4] * 2)
+
+        names = [("flux1_0", "Epoch")]
+        content = self._cdf_edi_amb("2019-09-14T07:54:00", names)
+        result = self._get_data_local("flux-amb_edi_srvy_l2", [content], tint)
+        self.assertTupleEqual(result.flux1_0_delta.dims, ("time",))
+
+        other = self._cdf_edi_amb("2019-09-14T07:54:20", [("flux1_180", "Epoch")])
+        with self.assertRaisesRegex(ValueError, "variables change between files"):
+            self._get_data_local("flux-amb_edi_srvy_l2", [content, other], tint)
+
     def test_get_ts_append_empty_file(self):
         # As get_data: a file without records, before or after a file with
         # data, gives the data and the energies of the latter
@@ -9863,12 +10040,16 @@ def _cdf_fpi_dist(
     energy_nrv=False,
     energy_tables=False,
     compressionloss=None,
+    parity_var=True,
+    energy=None,
+    errorflags=None,
 ):
     # In-memory FPI distribution of either mode (non-record-varying phi and
     # theta): energies of the stepping table parity of each record (all 0 in
-    # fast) or a single non-record-varying table, and optionally the energy0
-    # and energy1 variables (twice the energies) and the compression
-    # indicator of each record
+    # fast), a single non-record-varying table or the given energies of each
+    # record, and optionally the energy0 and energy1 variables (twice the
+    # energies), the compression indicator and quality flags of each record,
+    # and in burst no parity variable (the DES distaux files)
     time = np.datetime64("2019-09-14T07:54:10", "ns") + np.arange(
         n_records
     ) * np.timedelta64(150, "ms")
@@ -9886,7 +10067,9 @@ def _cdf_fpi_dist(
     cdf.add_variable("Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000)
     cdf.add_variable(names[0], values=np.arange(4.0)[None], is_nrv=True)
     cdf.add_variable(names[1], values=np.arange(3.0)[None], is_nrv=True)
-    if energy_nrv:
+    if energy is not None:
+        cdf.add_variable(names[2], values=np.asarray(energy, dtype=float))
+    elif energy_nrv:
         cdf.add_variable(names[2], values=_FPI_TABLES[:1], is_nrv=True)
     else:
         cdf.add_variable(names[2], values=_FPI_TABLES[parity].reshape(-1, 5))
@@ -9897,7 +10080,7 @@ def _cdf_fpi_dist(
                 values=2 * _FPI_TABLES[i : i + 1],
                 is_nrv=True,
             )
-    if mode == "brst":
+    if mode == "brst" and parity_var:
         cdf.add_variable(f"{pre}_steptable_parity{suf}", values=parity)
     if compressionloss is not None:
         # One per record, or one per file (non-record-varying, the fast
@@ -9906,6 +10089,9 @@ def _cdf_fpi_dist(
         cdf.add_variable(
             f"{pre}_compressionloss{suf}", values=loss, is_nrv=loss.size == 1
         )
+    if errorflags is not None:
+        flags = np.asarray(errorflags, dtype=np.uint32)
+        cdf.add_variable(f"{pre}_errorflags{suf}", values=flags)
     cdf.add_variable(
         names[3],
         values=np.arange(n_records * 60, dtype=float).reshape(n_records, 4, 3, 5),
@@ -9929,6 +10115,26 @@ class GetDistTestCase(unittest.TestCase):
         np.testing.assert_array_equal(
             result.energy.data, np.where(np.c_[parity] == 1, table1, table0)
         )
+
+    @data([0, 1, 0, 1], [1, 0, 0, 1], [0, 0, 0, 0])
+    def test_get_dist_no_parity(self, parity):
+        # A burst file without the stepping table parity (the DES distaux
+        # files): the parity of the energies of each record, 0 for the table
+        # of the first record, and the energies of the file
+        expected = mms.get_dist(_cdf_fpi_dist(4, parity=parity), "mms1_dis_dist_brst")
+        content = _cdf_fpi_dist(4, parity=parity, parity_var=False)
+        result = mms.get_dist(content, "mms1_dis_dist_brst")
+        relative = np.asarray(parity) != parity[0]
+        np.testing.assert_array_equal(result.energy.data, expected.energy.data)
+        np.testing.assert_array_equal(result.attrs["esteptable"], relative)
+        np.testing.assert_array_equal(result.data.data, expected.data.data)
+
+    def test_get_dist_no_parity_three_tables(self):
+        # Without the parity, more than two energy tables are an error
+        energy = np.vstack([_FPI_TABLES, 3 * _FPI_TABLES[:1]])
+        content = _cdf_fpi_dist(3, parity=[0, 1, 0], parity_var=False, energy=energy)
+        with self.assertRaisesRegex(ValueError, "more than two energy tables"):
+            mms.get_dist(content, "mms1_dis_dist_brst")
 
     @data(("dis", "ions"), ("des", "electrons"))
     @unpack
@@ -10038,6 +10244,23 @@ class GetDistTestCase(unittest.TestCase):
         result = mms.get_dist(content, "mms1_dis_dist_fast")
         self.assertNotIn("compressionloss", result.attrs)
 
+    @data("brst", "fast")
+    def test_get_dist_errorflags(self, mode):
+        # The quality flags of each record (bits), clipped with the times; none
+        # without them in the file, or with another number of values
+        content = _cdf_fpi_dist(4, mode, errorflags=[0, 2, 5, 0])
+        result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
+        np.testing.assert_array_equal(result.attrs["errorflags"], [0, 2, 5, 0])
+        self.assertEqual(result.attrs["errorflags"].dtype, np.uint32)
+
+        tint = ["2019-09-14T07:54:10.100", "2019-09-14T07:54:10.400"]
+        result = mms.get_dist(content, f"mms1_dis_dist_{mode}", tint)
+        np.testing.assert_array_equal(result.attrs["errorflags"], [2, 5])
+
+        for content in [_cdf_fpi_dist(4, mode), _cdf_fpi_dist(4, mode, errorflags=[1])]:
+            result = mms.get_dist(content, f"mms1_dis_dist_{mode}")
+            self.assertNotIn("errorflags", result.attrs)
+
     @data("2019-09-14T07:54:10", [0, 1])
     def test_get_dist_tint_type_error(self, tint):
         with self.assertRaises(TypeError):
@@ -10056,7 +10279,8 @@ class GetDistTestCase(unittest.TestCase):
 def _cdf_eis(pref, species, p_num, t_start, n_records=4, energy=(50.0, 80.0, 120.0)):
     # In-memory EIS L2 file named as the reprocessed (v*.100) files, e.g.
     # mms1_epd_eis_brst_l2_extof_proton_P5_flux_t0, with the non-record-varying
-    # energy tables (one record) of the 6 telescopes
+    # energy tables (one record) of the 6 telescopes, their look directions and
+    # pitch angles, and the quality word
     time = np.datetime64(t_start, "ns") + np.arange(n_records) * np.timedelta64(
         2500, "ms"
     )
@@ -10072,9 +10296,16 @@ def _cdf_eis(pref, species, p_num, t_start, n_records=4, energy=(50.0, 80.0, 120
         cdf.add_variable(f"{pref}_{name}", values=values)
         cdf[f"{pref}_{name}"].add_attribute("DEPEND_0", "Epoch")
 
+    cdf.add_variable(f"{pref}_quality", values=np.zeros(n_records, dtype=np.uint32))
+    cdf[f"{pref}_quality"].add_attribute("DEPEND_0", "Epoch")
+
     for i in range(6):
         cdf.add_variable(f"{pref}_look_t{i:d}", values=np.ones((n_records, 3)) * i)
         cdf[f"{pref}_look_t{i:d}"].add_attribute("DEPEND_0", "Epoch")
+        cdf.add_variable(
+            f"{pref}_pitch_angle_t{i:d}", values=np.full(n_records, 10.0 * i)
+        )
+        cdf[f"{pref}_pitch_angle_t{i:d}"].add_attribute("DEPEND_0", "Epoch")
 
         for j, specie in enumerate(species):
             energy_name = f"{pref}_{specie}_t{i:d}_energy"
@@ -10163,7 +10394,12 @@ class GetEisAlltTestCase(unittest.TestCase):
                 [
                     "spin",
                     "sector",
-                    *[f"{k}t{i:d}" for k in ["", "look_"] for i in range(6)],
+                    "quality",
+                    *[
+                        f"{k}t{i:d}"
+                        for k in ["", "look_", "pitch_angle_"]
+                        for i in range(6)
+                    ],
                 ]
             ),
         )
@@ -10182,6 +10418,9 @@ class GetEisAlltTestCase(unittest.TestCase):
                 result[f"t{i:d}"].data[:, 0], np.arange(0, 12, 3) + 100 * i + 1000 * j
             )
             np.testing.assert_array_equal(result[f"look_t{i:d}"].data, i)
+            np.testing.assert_array_equal(result[f"pitch_angle_t{i:d}"].data, 10 * i)
+
+        np.testing.assert_array_equal(result["quality"].data, 0)
 
     def test_get_eis_allt_files(self):
         # Two files appended in time and clipped to tint, P# changes but not
@@ -13491,6 +13730,43 @@ class TokenizeTestCase(unittest.TestCase):
         ("vdrift_gse_edi_srvy_l2", "edi_vdrift_gse_srvy_l2", "efield", "gse"),
         ("b_gse_scm_srvy_l2", "scm_acb_gse_scsrvy_srvy_l2", "scsrvy", "gse"),
         ("bschb_gse_scm_brst_l2", "scm_acb_gse_schb_brst_l2", "schb", "gse"),
+        ("defpare_fpi_fast_l2", "des_energyspectr_par_fast", "des-moms", ""),
+        ("defperpe_fpi_brst_l2", "des_energyspectr_perp_brst", "des-moms", ""),
+        ("defmzi_fpi_brst_l2", "dis_energyspectr_mz_brst", "dis-moms", ""),
+        ("scpmeane_fpi_brst_l2", "des_scpmean_brst", "des-partmoms", ""),
+        ("bhati_dbcs_fpi_fast_l2", "dis_bhat_dbcs_fast", "dis-partmoms", "dbcs"),
+        ("xforme_gse_fpi_fast_l2", "des_gse_xform_fast", "des-partmoms", "gse"),
+        ("avgf1countsi_fpi_brst_l2", "dis_avgf1counts_brst", "dis-dist", ""),
+        ("pdphotoe_fpi_fast_l2", "des_disterr_photo_fast", "des-distaux", ""),
+        ("hfesp_edp_srvy_l2", "edp_hfesp_srvy_l2", "hfesp", ""),
+        ("eres_dsl_edp_slow_l2", "edp_dce_dsl_res_slow_l2", "dce", "dsl"),
+        ("e_gsm_edi_brst_l2", "edi_e_gsm_brst_l2", "efield", "gsm"),
+        ("vdrift_dsl_edi_brst_l2", "edi_vdrift_dsl_brst_l2", "efield", "dsl"),
+        ("r_eci_mec_srvy_l2", "mec_r_eci", "epht89d", "eci"),
+        ("vel_gse2000_mec_brst_l2", "mec_v_gse2000", "epht89d", "gse2000"),
+        ("tilt_mec_srvy_l2", "mec_dipole_tilt", "epht89d", ""),
+        ("rsun_eci_mec_srvy_l2", "mec_r_sun_de421_eci", "epht89d", "eci"),
+        ("lphase_mec_brst_l2", "mec_L_phase", "epht89d", ""),
+        ("bmodt89d_gsm_mec_srvy_l2", "mec_bsc_gsm", "epht89d", "gsm"),
+        ("rfsts04d_gsm_mec_brst_l2", "mec_pfs_gsm", "ephts04d", "gsm"),
+        ("losscnt89q_mec_srvy_l2", "mec_loss_cone_angle_n", "epht89q", ""),
+        ("fltypets04d_mec_srvy_l2", "mec_fieldline_type", "ephts04d", ""),
+        ("spinnum_hpca_srvy_l2", "hpca_spin_number", "moments", ""),
+        ("tofvmon_hpca_brst_l2", "hpca_TOF_VMON_MIN_converted", "moments", ""),
+        ("bsweep_dmpa_hpca_srvy_l2", "hpca_B_GSE_sweep_avg", "ion", "dmpa"),
+        ("tofcounts_hpca_srvy_l2", "hpca_tof_counts", "tof-counts", ""),
+        ("stemp_fgm_brst_l2", "fgm_stemp_brst_l2", "", ""),
+        ("r_gse_fsm_brst_l3", "fsm_r_gse_brst_l3", "8khz", "gse"),
+        ("swde34_dsp_fast_l2", "dsp_swd_E34_Counts", "swd", ""),
+        ("ionc2_aspoc_srvy_l2", "asp2_ionc", "", ""),
+        ("ebeam1_aspoc_srvy_l2", "asp1_energy", "", ""),
+        ("status_aspoc_srvy_l2", "aspoc_status", "", ""),
+        ("flux-amb-pm2_edi_brst_l2", "edi_*", "amb-pm2", ""),
+        ("counts-q0_edi_srvy_l2", "edi_*", "q0", ""),
+        ("errem_gse_edi_srvy_l2", "edi_e_gse_delta_minus_srvy_l2", "efield", "gse"),
+        ("errvdriftp_dsl_edi_brst_l2", "edi_v_dsl_delta_plus_brst_l2", "efield", "dsl"),
+        ("triweight_edi_srvy_l2", "edi_tri_weight_srvy_l2", "efield", ""),
+        ("pdtoffi_fpi_brst_l2", "dis_steptimeoffsets_brst", "dis-dist", ""),
     )
     @unpack
     def test_tokenize_cmad_keys(self, var_str, cdf_name, dtype, coords):
@@ -13499,7 +13775,18 @@ class TokenizeTestCase(unittest.TestCase):
         # densities; EDP quality and bitmask of the dce and scpot files; FGM
         # flag and position; MEC quaternions (ECI to the frame), MLT, L, Kp,
         # Dst; HPCA T_para, T_perp, B; DSP spectra; EDI E and drift velocity;
-        # SCM survey and high-speed burst waveforms
+        # SCM survey and high-speed burst waveforms; FPI directional and
+        # field-aligned spectra, the potential, B direction and GSE matrix of
+        # the partial moments, the average one-count level and the DES
+        # photoelectron model (distaux files); EDP HF spectra and DCE residual;
+        # EDI burst E field and drift velocity; MEC positions and velocities
+        # in ECI and GSE2000, dipole tilt, Sun position, attitude phase, and
+        # the field-model variables of the T89 (Kp), T89 quiet and TS04 files;
+        # HPCA spin number, MCP and TOF voltages, sweep-averaged B, TOF counts;
+        # FGM sensor temperature; FSM position; DSP solitary wave counts; ASPOC
+        # currents, beam energies and status of each unit; EDI ambient and
+        # quality zero datasets (all the variables of the files), EDI errors
+        # and TRI weight; FPI time offsets of the bins
         result = mms.tokenize(var_str)
         self.assertEqual(result["cdf_name"], cdf_name)
         self.assertEqual(result["dtype"], dtype)
@@ -13523,10 +13810,13 @@ class TokenizeTestCase(unittest.TestCase):
     def test_mms_keys_coordinate_systems(self):
         # When the CDF variable name has a coordinate system, it is the one of
         # the key (some products, e.g. HPCA DBCS moments, have none in the name).
-        # HPCA B_GSE_spin_avg is in DMPA (its CATDESC; CMAD Table 5-18, "see
-        # afg_srvy_l2pre_dmpa")
+        # HPCA B_GSE_spin_avg and B_GSE_sweep_avg are in DMPA (their CATDESC;
+        # CMAD Tables 5-17 and 5-18, "see afg_srvy_l2pre_dmpa")
         coordinates = {"gse", "gsm", "dbcs", "dmpa", "bcs", "dsl", "ssc", "gei"}
-        mislabelled = {"hpca_B_GSE_spin_avg": {"dmpa"}}
+        mislabelled = {
+            "hpca_B_GSE_spin_avg": {"dmpa"},
+            "hpca_B_GSE_sweep_avg": {"dmpa"},
+        }
         keys_path = os.path.join(os.path.dirname(mms.__file__), "mms_keys.json")
         with open(keys_path, "r", encoding="utf-8") as file:
             keys = json.load(file)
@@ -13553,13 +13843,7 @@ class TokenizeTestCase(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "not supported"):
                     mms.tokenize(f"b_gse_hpca_{data_rate}_l2")
 
-    @data(
-        "es12_dsl_edp_fast_l2a",
-        "adcoff_edp_slow_l2a",
-        "phplus_gsm_hpca_brst_l2",
-        "flux-amb-pm2_edi_brst_l2",
-        "energye_fpi_fast_ql",
-    )
+    @data("phplus_gsm_hpca_brst_l2")
     def test_tokenize_unsupported(self, var_str):
         # Valid parts, but not in mms_keys.json: a clear ValueError, not KeyError
         with self.assertRaisesRegex(ValueError, "not supported"):
@@ -13572,10 +13856,14 @@ class TokenizeTestCase(unittest.TestCase):
         "nbge_fpi_brst_l2",
         "pbge_fpi_fast_l2",
         "defbge_fpi_brst_l2",
+        "es12_dsl_edp_fast_l2a",
+        "adcoff_edp_slow_l2a",
+        "energye_fpi_fast_ql",
     )
     def test_tokenize_removed_parameters(self, var_str):
         # Parameters without data (no FPI DES background, scalar temperatures
-        # computed in irfu-matlab, epar the e_par keys): invalid parameters
+        # computed in irfu-matlab, epar the e_par keys) or of team files that
+        # could not be checked (FPI ql energies, EDP l2a): invalid parameters
         with self.assertRaisesRegex(ValueError, "invalid parameter"):
             mms.tokenize(var_str)
 

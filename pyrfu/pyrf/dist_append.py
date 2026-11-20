@@ -33,10 +33,11 @@ def dist_append(inp0, inp1):
     -----
     The time series have to be in the correct time order. The energy widths
     (``delta_energy_plus``, ``delta_energy_minus``), the half widths of the
-    accumulations (``delta_time_minus``, ``delta_time_plus``) and the FPI
-    compression indicator (``compressionloss``) are joined when both inputs
-    have them, and left out otherwise (``mms.get_dist`` gives None energy
-    widths for files without them).
+    accumulations (``delta_time_minus``, ``delta_time_plus``), the FPI
+    compression indicator (``compressionloss``) and quality flags
+    (``errorflags``) are joined when both inputs have them, and left out
+    otherwise (``mms.get_dist`` gives None energy widths for files without
+    them).
 
     """
 
@@ -88,6 +89,7 @@ def dist_append(inp0, inp1):
         "delta_time_minus",
         "delta_time_plus",
         "compressionloss",
+        "errorflags",
     ]:
         values = [inp0.attrs.get(key), inp1.attrs.get(key)]
 

@@ -10,12 +10,13 @@ import numpy as np
 # is the length of time.
 
 # Per-time attributes of the distributions and their number of dimensions:
-# step table, time widths and compression indicator (time,), energy widths and
-# FEEPS coverage (time, energy), azimuthal widths (time, phi); the EIS energy
-# widths are per channel, (energy,)
+# step table, time widths, compression indicator and quality flags (time,),
+# energy widths and FEEPS coverage (time, energy), azimuthal widths (time,
+# phi); the EIS energy widths are per channel, (energy,)
 _TIME_ATTRS = {
     "esteptable": 1,
     "compressionloss": 1,
+    "errorflags": 1,
     "delta_time_minus": 1,
     "delta_time_plus": 1,
     "delta_energy_minus": 2,

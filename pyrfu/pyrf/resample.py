@@ -237,11 +237,15 @@ def _resample_dataset(inp, ref, **kwargs):
     out_dict = {**out_dict, **{k: inp[k] for k in ndepnd_zvars}}
 
     # The per-time attributes are resampled, the others kept, with the rule of
-    # time_clip (_is_time_attr)
+    # time_clip (_is_time_attr); the quality flags are left out (bits, neither
+    # interpolated nor averaged)
     out_attrs = {}
 
     for k in sorted(inp.attrs):
         attr = inp.attrs[k]
+
+        if k == "errorflags":
+            continue
 
         if _is_time_attr(k, attr, len(inp.time.data)):
             coords = [np.arange(attr.shape[i + 1]) for i in range(attr.ndim - 1)]
@@ -335,6 +339,10 @@ def resample(
       samples, each component is interpolated through its finite samples, as
       MATLAB interp1 ("spline"): NaN samples are skipped. With "linear" or
       "nearest", a NaN gives NaN at the times next to it, as MATLAB.
+
+    The per-time attributes of a distribution (xarray.Dataset) are resampled
+    as the data, except the FPI quality flags (``errorflags``), bits which
+    are left out.
 
     Examples
     --------

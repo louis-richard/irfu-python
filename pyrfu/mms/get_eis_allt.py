@@ -68,6 +68,8 @@ def _eis_names(cdf, pref, specie, data_unit, file_name):
             for i in range(6)
         },
         **{f"look_t{i:d}": f"{pref}_look_t{i:d}" for i in range(6)},
+        **{f"pitch_angle_t{i:d}": f"{pref}_pitch_angle_t{i:d}" for i in range(6)},
+        "quality": f"{pref}_quality",
     }
 
     # Non-record-varying energy table of the telescope 0, one value per channel
@@ -115,7 +117,12 @@ def get_eis_allt(
     -------
     out : xarray.Dataset
         Dataset containing the energy spectrum of the 6 telescopes of the
-        Energy Ion Spectrometer.
+        Energy Ion Spectrometer (``t0`` to ``t5``), their look directions in
+        GSE (``look_t0`` to ``look_t5``), the pitch angles of the particles
+        they measure (``pitch_angle_t0`` to ``pitch_angle_t5``, deg, from the
+        magnetic field of the files), the quality word of the files
+        (``quality``), and the spin number and sector of each time (``spin``,
+        ``sector``).
 
     Raises
     ------
@@ -131,6 +138,11 @@ def get_eis_allt(
     The variable names are read from each file: the P# of the look-up table
     is not always the major version of the file (e.g., P3 in v2.1.100). The
     specie "alpha" is read as "helium".
+
+    The pitch angles of the files are those of the particles, whose
+    velocities are opposite to the look directions: on 2017-07-11 (MMS2
+    survey) they are those of -``look_t0`` and the FGM field within 0.5 deg
+    (median), not those of ``look_t0``.
 
     Examples
     --------

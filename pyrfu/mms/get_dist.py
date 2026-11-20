@@ -26,6 +26,139 @@ def _first_table(energy, step_table, parity):
     return energy[idx[0] if idx.size else 0, :].copy()
 
 
+def _energy_parity(energy):
+    # Stepping table parity of each record from its energies, for the files
+    # without the parity variable (the DES distaux files): 0 for the table of
+    # the first record, 1 for the other one
+    other = np.any(energy != energy[0], axis=1)
+
+    if np.any(energy[other] != energy[other][:1]):
+        raise ValueError("more than two energy tables without a stepping parity")
+
+    return other.astype(np.uint8)
+
+
+def _species(cdf_name):
+    # Particle species of the FPI variable cdf_name (dis or des)
+    if "_dis_" in cdf_name:
+        species = "ions"
+    elif "_des_" in cdf_name:
+        species = "electrons"
+    else:
+        raise AttributeError(
+            "Couldn't get the particle species from file name!!",
+        )
+
+    return species
+
+
+def _burst_tables(file, cdf_name, z_vars, energy, n_times):
+    # Energies of each record, energy tables and stepping table parity of a
+    # burst file: the parity of the file or, without it (the DES distaux
+    # files), of the energies; the tables of the file (energy0, energy1) or
+    # of the first record of each parity
+    n_energy = energy.shape[1]
+    step_table_name = _fpi_name(cdf_name, "steptable_parity")
+    en0_name = _fpi_name(cdf_name, "energy0")
+    en1_name = _fpi_name(cdf_name, "energy1")
+
+    if step_table_name in z_vars:
+        step_table = file[step_table_name].values
+    else:
+        step_table = _energy_parity(np.broadcast_to(energy, (n_times, n_energy)))
+
+    if en0_name in z_vars:
+        energy0 = file[en0_name].values.reshape(n_energy)
+        energy1 = file[en1_name].values.reshape(n_energy)
+    else:
+        energy = np.broadcast_to(energy, (n_times, n_energy))
+        energy0 = _first_table(energy, step_table, 0)
+        energy1 = _first_table(energy, step_table, 1)
+
+    # Overwrite energy to make sure that energy0 and energy1 are used instead
+    energy = np.tile(energy0, (len(step_table), 1))
+    energy[step_table == 1] = np.tile(energy1, (int(np.sum(step_table)), 1))
+
+    return energy, energy0, energy1, step_table
+
+
+def _tables(file, cdf_name, z_vars, tmmode, phi, energy, n_times):
+    # Azimuths, energies of each record, energy tables and stepping table
+    # parity of the file, from the tables of one record (non-record-varying)
+    # or of all records
+    n_phi, n_energy = phi.shape[1], energy.shape[1]
+
+    if n_times == 0:
+        # File without records: empty skymap, without energy tables
+        phi = np.zeros((0, n_phi))
+        energy = np.zeros((0, n_energy))
+        energy0 = np.full(n_energy, np.nan)
+        energy1 = np.full(n_energy, np.nan)
+        step_table = np.zeros(0)
+    elif tmmode == "brst":
+        energy, energy0, energy1, step_table = _burst_tables(
+            file, cdf_name, z_vars, energy, n_times
+        )
+    elif tmmode == "fast":
+        # No stepping: a single energy table (the energies of the first
+        # record; the records of the files have the same)
+        energy = np.broadcast_to(energy, (n_times, n_energy)).copy()
+        energy0 = energy[0, :].copy()
+        energy1 = energy[0, :].copy()
+        step_table = np.zeros(n_times)
+    else:
+        raise ValueError("Invalid sampling mode!!")
+
+    if phi.shape[0] == 1:
+        phi = phi[0, :]
+
+    return phi, energy, energy0, energy1, step_table
+
+
+def _per_time(file, name, z_vars, n_times, per_file=False):
+    # Values of the variable name, one per record, or None if the file has
+    # none or another number of values; with per_file, one value
+    # (non-record-varying) is that of all the records
+    if name not in z_vars or not n_times:
+        return None
+
+    values = np.asarray(file[name].values).ravel()
+
+    if per_file and values.size == 1:
+        values = np.full(n_times, values[0], dtype=values.dtype)
+
+    if values.size != n_times:
+        return None
+
+    return values
+
+
+def _file_attrs(file, cdf_name, z_vars, n_times):
+    # Energy widths, compression indicator and quality flags of the file,
+    # those it has
+    attrs = {}
+    d_en_name = _fpi_name(cdf_name, "energy_delta")
+
+    # Energy widths, left out (not None) for the files without them, as the
+    # routines, e.g. reduce, check for the attribute
+    if d_en_name in z_vars:
+        attrs["delta_energy_plus"] = file[d_en_name].values
+        attrs["delta_energy_minus"] = file[d_en_name].values
+
+    # Compression indicator of each distribution: 0 lossless, 1 lossy; one
+    # per record in burst, one per file (non-record-varying, "at survey-start
+    # time") in fast survey, then for all its distributions. Quality flags of
+    # each distribution (32 bits, 0 without quality errors)
+    for key, per_file in [("compressionloss", True), ("errorflags", False)]:
+        name = _fpi_name(cdf_name, key)
+        values = _per_time(file, name, z_vars, n_times, per_file)
+
+        if values is not None:
+            attrs[key] = values
+
+    return attrs
+
+
 def get_dist(file_path, cdf_name, tint: list | None = None):
     r"""Read field named cdf_name in file and convert to velocity distribution
     function.
@@ -55,10 +188,28 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
         lossy, when the file has it: one per distribution in burst mode, the
         indicator of the file for all its distributions in fast survey
         (`pyrfu.pyrf.resample` interpolates it as the other per-time
-        attributes, to a fraction between 0 and 1).
+        attributes, to a fraction between 0 and 1). The attribute
+        ``errorflags`` (time,) holds the quality flags of each distribution,
+        when the file has them: 0 without quality errors, else bit 0 a
+        manually flagged interval, bit 1 overcounting or saturation likely,
+        bit 2 a compression pipeline error (``VAR_NOTES`` of the files;
+        4294967295 is the fill value).
+
+    Raises
+    ------
+    ValueError
+        If a burst file without the stepping table parity (the DES
+        ``distaux`` files) has more than two energy tables.
 
     Notes
     -----
+    In burst mode, the energy table of each distribution is given by the
+    stepping table parity of the file (``steptable_parity``). The files
+    without it (the DES ``distaux`` files of the modelled photoelectron
+    distribution, ``disterr_photo``) take it from the energies of each
+    distribution: 0 for the table of the first distribution, 1 for the
+    other one.
+
     The FPI distributions are compressed on board (CCSDS 122.0 wavelet
     compression, Barrie et al., 2017 [1]_). The fast survey distributions, the
     sums of 4.5 s of burst distributions, are compressed 16.7 times and are
@@ -92,15 +243,7 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
     """
 
     tmmode = cdf_name.split("_")[-1]
-
-    if "_dis_" in cdf_name:
-        specie = "ions"
-    elif "_des_" in cdf_name:
-        specie = "electrons"
-    else:
-        raise AttributeError(
-            "Couldn't get the particle species from file name!!",
-        )
+    specie = _species(cdf_name)
 
     # Time interval (forms of time_clip), checked before reading the file
     if tint is None:
@@ -144,69 +287,11 @@ def get_dist(file_path, cdf_name, tint: list | None = None):
     theta = file[depends_keys[2]].values.reshape(n_theta)
     energy = file[depends_keys[3]].values.reshape(-1, n_energy)
 
-    if times.size == 0:
-        # File without records: empty skymap, without energy tables
-        phi = np.zeros((0, n_phi))
-        energy = np.zeros((0, n_energy))
-        energy0 = np.full(n_energy, np.nan)
-        energy1 = np.full(n_energy, np.nan)
-        step_table = np.zeros(0)
+    phi, energy, energy0, energy1, step_table = _tables(
+        file, cdf_name, z_vars, tmmode, phi, energy, len(times)
+    )
 
-    elif tmmode == "brst":
-        e_step_table_name = _fpi_name(cdf_name, "steptable_parity")
-        en0_name = _fpi_name(cdf_name, "energy0")
-        en1_name = _fpi_name(cdf_name, "energy1")
-
-        step_table = file[e_step_table_name].values
-
-        if en0_name in z_vars:
-            energy0 = file[en0_name].values.reshape(n_energy)
-            energy1 = file[en1_name].values.reshape(n_energy)
-        else:
-            energy = np.broadcast_to(energy, (len(times), n_energy))
-            energy0 = _first_table(energy, step_table, 0)
-            energy1 = _first_table(energy, step_table, 1)
-
-        # Overwrite energy to make sure that energy0 and energy1
-        # are used instead
-        energy = np.tile(energy0, (len(step_table), 1))
-        energy[step_table == 1] = np.tile(energy1, (int(np.sum(step_table)), 1))
-
-    elif tmmode == "fast":
-        # No stepping: a single energy table (the energies of the first
-        # record; the records of the files have the same)
-        energy = np.broadcast_to(energy, (len(times), n_energy)).copy()
-        energy0 = energy[0, :].copy()
-        energy1 = energy[0, :].copy()
-        step_table = np.zeros(len(times))
-
-    else:
-        raise ValueError("Invalid sampling mode!!")
-
-    if phi.shape[0] == 1:
-        phi = phi[0, :]
-
-    d_en_name = _fpi_name(cdf_name, "energy_delta")
-
-    # Energy widths, left out (not None) for the files without them, as the
-    # routines, e.g. reduce, check for the attribute
-    if d_en_name in z_vars:
-        glob_attrs["delta_energy_plus"] = file[d_en_name].values
-        glob_attrs["delta_energy_minus"] = file[d_en_name].values
-
-    # Compression indicator of each distribution: 0 lossless, 1 lossy; one
-    # per record in burst, one per file (non-record-varying, "at survey-start
-    # time") in fast survey, then for all its distributions
-    compression_name = _fpi_name(cdf_name, "compressionloss")
-
-    if compression_name in z_vars and times.size:
-        loss = np.asarray(file[compression_name].values).ravel()
-
-        if loss.size == 1:
-            loss = np.full(len(times), loss[0], dtype=loss.dtype)
-
-        if loss.size == len(times):
-            glob_attrs["compressionloss"] = loss
+    glob_attrs = {**glob_attrs, **_file_attrs(file, cdf_name, z_vars, len(times))}
 
     # Half widths of the accumulation (s) around the (centred) times, as
     # irfu-matlab dt_minus and dt_plus
