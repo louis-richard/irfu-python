@@ -104,6 +104,7 @@ Coordinate systems
    mva_gui
    mean
    eb_nrf
+   lmn
    l_shell
 
 Filtering and signal processing
@@ -167,6 +168,7 @@ Multi-spacecraft methods
    avg_4sc
    nanavg_4sc
    c_4_k
+   c_4_r
    c_4_grad
    c_4_j
    c_4_v

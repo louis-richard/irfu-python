@@ -1769,6 +1769,54 @@ class C4GradTestCase(unittest.TestCase):
             np.testing.assert_allclose(k.data, k_0.data, rtol=1e-12)
 
 
+class C4RTestCase(unittest.TestCase):
+    def test_c_4_r(self):
+        # Regular tetrahedron of vertices (+-1, +-1, +-1): R = I, L = 2,
+        # E = P = 0; stretched by 2 along x, E = 1/2; flattened along z, P = 1
+        vertices = np.array(
+            [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]], dtype=float
+        )
+        time = generate_timeline(1.0, 3)
+        scales = np.array([[1.0, 1.0, 1.0], [2.0, 1.0, 1.0], [2.0, 1.0, 0.0]])
+        r_mms = [
+            pyrf.ts_vec_xyz(time, 100.0 + vertex * scales, {"UNITS": "km"})
+            for vertex in vertices
+        ]
+
+        r_tensor, size, elongation, planarity = pyrf.c_4_r(r_mms)
+        np.testing.assert_allclose(r_tensor.data[0], np.eye(3), atol=1e-12)
+        np.testing.assert_allclose(r_tensor.data[1], np.diag([4.0, 1, 1]), atol=1e-12)
+        np.testing.assert_allclose(size.data, [2.0, 4.0, 4.0])
+        np.testing.assert_allclose(elongation.data, [0.0, 0.5, 0.5], atol=1e-12)
+        np.testing.assert_allclose(planarity.data, [0.0, 0.0, 1.0], atol=1e-12)
+        self.assertEqual(r_tensor.attrs["UNITS"], "km^2")
+        self.assertEqual(size.attrs["UNITS"], "km")
+        self.assertEqual(planarity.attrs["UNITS"], "")
+
+    def test_c_4_r_nan_and_times(self):
+        # A NaN position gives NaN; positions on other time lines are
+        # resampled to the first; four spacecraft needed
+        vertices = np.array([[0, 0, 0], [20, 0, 0], [10, 17, 0], [10, 6, 16.0]])
+        time = generate_timeline(1.0, 4)
+        r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (4, 1))) for r in vertices]
+        r_mms[2].data[1] = np.nan
+        r_tensor, size, _, planarity = pyrf.c_4_r(r_mms)
+        self.assertTrue(np.all(np.isnan(r_tensor.data[1])))
+        self.assertTrue(np.isnan(size.data[1]) and np.isnan(planarity.data[1]))
+        self.assertNotIn("UNITS", r_tensor.attrs)
+
+        r_shifted = [r_mms[0]] + [
+            r.assign_coords(time=r.time.data + np.timedelta64(100, "ms"))
+            for r in r_mms[1:]
+        ]
+        result = pyrf.c_4_r(r_shifted)
+        np.testing.assert_array_equal(result[0].time.data, time)
+        np.testing.assert_allclose(result[1].data[3], size.data[3])
+
+        with self.assertRaises(ValueError):
+            pyrf.c_4_r(r_mms[:3])
+
+
 class C4JTestCase(unittest.TestCase):
     def test_c_4_j_input(self):
         # TypeError and ValueError (AssertionError), one call per check
@@ -5990,6 +6038,45 @@ class LowPassTestCase(unittest.TestCase):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", FutureWarning)
                 pyrf.lowpass(inp, 1.0, f_s=64.0, fhz=64.0)
+
+
+class LmnTestCase(unittest.TestCase):
+    def test_lmn_l(self):
+        # "L": L along B, N along the part of n perpendicular to B, M = N x L
+        time = generate_timeline(1.0, 2)
+        inp = pyrf.ts_vec_xyz(time, np.tile([1.0, 2.0, 3.0], (2, 1)), {"UNITS": "mV/m"})
+        b_xyz = pyrf.ts_vec_xyz(time, np.array([[5.0, 0, 0], [0, 5.0, 0]]))
+
+        # B along x: N along z; B along y: N along n, M = (-1, 0, 0.3) / |n|
+        result = pyrf.lmn(inp, b_xyz, [0.3, 0.0, 1.0])
+        expected = [[1.0, 2.0, 3.0], [2.0, -0.1 / np.sqrt(1.09), 3.3 / np.sqrt(1.09)]]
+        np.testing.assert_allclose(result.data, expected, atol=1e-12)
+        self.assertEqual(result.attrs["COORDINATE_SYSTEM"], "lmn")
+        self.assertEqual(result.attrs["UNITS"], "mV/m")
+        self.assertNotIn("COORDINATE_SYSTEM", inp.attrs)
+
+    def test_lmn_n(self):
+        # "N": N along n, L along the mean B (perpendicular to n), M = N x L;
+        # B in its own frame has B_L > 0, B_M = 0 (irfu-matlab: B_L < 0)
+        time = generate_timeline(1.0, 3)
+        b_xyz = pyrf.ts_vec_xyz(
+            time, np.array([[1.0, 1.0, 0.5], [1.0, -1.0, 0.5], [np.nan] * 3])
+        )
+        inp = pyrf.ts_vec_xyz(time, np.tile([1.0, 2.0, 3.0], (3, 1)))
+
+        result = pyrf.lmn(inp, b_xyz, [0.0, 0.0, 2.0], "N")
+        np.testing.assert_allclose(result.data, np.tile([1.0, 2.0, 3.0], (3, 1)))
+        b_lmn = pyrf.lmn(b_xyz, b_xyz, [0.0, 0.0, 1.0], "N")
+        np.testing.assert_allclose(np.nanmean(b_lmn.data, axis=0), [1.0, 0, 0.5])
+
+    def test_lmn_errors(self):
+        inp = generate_ts(1.0, 5, tensor_order=1)
+
+        with self.assertRaises(ValueError):
+            pyrf.lmn(inp, inp, [0.0, 1.0])
+
+        with self.assertRaises(ValueError):
+            pyrf.lmn(inp, inp, [0.0, 0.0, 1.0], "M")
 
 
 @ddt

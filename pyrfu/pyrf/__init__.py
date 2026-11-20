@@ -10,6 +10,7 @@ from .brazil import brazil
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
 from .c_4_k import c_4_k
+from .c_4_r import c_4_r
 from .c_4_v import c_4_v
 from .c_4_v_xcorr import c_4_v_xcorr
 from .calc_ag import calc_ag
@@ -58,6 +59,7 @@ from .iso86012datetime64 import iso86012datetime64
 from .iso86012timevec import iso86012timevec
 from .iso86012unix import iso86012unix
 from .l_shell import l_shell
+from .lmn import lmn
 from .lowpass import lowpass
 from .magnetosphere import magnetosphere
 from .match_phibe_dir import match_phibe_dir
@@ -126,6 +128,7 @@ __all__ = [
     "c_4_grad",
     "c_4_j",
     "c_4_k",
+    "c_4_r",
     "c_4_v",
     "c_4_v_xcorr",
     "calc_ag",
@@ -174,6 +177,7 @@ __all__ = [
     "iso86012datetime64",
     "iso86012timevec",
     "l_shell",
+    "lmn",
     "lowpass",
     "magnetosphere",
     "match_phibe_dir",
