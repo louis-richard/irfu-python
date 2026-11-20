@@ -129,6 +129,7 @@ FPI particle distributions
    vdf_partial_density
    vdf_flux
    pad_palim
+   edi_amb_pad
    pad_diffusion
    psd_rebin
    vdf_rebin

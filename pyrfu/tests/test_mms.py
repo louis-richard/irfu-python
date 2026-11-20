@@ -4631,6 +4631,70 @@ class PadPalimTestCase(unittest.TestCase):
             mms.pad_palim(vdf, 90.0)
 
 
+def _edi_amb(n_records=4, energy=(500.0, 250.0), delta=True):
+    # EDI burst amb-pm2 Dataset as get_data gives it: the fluxes of the four
+    # channels at 0 and 180 degrees (10 * channel, + 1 at 180 degrees), their
+    # errors (a tenth) and the energy of the GDUs on its own time base
+    time = np.datetime64("2017-01-01T01:51:40", "ns") + np.arange(
+        n_records
+    ) * np.timedelta64(250, "ms")
+    out = {}
+    for channel in range(1, 5):
+        for angle, offset in [(0, 0.0), (180, 1.0)]:
+            values = np.full(n_records, 10.0 * channel + offset)
+            name = f"flux{channel:d}_{angle:d}"
+            out[name] = pyrf.ts_scalar(time, values, attrs={"UNITS": "cm^-2 s^-1"})
+            if delta:
+                out[f"{name}_delta"] = pyrf.ts_scalar(time, values / 10.0)
+    time_tag = time[0] + np.array([-1, 375], dtype="timedelta64[ms]")
+    for gdu in [1, 2]:
+        energy_ts = pyrf.ts_scalar(time_tag, np.asarray(energy))
+        out[f"energy_gdu{gdu:d}"] = energy_ts.rename({"time": "time_timetag"})
+    return xr.Dataset(out)
+
+
+class EdiAmbPadTestCase(unittest.TestCase):
+    def test_edi_amb_pad(self):
+        # The 8 pitch-angle bins of irfu-matlab Flux-amb-pm2: channels 1 to 4
+        # at 0 to 45 degrees, 4 to 1 at 135 to 180 degrees; the energy of the
+        # GDU at its last record before each time
+        pad = mms.edi_amb_pad(_edi_amb())
+
+        self.assertTupleEqual(pad.data.shape, (4, 1, 8))
+        np.testing.assert_array_equal(
+            pad.data.data[0, 0], [10, 20, 30, 40, 41, 31, 21, 11]
+        )
+        np.testing.assert_allclose(
+            pad.theta.data[0],
+            np.array([0.5, 1.5, 2.5, 3.5, 12.5, 13.5, 14.5, 15.5]) * 11.25,
+        )
+        np.testing.assert_array_equal(pad.energy.data[:, 0], [500, 500, 250, 250])
+        np.testing.assert_array_equal(
+            pad.attrs["delta_energy_minus"][:, 0], [25, 25, 12.5, 12.5]
+        )
+        np.testing.assert_array_equal(pad.attrs["delta_pitchangle_plus"], 5.625)
+        self.assertEqual(pad.data.attrs["UNITS"], "cm^-2 s^-1")
+        self.assertEqual(pad.attrs["species"], "electrons")
+
+        # The errors (irfu-matlab Flux-err-amb-pm2), and pad_palim on the result
+        pad_err = mms.edi_amb_pad(_edi_amb(), error=True)
+        np.testing.assert_allclose(pad_err.data.data, pad.data.data / 10.0)
+        np.testing.assert_array_equal(
+            mms.pad_palim(pad, [0.0, 50.0]).data.data[0, 0], [10, 20, 30, 40]
+        )
+
+    def test_edi_amb_pad_missing(self):
+        # Without the four channels, their errors or the energy: ValueError
+        amb = _edi_amb()
+        for name in ["flux4_180", "energy_gdu1"]:
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, name):
+                    mms.edi_amb_pad(amb.drop_vars(name))
+
+        with self.assertRaisesRegex(ValueError, "flux1_0_delta"):
+            mms.edi_amb_pad(_edi_amb(delta=False), error=True)
+
+
 @ddt
 class PadDiffusionTestCase(unittest.TestCase):
     def test_pad_diffusion_legendre(self):
@@ -9887,10 +9951,11 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
         self.assertEqual(os.path.basename(future[0].filename), "test_mms.py")
 
     @staticmethod
-    def _cdf_edi_amb(t_start, names, n_records=4):
+    def _cdf_edi_amb(t_start, names, n_records=4, energy=None):
         # In-memory EDI ambient file with the given (name, time base) data
         # variables of 4 records (a time base per name), their errors (support
-        # data) and a variable without VAR_TYPE
+        # data), a variable without VAR_TYPE, and optionally the energy of the
+        # GDUs on a time base of its own (epoch_timetag, 2 records)
         cdf = pycdfpp.CDF()
         t_0 = np.datetime64(t_start, "ns")
         for base in sorted({base for _, base in names}):
@@ -9909,6 +9974,16 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
                 cdf[full].add_attribute("DEPEND_0", base)
                 cdf[full].add_attribute("VAR_TYPE", var_type)
         cdf.add_variable("mms1_edi_label", values=np.ones(n_records))
+        if energy is not None:
+            time = t_0 + np.arange(2) * np.timedelta64(500, "ms")
+            cdf.add_variable(
+                "epoch_timetag", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+            )
+            for gdu in [1, 2]:
+                name = f"mms1_edi_energy_gdu{gdu:d}_srvy_l2"
+                cdf.add_variable(name, values=np.asarray(energy, dtype=np.uint16))
+                cdf[name].add_attribute("DEPEND_0", "epoch_timetag")
+                cdf[name].add_attribute("VAR_TYPE", "support_data")
         return bytes(pycdfpp.save(cdf))
 
     def test_get_data_edi_datasets(self):
@@ -9939,6 +10014,13 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
         content = self._cdf_edi_amb("2019-09-14T07:54:00", names)
         result = self._get_data_local("flux-amb_edi_srvy_l2", [content], tint)
         self.assertTupleEqual(result.flux1_0_delta.dims, ("time",))
+
+        # The energies of the GDUs on their own time base
+        content = self._cdf_edi_amb("2019-09-14T07:54:00", names, energy=[500, 250])
+        result = self._get_data_local("flux-amb_edi_srvy_l2", [content], tint)
+        self.assertTupleEqual(result.flux1_0.dims, ("time",))
+        self.assertTupleEqual(result.energy_gdu2.dims, ("time_timetag",))
+        np.testing.assert_array_equal(result.energy_gdu1.data, [500, 250])
 
         other = self._cdf_edi_amb("2019-09-14T07:54:20", [("flux1_180", "Epoch")])
         with self.assertRaisesRegex(ValueError, "variables change between files"):

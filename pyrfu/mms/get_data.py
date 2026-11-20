@@ -99,11 +99,13 @@ def _read(reader, file_content, cdf_name, tint):
 
 def _read_variables(file_content, cdf_name, tint: list | None = None):
     r"""Dataset of the variables of a file matching the pattern `cdf_name`
-    (e.g. ``mms1_edi_*``): its data variables and their errors (``*_delta*``),
-    named without the spacecraft, instrument, rate and level, or None if the
-    file has none of them (a null file). In a file with several time bases,
-    the time dimension of each variable is named after its base (e.g.
-    ``time_90`` for ``Epoch_90``)."""
+    (e.g. ``mms1_edi_*``): its data variables, their errors (``*_delta*``)
+    and the energies of the GDUs (``*_energy_gdu*``), named without the
+    spacecraft, instrument, rate and level, or None if the file has no data
+    variable (a null file). The time dimension is ``time`` if the data
+    variables have a single time base, else it is named after the base of
+    each variable (e.g. ``time_90`` for ``Epoch_90``), as that of the
+    energies when theirs differs (``time_timetag``)."""
 
     file = load(file_content)
     names = [
@@ -116,14 +118,20 @@ def _read_variables(file_content, cdf_name, tint: list | None = None):
     if not names:
         return None
 
+    names += [
+        name
+        for name in file
+        if fnmatch.fnmatchcase(name, cdf_name) and "_energy_gdu" in name
+    ]
     bases = {name: file[name].attributes["DEPEND_0"][0] for name in names}
+    data_bases = {bases[name] for name in names if "_energy_gdu" not in name}
     prefix = cdf_name.rstrip("*")
     out = {}
 
     for name in names:
         data = get_ts(file_content, name, tint)
 
-        if len(set(bases.values())) > 1:
+        if len(data_bases) > 1 or bases[name] not in data_bases:
             base = bases[name].split("_", 1)[-1].lower()
             data = data.rename({data.dims[0]: f"time_{base}"})
 
@@ -720,17 +728,19 @@ def get_data(
     `pyrfu.mms.db_init`): they are neither in the public SDC files nor in
     the public copy of the archive on AWS.
 
-    The keys of the EDI ambient and quality zero datasets
-    (``flux-amb*_edi_*``, ``counts-q0_edi_*``) give a Dataset of all the
-    fluxes (or counts) of the file, their errors (``*_delta*``) and the
-    trajectories of the electrons, e.g. ``flux1_0``, ``flux1_0_delta``,
-    ``traj1_gse_0``: the fluxes at 0 and 180 degrees pitch angle of channel 1
-    (and of channels 2 to 4 in burst amb-pm2), at 90 degrees of each GDU in
-    the amb-alt and amb-perp modes (CMAD pp. 344-357). In the files with
-    several time bases (amb-alt: 0 and 180 degrees, 90 degrees; q0: each GDU)
-    the time dimension of each variable is named after its base, e.g.
-    ``time_0_180`` and ``time_90``. The q0 trajectories of GDU2 are in
-    degrees, as those of GDU1, although their UNITS say rad.
+    The keys of the EDI ambient and quality zero datasets (``flux-amb*_edi_*``,
+    ``counts-q0_edi_*``) give a Dataset of all the fluxes (or counts) of the
+    file, their errors (``*_delta*``), the trajectories of the electrons and
+    the energies of the GDUs (``energy_gdu1``, ``energy_gdu2``, eV, on the time
+    base ``time_timetag`` in the ambient files: 500 eV in 2017 and 2019, 250 eV
+    in 2022), e.g. ``flux1_0``, ``flux1_0_delta``, ``traj1_gse_0``: the fluxes
+    at 0 and 180 degrees pitch angle of channel 1 (and of channels 2 to 4 in
+    burst amb-pm2), at 90 degrees of each GDU in the amb-alt and amb-perp modes
+    (CMAD pp. 344-357). In the files with several time bases (amb-alt: 0 and
+    180 degrees, 90 degrees; q0: each GDU) the time dimension of each variable
+    is named after its base, e.g. ``time_0_180`` and ``time_90``. The q0
+    trajectories of GDU2 are in degrees, as those of GDU1, although their UNITS
+    say rad.
 
     The MEC variables of a field model are in the files of each model (T89
     with Kp, T89 quiet, TS04 dynamic): their keys end with the model, e.g.
