@@ -300,6 +300,33 @@ class AverageVDFTestCase(unittest.TestCase):
                 np.testing.assert_array_equal(result[1, 0], full)
                 np.testing.assert_array_equal(result[1, 1], part)
 
+    def test_average_vdf_counts(self):
+        # Bins with fewer than 2 counts in the window set to 0 (irfu-matlab
+        # PDist.movmean RemoveOneCounts), NaN counts as 0, a bin without data
+        # left NaN; the counts must match vdf
+        vdf = generate_vdf(64.0, 6, [4, 4, 2])
+        vdf.data.data[:] = 1.0
+        vdf.data.data[:3, 3] = np.nan
+        counts = vdf.copy(deep=True)
+        counts.data.data[:] = 0.0
+        counts.data.data[0, 1] = 1.0005
+        counts.data.data[:2, 2] = 1.0005
+        counts.data.data[1, 0] = np.nan
+
+        result = pyrf.average_vdf(vdf, 3, counts=counts).data.data
+        np.testing.assert_array_equal(result[0, :3, 0, 0], [0.0, 0.0, 1.0])
+        self.assertTrue(np.all(np.isnan(result[0, 3])))
+        np.testing.assert_array_equal(result[1], 0.0)
+
+        whole = pyrf.average_vdf(vdf, None, method="sum", counts=counts).data.data
+        np.testing.assert_array_equal(whole[0, :3, 0, 0], [0.0, 0.0, 6.0])
+
+        with self.assertRaises(TypeError):
+            pyrf.average_vdf(vdf, 3, counts=counts.data)
+
+        with self.assertRaises(ValueError):
+            pyrf.average_vdf(vdf, 3, counts=counts.isel(time=slice(0, 5)))
+
     def test_average_vdf_output_meta(self):
         avg_inds = np.arange(1, 99, 3, dtype=int)
         result = pyrf.average_vdf(generate_vdf(64.0, 100, [32, 32, 16]), 3)
@@ -7589,6 +7616,88 @@ class PsdTestCase(unittest.TestCase):
         expected = pyrf.wave_fft(inp, "hamming", 0.5, 1.0, scaled=False)
         for value, ref in zip(result, expected):
             np.testing.assert_allclose(value, ref, rtol=1e-12, atol=1e-12)
+
+
+def _pads(values, theta):
+    # The same pitch-angle distribution (time, energy, pitch angle) as a
+    # Dataset (get_pitch_angle_dist) and as a DataArray with theta (eis_pad)
+    n_t, n_e, _ = values.shape
+    time = generate_timeline(1.0, n_t)
+    dataset = xr.Dataset(
+        {
+            "data": (["time", "idx0", "idx1"], values, {"UNITS": "s^3/cm^6"}),
+            "energy": (["time", "idx0"], np.tile(np.arange(1.0, n_e + 1), (n_t, 1))),
+            "theta": (["time", "idx1"], np.tile(theta, (n_t, 1))),
+            "time": time,
+            "idx0": np.arange(n_e),
+            "idx1": np.arange(len(theta)),
+        },
+        attrs={"species": "electrons"},
+    )
+    data_array = xr.DataArray(
+        np.transpose(values, (0, 2, 1)),
+        coords=[time, theta, np.arange(1.0, n_e + 1)],
+        dims=["time", "theta", "energy"],
+        attrs={"UNITS": "cm^-2 s^-1 sr^-1 keV^-1"},
+    )
+    return dataset, data_array
+
+
+class PitchAngleAverageTestCase(unittest.TestCase):
+    def test_pitch_angle_average(self):
+        # Solid-angle weights 2 pi (cos a- - cos a+); the NaN bins left out
+        # with their weights, a time without data NaN; bounds included
+        theta = 7.5 + 15.0 * np.arange(12)
+        values = np.tile(np.arange(1.0, 13.0), (3, 2, 1))
+        values[1, 0, 1] = np.nan
+        values[2] = np.nan
+        dataset, data_array = _pads(values, theta)
+        edges = np.deg2rad(np.arange(0.0, 181.0, 15.0))
+        solid = np.cos(edges[:-1]) - np.cos(edges[1:])
+
+        expected = np.sum(np.arange(1.0, 13.0) * solid) / np.sum(solid)
+        expected_nan = np.sum(np.delete(np.arange(1.0, 13.0) * solid, 1))
+        expected_nan /= np.sum(np.delete(solid, 1))
+        expected_par = (1 * solid[0] + 2 * solid[1]) / (solid[0] + solid[1])
+
+        result = pyrf.pitch_angle_average(data_array)
+        self.assertTupleEqual(result.dims, ("time", "energy"))
+        np.testing.assert_allclose(result.data[0], expected)
+        np.testing.assert_allclose(result.data[1], [expected_nan, expected])
+        self.assertTrue(np.all(np.isnan(result.data[2])))
+        self.assertEqual(result.attrs["UNITS"], "cm^-2 s^-1 sr^-1 keV^-1")
+
+        result = pyrf.pitch_angle_average(dataset, [7.5, 22.5])
+        self.assertTupleEqual(result.data.shape, (3, 2, 1))
+        np.testing.assert_allclose(result.data.data[0, :, 0], expected_par)
+        np.testing.assert_allclose(result.theta.data[:, 0], 15.0)
+        np.testing.assert_array_equal(result.attrs["delta_pitchangle_plus"], 15.0)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+
+        # Bins of the attributes: one bin of 0 to 90 degrees and one of 90 to
+        # 180 degrees, equal solid angles
+        dataset, _ = _pads(values[:, :, :2], np.array([45.0, 135.0]))
+        dataset.attrs["delta_pitchangle_minus"] = np.array([45.0, 45.0])
+        dataset.attrs["delta_pitchangle_plus"] = np.array([45.0, 45.0])
+        result = pyrf.pitch_angle_average(dataset)
+        np.testing.assert_allclose(result.data.data[0, :, 0], 1.5)
+
+    def test_pitch_angle_average_errors(self):
+        theta = 7.5 + 15.0 * np.arange(12)
+        dataset, data_array = _pads(np.ones((2, 2, 12)), theta)
+
+        with self.assertRaises(TypeError):
+            pyrf.pitch_angle_average(dataset.data.data)
+
+        for pad, angles in [
+            (data_array.rename(theta="pitch"), None),
+            (dataset, [0.0, 5.0]),
+            (dataset, [0.0, 90.0, 180.0]),
+            (dataset.isel(idx1=[0]), None),
+        ]:
+            with self.subTest(angles=angles):
+                with self.assertRaises(ValueError):
+                    pyrf.pitch_angle_average(pad, angles)
 
 
 class PresAnisTestCase(unittest.TestCase):

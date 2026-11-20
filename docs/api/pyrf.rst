@@ -218,6 +218,7 @@ Velocity distribution functions
 
    average_vdf
    int_sph_dist
+   pitch_angle_average
 
 Shocks and boundaries
 ---------------------
