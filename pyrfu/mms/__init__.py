@@ -108,6 +108,7 @@ from .vdf_find_low_counts import vdf_find_low_counts
 from .vdf_flux import vdf_flux
 from .vdf_macroparticles import vdf_macroparticles
 from .vdf_mask import vdf_mask
+from .vdf_movmean import vdf_movmean
 from .vdf_omni import vdf_omni
 from .vdf_one_count import vdf_one_count
 from .vdf_partial_density import vdf_partial_density
@@ -231,6 +232,7 @@ __all__ = [
     "vdf_frame_transformation",
     "vdf_macroparticles",
     "vdf_mask",
+    "vdf_movmean",
     "vdf_omni",
     "vdf_one_count",
     "vdf_partial_density",

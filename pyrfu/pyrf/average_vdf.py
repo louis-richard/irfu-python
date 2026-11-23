@@ -14,6 +14,103 @@ from pyrfu._core.time import _seconds, _timedelta
 from pyrfu.pyrf.ts_skymap import ts_skymap
 
 
+def _average_windows(vdf, bounds, centres, time_avg, method, counts):
+    r"""Distributions averaged (mean or sum) over the windows [i_l, i_r) of
+    bounds, at the times time_avg, with the tables of the distributions of
+    the indices centres, the attributes of each window and the one-count
+    removal with counts (average_vdf, mms.vdf_movmean)."""
+
+    n_vdf = len(vdf.time.data)
+    times = vdf.time.data
+    func = np.nanmean if method == "mean" else np.nansum
+
+    # Mean or sum over the samples with data of each bin, NaN without
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        data_avg = np.stack(
+            [func(vdf.data.data[i_l:i_r, ...], axis=0) for i_l, i_r in bounds]
+        )
+
+    no_data = np.stack(
+        [~np.any(np.isfinite(vdf.data.data[i_l:i_r]), axis=0) for i_l, i_r in bounds]
+    )
+    data_avg[no_data] = np.nan
+
+    # One-count removal: fewer than 2 counts in the window (irfu-matlab
+    # PDist.movmean RemoveOneCounts), the bins with data only
+    if counts is not None:
+        n_counts = np.nan_to_num(np.asarray(counts.data.data, dtype=np.float64))
+        summed = np.stack([np.sum(n_counts[i_l:i_r], axis=0) for i_l, i_r in bounds])
+        data_avg[(summed < 1.5) & ~no_data] = 0.0
+    energy_avg = np.stack(
+        [np.nanmean(vdf.energy.data[i_l:i_r], axis=0) for i_l, i_r in bounds]
+    )
+    phi_avg = np.stack(
+        [np.nanmean(vdf.phi.data[i_l:i_r], axis=0) for i_l, i_r in bounds]
+    )
+
+    # Pass energy tables explicitly as ts_skymap would otherwise read
+    # energy[1, :], which fails for a single time step.
+    vdf_avg = ts_skymap(
+        time_avg,
+        data_avg,
+        energy_avg,
+        phi_avg,
+        vdf.theta.data,
+        energy0=vdf.attrs["energy0"],
+        energy1=vdf.attrs["energy1"],
+        esteptable=vdf.attrs["esteptable"][centres],
+    )
+    vdf_avg.attrs = {**vdf.attrs, **vdf_avg.attrs}
+
+    vdf_avg.time.attrs = vdf.time.attrs
+    for k in vdf:
+        vdf_avg[k].attrs = vdf[k].attrs
+
+    # Energy widths (time, energy) averaged over each window; left as they
+    # are when missing (get_dist leaves them out) or per channel (energy,)
+    for k in ["delta_energy_minus", "delta_energy_plus"]:
+        if vdf.attrs.get(k) is None:
+            continue
+
+        widths = np.asarray(vdf.attrs[k])
+
+        if widths.ndim == 2 and len(widths) == n_vdf:
+            vdf_avg.attrs[k] = np.stack(
+                [np.nanmean(widths[i_l:i_r], axis=0) for i_l, i_r in bounds]
+            )
+
+    # Compression indicator (per time): lossy if one of the distributions is
+    loss = vdf.attrs.get("compressionloss")
+
+    if isinstance(loss, np.ndarray) and loss.ndim == 1 and len(loss) == n_vdf:
+        vdf_avg.attrs["compressionloss"] = np.array(
+            [np.max(loss[i_l:i_r]) for i_l, i_r in bounds]
+        )
+
+    # Quality flags (per time): those of each distribution of the window
+    flags = vdf.attrs.get("errorflags")
+
+    if isinstance(flags, np.ndarray) and flags.ndim == 1 and len(flags) == n_vdf:
+        vdf_avg.attrs["errorflags"] = np.array(
+            [np.bitwise_or.reduce(flags[i_l:i_r]) for i_l, i_r in bounds]
+        )
+
+    # Half widths of the accumulations: from the start of the first sample of
+    # each window to the end of the last
+    if "delta_time_minus" in vdf.attrs and "delta_time_plus" in vdf.attrs:
+        t_start = np.array([times[i_l] for i_l, _ in bounds]) - _timedelta(
+            [vdf.attrs["delta_time_minus"][i_l] for i_l, _ in bounds]
+        )
+        t_stop = np.array([times[i_r - 1] for _, i_r in bounds]) + _timedelta(
+            [vdf.attrs["delta_time_plus"][i_r - 1] for _, i_r in bounds]
+        )
+        vdf_avg.attrs["delta_time_minus"] = _seconds(time_avg, t_start)
+        vdf_avg.attrs["delta_time_plus"] = _seconds(t_stop, time_avg)
+
+    return vdf_avg
+
+
 def average_vdf(
     vdf, n_pts, method: Literal["mean", "sum"] = "mean", counts: Dataset | None = None
 ):
@@ -115,90 +212,4 @@ def average_vdf(
         bounds = [(i - pad_value, i + pad_value + 1) for i in avg_inds]
         time_avg = times[avg_inds]
 
-    func = np.nanmean if method == "mean" else np.nansum
-
-    # Mean or sum over the samples with data of each bin, NaN without
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        data_avg = np.stack(
-            [func(vdf.data.data[i_l:i_r, ...], axis=0) for i_l, i_r in bounds]
-        )
-
-    no_data = np.stack(
-        [~np.any(np.isfinite(vdf.data.data[i_l:i_r]), axis=0) for i_l, i_r in bounds]
-    )
-    data_avg[no_data] = np.nan
-
-    # One-count removal: fewer than 2 counts in the window (irfu-matlab
-    # PDist.movmean RemoveOneCounts), the bins with data only
-    if counts is not None:
-        n_counts = np.nan_to_num(np.asarray(counts.data.data, dtype=np.float64))
-        summed = np.stack([np.sum(n_counts[i_l:i_r], axis=0) for i_l, i_r in bounds])
-        data_avg[(summed < 1.5) & ~no_data] = 0.0
-    energy_avg = np.stack(
-        [np.nanmean(vdf.energy.data[i_l:i_r], axis=0) for i_l, i_r in bounds]
-    )
-    phi_avg = np.stack(
-        [np.nanmean(vdf.phi.data[i_l:i_r], axis=0) for i_l, i_r in bounds]
-    )
-
-    # Pass energy tables explicitly as ts_skymap would otherwise read
-    # energy[1, :], which fails for a single time step.
-    vdf_avg = ts_skymap(
-        time_avg,
-        data_avg,
-        energy_avg,
-        phi_avg,
-        vdf.theta.data,
-        energy0=vdf.attrs["energy0"],
-        energy1=vdf.attrs["energy1"],
-        esteptable=vdf.attrs["esteptable"][avg_inds],
-    )
-    vdf_avg.attrs = {**vdf.attrs, **vdf_avg.attrs}
-
-    vdf_avg.time.attrs = vdf.time.attrs
-    for k in vdf:
-        vdf_avg[k].attrs = vdf[k].attrs
-
-    # Energy widths (time, energy) averaged over each window; left as they
-    # are when missing (get_dist leaves them out) or per channel (energy,)
-    for k in ["delta_energy_minus", "delta_energy_plus"]:
-        if vdf.attrs.get(k) is None:
-            continue
-
-        widths = np.asarray(vdf.attrs[k])
-
-        if widths.ndim == 2 and len(widths) == n_vdf:
-            vdf_avg.attrs[k] = np.stack(
-                [np.nanmean(widths[i_l:i_r], axis=0) for i_l, i_r in bounds]
-            )
-
-    # Compression indicator (per time): lossy if one of the distributions is
-    loss = vdf.attrs.get("compressionloss")
-
-    if isinstance(loss, np.ndarray) and loss.ndim == 1 and len(loss) == n_vdf:
-        vdf_avg.attrs["compressionloss"] = np.array(
-            [np.max(loss[i_l:i_r]) for i_l, i_r in bounds]
-        )
-
-    # Quality flags (per time): those of each distribution of the window
-    flags = vdf.attrs.get("errorflags")
-
-    if isinstance(flags, np.ndarray) and flags.ndim == 1 and len(flags) == n_vdf:
-        vdf_avg.attrs["errorflags"] = np.array(
-            [np.bitwise_or.reduce(flags[i_l:i_r]) for i_l, i_r in bounds]
-        )
-
-    # Half widths of the accumulations: from the start of the first sample of
-    # each window to the end of the last
-    if "delta_time_minus" in vdf.attrs and "delta_time_plus" in vdf.attrs:
-        t_start = np.array([times[i_l] for i_l, _ in bounds]) - _timedelta(
-            [vdf.attrs["delta_time_minus"][i_l] for i_l, _ in bounds]
-        )
-        t_stop = np.array([times[i_r - 1] for _, i_r in bounds]) + _timedelta(
-            [vdf.attrs["delta_time_plus"][i_r - 1] for _, i_r in bounds]
-        )
-        vdf_avg.attrs["delta_time_minus"] = _seconds(time_avg, t_start)
-        vdf_avg.attrs["delta_time_plus"] = _seconds(t_stop, time_avg)
-
-    return vdf_avg
+    return _average_windows(vdf, bounds, avg_inds, time_avg, method, counts)

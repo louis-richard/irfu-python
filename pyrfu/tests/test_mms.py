@@ -12822,6 +12822,80 @@ class VdfVelocityTestCase(unittest.TestCase):
         np.testing.assert_allclose(ratio, 1 - 3 * eps / 4, rtol=1e-12)
 
 
+def _movmean_skymap(n_t=6):
+    # Skymap with f = the time index, accumulations of 0.15 s, the
+    # compression indicator and quality flags of each distribution
+    time = generate_timeline(1 / 0.15, n_t)
+    energy = np.tile(np.logspace(1, 3, 4), (n_t, 1))
+    data = np.tile(np.arange(float(n_t))[:, None, None, None], (1, 4, 3, 2))
+    vdf = pyrf.ts_skymap(
+        time,
+        data,
+        energy,
+        np.tile([60.0, 180.0, 300.0], (n_t, 1)),
+        np.array([45.0, 135.0]),
+        energy0=energy[0],
+        energy1=energy[0],
+        esteptable=np.zeros(n_t, dtype=np.uint8),
+        attrs={"UNITS": "s^3/cm^6"},
+    )
+    vdf.attrs["delta_time_minus"] = np.full(n_t, 0.075)
+    vdf.attrs["delta_time_plus"] = np.full(n_t, 0.075)
+    vdf.attrs["compressionloss"] = np.array([0, 0, 1, 0, 0, 0])[:n_t]
+    vdf.attrs["errorflags"] = np.array([0, 1, 0, 0, 4, 0], dtype=np.uint32)[:n_t]
+    return vdf
+
+
+class VdfMovmeanTestCase(unittest.TestCase):
+    def test_vdf_movmean(self):
+        # The mean of each distribution with its neighbours, fewer at the
+        # ends, on the times of vdf; the attributes of each window
+        vdf = _movmean_skymap()
+        out = mms.vdf_movmean(vdf, 3)
+        np.testing.assert_array_equal(out.time.data, vdf.time.data)
+        np.testing.assert_allclose(out.data.data[:, 0, 0, 0], [0.5, 1, 2, 3, 4, 4.5])
+        np.testing.assert_array_equal(out.attrs["compressionloss"], [0, 1, 1, 1, 0, 0])
+        np.testing.assert_array_equal(out.attrs["errorflags"], [1, 1, 1, 4, 4, 4])
+        np.testing.assert_allclose(out.attrs["delta_time_minus"], [0.075] + [0.225] * 5)
+        np.testing.assert_allclose(out.attrs["delta_time_plus"], [0.225] * 5 + [0.075])
+        self.assertEqual(out.data.attrs["UNITS"], "s^3/cm^6")
+
+        # One distribution: unchanged
+        np.testing.assert_allclose(mms.vdf_movmean(vdf, 1).data.data, vdf.data.data)
+
+    def test_vdf_movmean_counts_nan(self):
+        # Fewer than 2 counts in the window: 0; NaN bins left out of the mean,
+        # a window without data NaN
+        vdf = _movmean_skymap()
+        counts = vdf.copy(deep=True)
+        counts.data.data[:] = 0.0
+        counts.data.data[2, 0] = 1.0
+        counts.data.data[2:4, 1] = 1.0
+        vdf.data.data[0:2, 2] = np.nan
+        vdf.data.data[:, 3, 0, 0] = np.nan
+
+        out = mms.vdf_movmean(vdf, 3, counts=counts).data.data
+        np.testing.assert_array_equal(out[2, 0, 0, 0], 0.0)
+        np.testing.assert_allclose(out[2, 1, 0, 0], 2.0)
+        np.testing.assert_allclose(mms.vdf_movmean(vdf, 3).data.data[1, 2, 0, 0], 2.0)
+        self.assertTrue(np.all(np.isnan(out[:, 3, 0, 0])))
+
+    def test_vdf_movmean_errors(self):
+        vdf = _movmean_skymap()
+
+        for args, error in [
+            ((vdf.data, 3), TypeError),
+            ((vdf, 2.0), TypeError),
+            ((vdf, 4), ValueError),
+            ((vdf, 7), ValueError),
+            ((vdf, 3, vdf.data), TypeError),
+            ((vdf, 3, vdf.isel(time=slice(0, 5))), ValueError),
+        ]:
+            with self.subTest(args=args[1:]):
+                with self.assertRaises(error):
+                    mms.vdf_movmean(*args)
+
+
 def _einterp_skymap(values):
     # Skymap of two times with alternating tables (the second between the
     # channels of the first), f = values(energy) in every angular bin

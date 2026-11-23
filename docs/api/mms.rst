@@ -117,6 +117,7 @@ FPI particle distributions
 
    vdf_elim
    vdf_einterp
+   vdf_movmean
    vdf_omni
    vdf_spectr
    vdf_to_e64
