@@ -12822,6 +12822,94 @@ class VdfVelocityTestCase(unittest.TestCase):
         np.testing.assert_allclose(ratio, 1 - 3 * eps / 4, rtol=1e-12)
 
 
+def _spectr_pad(n_t=3, n_pitch=12, alternating=False):
+    # Pitch-angle distribution (time, energy, pitch angle) with f = energy
+    # index + pitch-angle index / 100
+    time = generate_timeline(1.0, n_t)
+    energy = np.tile(np.logspace(1, 4, 32), (n_t, 1))
+    if alternating:
+        energy[1::2] *= 1.1
+    pitch = (0.5 + np.arange(n_pitch)) * 180.0 / n_pitch
+    data = np.arange(32.0)[None, :, None] + np.arange(n_pitch)[None, None, :] / 100
+    data = np.tile(data, (n_t, 1, 1))
+    return xr.Dataset(
+        {
+            "data": (["time", "idx0", "idx1"], data, {"UNITS": "s^3/cm^6"}),
+            "energy": (["time", "idx0"], energy),
+            "theta": (["time", "idx1"], np.tile(pitch, (n_t, 1))),
+            "time": time,
+            "idx0": np.arange(32),
+            "idx1": np.arange(n_pitch),
+        },
+        attrs={"species": "electrons"},
+    )
+
+
+class VdfSpectrTestCase(unittest.TestCase):
+    def test_vdf_spectr_pad(self):
+        # Pitch-angle spectrogram: the mean over the energies (or those of
+        # indices); energy spectrogram: the mean over the pitch angles
+        pad = _spectr_pad()
+        spec = mms.vdf_spectr(pad)
+        self.assertTupleEqual(spec.dims, ("time", "theta"))
+        np.testing.assert_allclose(spec.data[0], 15.5 + np.arange(12) / 100)
+        np.testing.assert_allclose(spec.theta.data, 7.5 + 15.0 * np.arange(12))
+        self.assertEqual(spec.theta.attrs["UNITS"], "deg")
+        self.assertEqual(spec.attrs["UNITS"], "s^3/cm^6")
+
+        spec = mms.vdf_spectr(pad, "pitchangle", indices=[2, 4])
+        np.testing.assert_allclose(spec.data[0], 3.0 + np.arange(12) / 100)
+
+        spec = mms.vdf_spectr(pad, "energy", indices=[0, 11])
+        np.testing.assert_allclose(spec.data[1], np.arange(32.0) + 0.055)
+        self.assertTupleEqual(spec.dims, ("time", "energy"))
+
+        # One pitch angle: the energy spectrogram by default; alternating
+        # tables: a Dataset with the energies of each time
+        spec = mms.vdf_spectr(_spectr_pad(n_pitch=1))
+        self.assertTupleEqual(spec.dims, ("time", "energy"))
+        spec = mms.vdf_spectr(_spectr_pad(alternating=True), "energy")
+        self.assertIsInstance(spec, xr.Dataset)
+        np.testing.assert_allclose(spec.energy.data[1], 1.1 * spec.energy.data[0])
+
+    def test_vdf_spectr_skymap(self):
+        # Energy spectrogram: vdf_omni; azimuthal: the mean over the polar
+        # angles, then the energies (a Dataset when the azimuths change)
+        vdf = _gyro_skymap(lambda p, t: p + 0 * t, n_t=2)
+        xr.testing.assert_identical(mms.vdf_spectr(vdf), mms.vdf_omni(vdf))
+        spec = mms.vdf_spectr(vdf, "azimuthal")
+        self.assertTupleEqual(spec.dims, ("time", "phi"))
+        np.testing.assert_allclose(spec.data[0], vdf.phi.data[0])
+
+        vdf["phi"] = vdf.phi + np.array([[0.0], [2.8]])
+        self.assertIsInstance(mms.vdf_spectr(vdf, "azimuthal"), xr.Dataset)
+
+    def test_vdf_spectr_nan(self):
+        # NaN bins left out; a time without data is NaN
+        pad = _spectr_pad()
+        pad.data.data[0, 0, :] = np.nan
+        pad.data.data[2] = np.nan
+        spec = mms.vdf_spectr(pad)
+        np.testing.assert_allclose(spec.data[0], 16.0 + np.arange(12) / 100)
+        self.assertTrue(np.all(np.isnan(spec.data[2])))
+
+    def test_vdf_spectr_errors(self):
+        pad = _spectr_pad()
+        vdf = _gyro_skymap(n_t=2)
+
+        with self.assertRaises(TypeError):
+            mms.vdf_spectr(pad.data)
+
+        for inp, kwargs in [
+            (pad, {"kind": "azimuthal"}),
+            (vdf, {"kind": "pitchangle"}),
+            (vdf, {"kind": "energy", "indices": [0]}),
+        ]:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    mms.vdf_spectr(inp, **kwargs)
+
+
 @ddt
 class VdfSolidAngleTestCase(unittest.TestCase):
     def test_vdf_solid_angle_skymap(self):

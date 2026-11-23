@@ -115,6 +115,7 @@ from .vdf_rebin import vdf_rebin
 from .vdf_reduce import vdf_frame_transformation, vdf_reduce
 from .vdf_shift import vdf_shift
 from .vdf_solid_angle import vdf_solid_angle
+from .vdf_spectr import vdf_spectr
 from .vdf_to_e64 import vdf_to_e64
 from .vdf_velocity import vdf_velocity
 from .whistler_b2e import whistler_b2e
@@ -236,6 +237,7 @@ __all__ = [
     "vdf_reduce",
     "vdf_shift",
     "vdf_solid_angle",
+    "vdf_spectr",
     "vdf_to_e64",
     "vdf_velocity",
     "whistler_b2e",
