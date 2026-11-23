@@ -6099,6 +6099,100 @@ class LowPassTestCase(unittest.TestCase):
                 pyrf.lowpass(inp, 1.0, f_s=64.0, fhz=64.0)
 
 
+def _sheet(n_pts=401):
+    # Spacecraft crossing at 30 km/s along x a sheet tanh(x / L) of a field
+    # component along y (L = 100 km), sampled at 16 Hz
+    time = generate_timeline(16.0, n_pts)
+    s_x = (np.arange(n_pts) - n_pts // 2) / 16.0 * 30.0
+    return time, s_x, 100.0
+
+
+class JzTestCase(unittest.TestCase):
+    def test_jz_b(self):
+        # B = 10 tanh(x / L) y: J = (1 / mu0) dBy/dx z = 10 sech^2(x / L) /
+        # (mu0 L) (nT/km), along B x v for z (B along y, v along x)
+        time, s_x, l_s = _sheet()
+        b_y = 10.0 * np.tanh(s_x / l_s)
+        b_xyz = pyrf.ts_vec_xyz(
+            time, np.column_stack([0 * s_x, b_y, 0 * s_x + 1e-3]), {"UNITS": "nT"}
+        )
+        v_xyz = pyrf.ts_vec_xyz(time, np.tile([30.0, 0.0, 0.0], (len(time), 1)))
+        expected = 1e-12 * 10.0 / np.cosh(s_x / l_s) ** 2 / l_s / constants.mu_0
+
+        j_xyz, j_par, j_perp = pyrf.jz(v_xyz, b_xyz)
+        np.testing.assert_allclose(j_xyz.data[1:-1, 2], expected[1:-1], rtol=1e-3)
+        np.testing.assert_allclose(j_xyz.data[:, :2], 0.0, atol=1e-15)
+
+        # Where B is along +-y: J along -+(B x v) = z; along B, J_z b_z
+        along_y = np.abs(b_y) > 1.0
+        np.testing.assert_allclose(
+            j_perp.data[along_y],
+            -np.sign(b_y[along_y]) * j_xyz.data[along_y, 2],
+            rtol=1e-6,
+        )
+        b_mag = np.sqrt(b_y**2 + 1e-6)
+        np.testing.assert_allclose(j_par.data, j_xyz.data[:, 2] * 1e-3 / b_mag)
+        self.assertEqual(j_xyz.attrs["UNITS"], "A/m^2")
+
+        # A constant velocity as 3 values; the disturbance field given
+        result = pyrf.jz([30.0, 0.0, 0.0], b_xyz, b_xyz)[0]
+        np.testing.assert_allclose(result.data, j_xyz.data)
+
+    def test_jz_a(self):
+        # Auroral-like sheet: B = 20000 z + 50 tanh(x / L) y, v = (30, 5, 3):
+        # J_par = (1 / mu0) dBy/dx (b . z), normal along x, and J_perp from the
+        # change of |B|, (1 / mu0) dBy/dx |By| / |B|
+        time, s_x, l_s = _sheet()
+        b_xyz = np.column_stack([0 * s_x, 50.0 * np.tanh(s_x / l_s), 0 * s_x + 2e4])
+        b_ts = pyrf.ts_vec_xyz(time, b_xyz, {"UNITS": "nT"})
+        b_mag = np.linalg.norm(b_xyz, axis=1)
+        expected = 1e-12 * 50.0 / np.cosh(s_x / l_s) ** 2 / l_s / constants.mu_0
+        expected *= 2e4 / b_mag
+
+        j_par, j_perp, n_j, angle = pyrf.jz([30.0, 5.0, 3.0], b_ts, method="A")
+        inner = slice(1, -1)
+        np.testing.assert_allclose(j_par.data[inner], expected[inner], rtol=1e-3)
+        np.testing.assert_allclose(
+            j_perp.data[inner],
+            (expected * np.abs(b_xyz[:, 1]) / 2e4)[inner],
+            rtol=1e-3,
+            atol=1e-15,
+        )
+        np.testing.assert_allclose(np.abs(n_j.data[inner, 0]), 1.0, atol=1e-5)
+
+        # Angle of the normal (x) from the velocity perpendicular to B, (30, 5)
+        np.testing.assert_allclose(angle.data[200], np.rad2deg(np.arctan(5 / 30)))
+        self.assertEqual(angle.attrs["UNITS"], "deg")
+
+        # A velocity within deg_z of B, or within deg_p of the sheet: NaN
+        for v_xyz in [[1.0, 0.0, 30.0], [1.0, 30.0, 0.0]]:
+            with self.subTest(v_xyz=v_xyz):
+                j_par = pyrf.jz(v_xyz, b_ts, method="A")[0]
+                self.assertTrue(np.all(np.isnan(j_par.data)))
+
+    def test_jz_n_av(self):
+        # The low-pass filter of n_av leaves a sheet much wider than the
+        # sampling unchanged; errors for the other inputs
+        time, s_x, l_s = _sheet()
+        b_xyz = pyrf.ts_vec_xyz(
+            time,
+            np.column_stack([0 * s_x, 10.0 * np.tanh(s_x / (20 * l_s)), 0 * s_x]),
+            {"UNITS": "nT"},
+        )
+        direct = pyrf.jz([30.0, 0.0, 0.0], b_xyz)[0].data[50:-50, 2]
+        filtered = pyrf.jz([30.0, 0.0, 0.0], b_xyz, n_av=4)[0].data[50:-50, 2]
+        self.assertEqual(len(direct), 301)
+        np.testing.assert_allclose(filtered, direct, rtol=1e-3)
+
+        for kwargs in [{"method": "C"}, {"n_av": 1}]:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    pyrf.jz([30.0, 0.0, 0.0], b_xyz, **kwargs)
+
+        with self.assertRaises(ValueError):
+            pyrf.jz([30.0, 0.0], b_xyz)
+
+
 class LmnTestCase(unittest.TestCase):
     def test_lmn_l(self):
         # "L": L along B, N along the part of n perpendicular to B, M = N x L
@@ -7117,6 +7211,77 @@ class ReadCdfTestCase(unittest.TestCase):
         self.assertTupleEqual(result["density"].shape, (3,))
 
 
+class ResampleAverageTestCase(unittest.TestCase):
+    def test_resample_pchip(self):
+        # Shape preserving (no overshoot of a step, unlike "cubic"), as scipy
+        # PchipInterpolator; NaN samples skipped; NaN outside without
+        # extrapolate
+        time = generate_timeline(1.0, 8)
+        step = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        inp = pyrf.ts_scalar(time, step)
+        ref = pyrf.ts_scalar(time[:-1] + np.timedelta64(500, "ms"), np.zeros(7))
+
+        result = pyrf.resample(inp, ref, method="pchip")
+        expected = interpolate.PchipInterpolator(np.arange(8.0), step)(
+            np.arange(7) + 0.5
+        )
+        np.testing.assert_allclose(result.data, expected)
+        self.assertTrue(np.all((result.data >= 0) & (result.data <= 1)))
+        cubic = pyrf.resample(inp, ref, method="cubic").data
+        self.assertTrue(np.any((cubic < 0) | (cubic > 1)))
+
+        with_nan = inp.copy(data=np.where(np.arange(8) == 5, np.nan, step))
+        np.testing.assert_allclose(
+            pyrf.resample(with_nan, ref, method="pchip").data[[0, 6]], [0.0, 1.0]
+        )
+
+        later = pyrf.ts_scalar(time + np.timedelta64(2, "s"), step)
+        out = pyrf.resample(later, ref, method="pchip", extrapolate=False).data
+        self.assertTrue(np.all(np.isnan(out[:2])) and np.all(np.isfinite(out[2:])))
+
+    def test_resample_median_max(self):
+        # Windows of 4 samples (8 Hz to 2 Hz): median and max of each, a NaN
+        # giving NaN; averaged also when the sampling is not twice higher
+        time = generate_timeline(8.0, 16)
+        values = np.array([1, 2, 3, 10, 4, 4, 5, 6, 0, 0, 1, 9, 7, 7, 7, 7.0])
+        values[9] = np.nan
+        inp = pyrf.ts_scalar(time, values)
+        ref = pyrf.ts_scalar(time[2::4] - np.timedelta64(62500, "us"), np.zeros(4))
+
+        median = pyrf.resample(inp, ref, average="median").data
+        np.testing.assert_array_equal(median[[0, 1, 3]], [2.5, 4.5, 7.0])
+        self.assertTrue(np.isnan(median[2]))
+        maximum = pyrf.resample(inp, ref, average="max").data
+        np.testing.assert_array_equal(maximum[[0, 1, 3]], [10.0, 6.0, 7.0])
+        self.assertTrue(np.isnan(maximum[2]))
+
+        # thresh: 10 is beyond 1 std of the first window, left out
+        median = pyrf.resample(inp, ref, thresh=1.0, average="median").data
+        np.testing.assert_array_equal(median[0], 2.0)
+
+        # The same sampling: averaged anyway (one sample per window)
+        same = pyrf.resample(inp, inp, average="max").data
+        np.testing.assert_array_equal(same, values)
+
+        for kwargs in [{"average": "min"}, {"average": "max", "method": "linear"}]:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    pyrf.resample(inp, ref, **kwargs)
+
+    def test_resample_max_dataset(self):
+        # A distribution: the max of the data, the mean of the energies
+        vdf = generate_vdf(8.0, 8, [2, 2, 2])
+        vdf.data.data[:] = np.arange(8.0)[:, None, None, None]
+        vdf.energy.data[:] = np.arange(8.0)[:, None]
+        ref = pyrf.ts_scalar(
+            vdf.time.data[1::4] + np.timedelta64(62500, "us"), np.zeros(2)
+        )
+
+        result = pyrf.resample(vdf, ref, average="max")
+        np.testing.assert_array_equal(result.data.data[:, 0, 0, 0], [3.0, 7.0])
+        np.testing.assert_array_equal(result.energy.data[:, 0], [1.5, 5.5])
+
+
 @ddt
 class ResampleTestCase(unittest.TestCase):
     @data(
@@ -7320,7 +7485,7 @@ class ResampleTestCase(unittest.TestCase):
             pyrf.resample(inp, ref, method="spline")
 
         with self.assertRaisesRegex(ValueError, "method must be one of"):
-            pyrf.resample(inp, ref, method="pchip")
+            pyrf.resample(inp, ref, method="akima")
 
         # NaN, as MATLAB interp1 (R2024a): next to it with "linear"; skipped
         # by "cubic", each component through its finite samples, also at the

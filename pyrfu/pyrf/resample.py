@@ -24,12 +24,38 @@ _METHODS = (
     "cubic",
     "previous",
     "next",
+    "pchip",
 )
 
 # Methods whose interpolant depends on all the samples, where a NaN would
 # spread to the whole output: each component is interpolated through its
 # finite samples, as MATLAB interp1 ("spline", "pchip")
-_GLOBAL_METHODS = ("quadratic", "cubic")
+_GLOBAL_METHODS = ("quadratic", "cubic", "pchip")
+
+# Statistics of the averaging windows, as the irf_resamp flags; the NaN-aware
+# ones for the points kept by thresh
+_AVERAGES = {"mean": np.mean, "median": np.median, "max": np.max}
+_NAN_AVERAGES = {"mean": np.nanmean, "median": np.nanmedian, "max": np.nanmax}
+
+
+def _interpolant(inp_time, inp_data, method, fill_value):
+    r"""Interpolant of inp_data (along the first axis): scipy interp1d, or the
+    piecewise cubic Hermite interpolant for "pchip" (MATLAB interp1 "pchip"),
+    extrapolated with its end polynomials or NaN outside."""
+
+    if method == "pchip":
+        return interpolate.PchipInterpolator(
+            inp_time, inp_data, axis=0, extrapolate=fill_value == "extrapolate"
+        )
+
+    return interpolate.interp1d(
+        inp_time,
+        inp_data,
+        kind=method,
+        axis=0,
+        bounds_error=False,
+        fill_value=fill_value,
+    )
 
 
 def _guess_sampling_frequency(ref_time):
@@ -44,11 +70,12 @@ def _guess_sampling_frequency(ref_time):
     return 1 / d_t
 
 
-def _average(inp_time, inp_data, ref_time, thresh, dt2):
-    r"""Average inp_data in the windows (ref_time - dt2, ref_time + dt2] (as in
-    irf_resamp), with inp_time, ref_time and dt2 in the same units. A window
-    without samples, or with a NaN, gives NaN. With thresh, the points farther
-    than thresh * std from the mean of the window are disregarded.
+def _average(inp_time, inp_data, ref_time, thresh, dt2, average="mean"):
+    r"""Average (mean, median or max) inp_data in the windows (ref_time - dt2,
+    ref_time + dt2] (as in irf_resamp), with inp_time, ref_time and dt2 in the
+    same units. A window without samples, or with a NaN, gives NaN. With
+    thresh, the points farther than thresh * std from the mean of the window
+    are disregarded.
     """
 
     inp_data = np.asarray(inp_data, dtype=np.float64)
@@ -60,7 +87,7 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
     idx_r = np.searchsorted(inp_time, ref_time + dt2, side="right")
     n_pts = idx_r - idx_l
 
-    if not thresh:
+    if not thresh and average == "mean":
         # Sums of the windows from cumulative sums (offset by the mean to limit
         # round-off), with NaNs counted separately so they only affect their
         # own windows
@@ -88,6 +115,11 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
 
             window = data[i_l:i_r]
 
+            if not thresh:
+                # A NaN gives NaN (np.median and np.max propagate it)
+                out_data[i] = _AVERAGES[average](window, axis=0)
+                continue
+
             # Standard deviation as MATLAB's std (N - 1; 0 for one sample); NaN
             # if the window contains a NaN
             std_ = np.std(window, axis=0, ddof=1) if len(window) > 1 else 0 * window[0]
@@ -96,7 +128,9 @@ def _average(inp_time, inp_data, ref_time, thresh, dt2):
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                out_data[i] = np.nanmean(np.where(keep, window, np.nan), axis=0)
+                out_data[i] = _NAN_AVERAGES[average](
+                    np.where(keep, window, np.nan), axis=0
+                )
 
     return out_data.reshape(len(ref_time), *shape)
 
@@ -113,12 +147,8 @@ def _interp_finite(inp_time, inp_data, ref_time, method, fill_value):
         finite = np.isfinite(data[:, k])
 
         if np.any(finite):
-            out_data[:, k] = interpolate.interp1d(
-                inp_time[finite],
-                data[finite, k],
-                kind=method,
-                bounds_error=False,
-                fill_value=fill_value,
+            out_data[:, k] = _interpolant(
+                inp_time[finite], data[finite, k], method, fill_value
             )(ref_time)
 
     return out_data.reshape(len(ref_time), *np.shape(inp_data)[1:])
@@ -136,13 +166,19 @@ def _resampled_like(inp, out_data, time):
     return xr.DataArray(out_data, coords=coords, dims=inp.dims, attrs=inp.attrs)
 
 
-def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
+def _resample_dataarray(
+    inp, ref, method, f_s, window, thresh, extrapolate, average="mean"
+):
     r"""Resample for time series (xarray.DataArray)"""
 
     flag_do = "check"
 
     if method:
         flag_do = "interpolation"
+
+    # The median and max average whatever the sampling, as irf_resamp
+    if average != "mean":
+        flag_do = "average"
 
     if f_s is not None:
         sfy = f_s
@@ -167,6 +203,9 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
     else:
         raise TypeError("inp and ref must both have datetime64 or numeric times")
 
+    if flag_do == "average" and not sfy:
+        sfy = _guess_sampling_frequency(ref_time)
+
     if flag_do == "check":
         if len(ref_time) > 1:
             if not sfy:
@@ -190,7 +229,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
         else:
             dt2 = 0.5 / sfy
 
-        out_data = _average(inp_time_ns, inp.data, ref_time_ns, thresh, dt2)
+        out_data = _average(inp_time_ns, inp.data, ref_time_ns, thresh, dt2, average)
 
     else:
         if not method:
@@ -212,15 +251,7 @@ def _resample_dataarray(inp, ref, method, f_s, window, thresh, extrapolate):
         if method in _GLOBAL_METHODS and not np.all(np.isfinite(inp.data)):
             out_data = _interp_finite(inp_time, inp.data, ref_time, method, fill_value)
         else:
-            tck = interpolate.interp1d(
-                inp_time,
-                inp.data,
-                kind=method,
-                axis=0,
-                bounds_error=False,
-                fill_value=fill_value,
-            )
-            out_data = tck(ref_time)
+            out_data = _interpolant(inp_time, inp.data, method, fill_value)(ref_time)
 
     return _resampled_like(inp, out_data, ref.coords["time"])
 
@@ -229,8 +260,14 @@ def _resample_dataset(inp, ref, **kwargs):
     r"""Resample for VDFs (xarray.Dataset)"""
 
     # Find time dependent zVariables and resample
+    # The median or max of the data only, the mean of the energies, angles
+    # and per-time attributes (e.g. the alternating energy tables of FPI)
     tdepnd_zvars = list(filter(lambda x: "time" in inp[x].dims, inp))
-    out_dict = {k: _resample_dataarray(inp[k], ref, **kwargs) for k in tdepnd_zvars}
+    mean_kwargs = {**kwargs, "average": "mean"}
+    out_dict = {
+        k: _resample_dataarray(inp[k], ref, **(kwargs if k == "data" else mean_kwargs))
+        for k in tdepnd_zvars
+    }
 
     # Complete the dictionary with non-time dependent zVaraiables
     ndepnd_zvars = list(filter(lambda x: x not in tdepnd_zvars, inp))
@@ -255,7 +292,7 @@ def _resample_dataset(inp, ref, **kwargs):
                 coords=[inp.time.data, *coords],
                 dims=["time", *dims],
             )
-            out_attrs[k] = _resample_dataarray(attr_ts, ref, **kwargs).data
+            out_attrs[k] = _resample_dataarray(attr_ts, ref, **mean_kwargs).data
         else:
             out_attrs[k] = attr
 
@@ -274,6 +311,7 @@ def resample(
     thresh: float = 0,
     *,
     extrapolate: bool = True,
+    average: str = "mean",
 ):
     r"""Resample inp to the time line of ref. If sampling of X is more than two
     times higher than Y, we average X, otherwise we interpolate X.
@@ -287,11 +325,12 @@ def resample(
     method : str, Optional
         Method of interpolation, a kind of ``scipy.interpolate.interp1d``:
         "linear", "nearest", "nearest-up", "zero", "slinear", "quadratic",
-        "cubic", "previous" or "next". If given, interpolate whatever the
-        sampling. Default is "linear" when interpolating, as irf_resamp. The
-        names are those of scipy, not of MATLAB: the MATLAB "spline" (the
-        not-a-knot cubic spline) is "cubic" here, and the MATLAB "cubic"
-        ("pchip") has no equivalent.
+        "cubic", "previous" or "next", or "pchip" (the shape-preserving
+        piecewise cubic Hermite interpolant, scipy PchipInterpolator, MATLAB
+        interp1 "pchip"). If given, interpolate whatever the sampling.
+        Default is "linear" when interpolating, as irf_resamp. The names are
+        those of scipy, not of MATLAB: the MATLAB "spline" (the not-a-knot
+        cubic spline) is "cubic" here, and the MATLAB "cubic" is "pchip".
     f_s : float, Optional
         Sampling frequency of the Y signal, 1/window. Default is guessed from
         the median time step of ref.
@@ -304,8 +343,15 @@ def resample(
         Extrapolate the interpolation outside the time range of inp with the
         interpolant, as irf_resamp. False gives NaN at the reference times
         outside the time range of the samples (of the finite samples of each
-        component with "quadratic" or "cubic"). Default is True. Averages
+        component with "quadratic", "cubic" or "pchip"). Default is True. Averages
         are NaN where a window has no samples in both cases.
+    average : {"mean", "median", "max"}, Optional
+        Statistic of the averaging windows, as the irf_resamp flags
+        "median" and "max": "median" and "max" average whatever the sampling
+        (no interpolation method then), after the thresh rejection as the
+        mean. A NaN in a window gives NaN for the three (MATLAB max skips
+        it). For a distribution, the data only; its energies, angles and
+        per-time attributes are averaged with the mean. Default is "mean".
 
     Returns
     -------
@@ -318,7 +364,8 @@ def resample(
         If inp is not a xarray.DataArray or a xarray.Dataset, or if the times
         of inp and ref are not both datetime64 or both numeric (seconds).
     ValueError
-        If method is not one of the methods above.
+        If method or average is not one of the values above, or average is
+        "median" or "max" with a method.
 
     Notes
     -----
@@ -335,10 +382,11 @@ def resample(
     * Interpolation extrapolates outside the time range of inp with the
       interpolant (linearly with "linear"); ``extrapolate=False`` gives NaN
       there instead.
-    * With "quadratic" or "cubic", whose interpolant depends on all the
-      samples, each component is interpolated through its finite samples, as
-      MATLAB interp1 ("spline"): NaN samples are skipped. With "linear" or
-      "nearest", a NaN gives NaN at the times next to it, as MATLAB.
+    * With "quadratic", "cubic" or "pchip", whose interpolant depends on all
+      the samples, each component is interpolated through its finite
+      samples, as MATLAB interp1 ("spline", "pchip"): NaN samples are
+      skipped. With "linear" or "nearest", a NaN gives NaN at the times next
+      to it, as MATLAB.
 
     The per-time attributes of a distribution (xarray.Dataset) are resampled
     as the data, except the FPI quality flags (``errorflags``), bits which
@@ -380,6 +428,14 @@ def resample(
             f"method must be one of {', '.join(_METHODS)}, not {method!r}{hint}"
         )
 
+    if average not in _AVERAGES:
+        raise ValueError(
+            f"average must be one of {', '.join(_AVERAGES)}, not {average!r}"
+        )
+
+    if average != "mean" and method:
+        raise ValueError("cannot mix interpolation (method) and averaging (average)")
+
     # Both datetime64 or both numeric, checked before the times are cast to
     # datetime64[ns] (numeric times would be read as 1970 epochs)
     is_datetime = [np.issubdtype(x.time.dtype, np.datetime64) for x in [inp, ref]]
@@ -399,6 +455,7 @@ def resample(
         "window": window,
         "thresh": thresh,
         "extrapolate": extrapolate,
+        "average": average,
     }
 
     if isinstance(inp, xr.DataArray):

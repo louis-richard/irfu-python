@@ -58,6 +58,7 @@ from .iso86012datetime import iso86012datetime
 from .iso86012datetime64 import iso86012datetime64
 from .iso86012timevec import iso86012timevec
 from .iso86012unix import iso86012unix
+from .jz import jz
 from .l_shell import l_shell
 from .lmn import lmn
 from .lowpass import lowpass
@@ -177,6 +178,7 @@ __all__ = [
     "iso86012datetime",
     "iso86012datetime64",
     "iso86012timevec",
+    "jz",
     "l_shell",
     "lmn",
     "lowpass",

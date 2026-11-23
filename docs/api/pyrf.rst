@@ -171,6 +171,7 @@ Multi-spacecraft methods
    c_4_r
    c_4_grad
    c_4_j
+   jz
    c_4_v
    c_4_v_xcorr
    st_diff
