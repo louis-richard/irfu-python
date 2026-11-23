@@ -10,7 +10,7 @@ import xarray as xr
 from scipy import constants
 
 # Local imports
-from pyrfu.mms._internal.vdf_bins import _charge, _charge_sign, _mass, _speed
+from pyrfu.mms._internal.vdf_bins import _charge, _charge_sign, _mass, _no_data, _speed
 from pyrfu.mms.psd_moments import (
     _energy_edges,
     _exact_kernels,
@@ -167,6 +167,8 @@ def _moments_cov(vdf, vdf_err, sc_pot):
             n_missing,
         )
 
+    # Times without data: NaN moments and errors, not 0
+    no_data = _no_data(psd)
     psd[np.isnan(psd)] = 0.0
     psd_err[np.isnan(psd_err)] = 0.0
     psd_var = psd_err**2
@@ -195,6 +197,9 @@ def _moments_cov(vdf, vdf_err, sc_pot):
             # Weights of the 19 linearised derived moments in each bin
             weights = jacobian[i_t] @ _bin_weights(energy, angular, i_t)
             covariance[i_t] = (weights * psd_var[i_t].ravel()) @ weights.T
+
+    moments[no_data] = np.nan
+    covariance[no_data] = np.nan
 
     return moments, covariance
 
@@ -408,7 +413,8 @@ def psd_moments_err(vdf, vdf_err, sc_pot):
     of its options `energy_range`, `en_channels`, `partial_moments`,
     `inner_electron`, `pitch_angle_range` and `no_sc_pot`.
 
-    A NaN of `vdf` is a bin without data (as `psd_moments`); a NaN of
+    A NaN of `vdf` is a bin without data (as `psd_moments`), and the errors
+    of a time without data are NaN (see :ref:`api-mms-vdf-nan`); a NaN of
     `vdf_err` where `vdf` is finite counts as a zero variance, with a
     warning.
 

@@ -504,6 +504,10 @@ def psd_moments(
     less than 0.001 %. The bulk-flow corrections of the pressure and heat
     flux are non-relativistic.
 
+    The NaN bins of `vdf` have no data and add nothing to the moments; the
+    moments of a time without data in the channels of the energy range are
+    NaN, not 0 (see :ref:`api-mms-vdf-nan`).
+
     The speed widths of the energy channels follow irfu-matlab
     `mms.psd_moments`: the channel edges are E + delta_energy_plus and
     E - delta_energy_minus (attributes) when there is one energy table, and
@@ -699,7 +703,9 @@ def psd_moments(
     v_upper, v_lower = [_speed(e, p_mass) for e in [e_upper, e_lower]]
     delta_v = v_upper - v_lower
 
-    # The data without NaN (as np.nansum), in place: vdf_data is a new array
+    # The channels with data, then the data without NaN (as np.nansum), in
+    # place: vdf_data is a new array
+    has_data = np.any(np.isfinite(vdf_data), axis=(2, 3))
     vdf_data[np.isnan(vdf_data)] = 0.0
 
     # Angular integrals of the data (time, energy, kernel): the kernels at the
@@ -751,8 +757,9 @@ def psd_moments(
     for k_, (i, j) in enumerate([(0, 0), (1, 1), (2, 2), (0, 1), (0, 2), (1, 2)]):
         p_psd[:, i, j] = p_moms[:, k_]
 
-    # No energy channel at these time steps (time dependent energy_range)
-    no_energy = ~np.any(use_energy, axis=1) | no_b
+    # No energy channel at these time steps (time dependent energy_range), or
+    # no data in the channels of the energy range (NaN only)
+    no_energy = ~np.any(use_energy & has_data, axis=1) | no_b
     n_psd[no_energy] = np.nan
     v_psd[no_energy] = np.nan
     p_psd[no_energy] = np.nan

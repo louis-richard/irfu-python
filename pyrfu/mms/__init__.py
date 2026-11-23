@@ -17,6 +17,7 @@ from .download_data import download_data
 from .dpf2psd import dpf2psd
 from .dsl2gse import dsl2gse
 from .dsl2gsm import dsl2gsm
+from .edi_amb_pad import edi_amb_pad
 from .eis_ang_ang import eis_ang_ang
 from .eis_combine_proton_pad import eis_combine_proton_pad
 from .eis_combine_proton_skymap import eis_combine_proton_skymap
@@ -136,6 +137,7 @@ __all__ = [
     "dpf2psd",
     "dsl2gse",
     "dsl2gsm",
+    "edi_amb_pad",
     "eis_ang_ang",
     "eis_combine_proton_pad",
     "eis_combine_proton_skymap",

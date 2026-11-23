@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Built-in imports
+import warnings
 from typing import Literal
 
 # 3rd party imports
@@ -13,7 +14,9 @@ from pyrfu._core.time import _seconds, _timedelta
 from pyrfu.pyrf.ts_skymap import ts_skymap
 
 
-def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
+def average_vdf(
+    vdf, n_pts, method: Literal["mean", "sum"] = "mean", counts: Dataset | None = None
+):
     r"""Time averages the velocity distribution functions over `n_pts` in time.
 
     Parameters
@@ -26,7 +29,16 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
         output is a skymap with a single time step (at the middle of the
         interval) which can be used as input of the other routines.
     method : {'mean', 'sum'}, Optional
-        Method for averaging. Use 'sum' for counts. Default is 'mean'.
+        Method for averaging. Use 'sum' for counts. Default is 'mean'. The
+        NaN bins have no data and are left out; a bin without data in a
+        window is NaN, for both methods (see :ref:`api-mms-vdf-nan`).
+    counts : xarray.Dataset, Optional
+        Counts of `vdf`, at its times and on its bins (e.g. from
+        :func:`pyrfu.mms.vdf_counts`). The bins with fewer than 2 counts
+        summed over the window (one count or none: below 1.5, the counts of
+        FPI being whole numbers to 0.05 %) are set to 0, as irfu-matlab
+        ``PDist.movmean(..., 'RemoveOneCounts', counts)``; NaN counts count as
+        0. Default is None: no removal.
 
     Returns
     -------
@@ -40,6 +52,24 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
         if one of its distributions is. The FPI quality flags (``errorflags``)
         of each window are those of its distributions combined (bitwise or):
         an average has the flags of each of its distributions.
+
+    Raises
+    ------
+    TypeError
+        If `vdf` or `counts` is not a xarray.Dataset, or `n_pts` is not an
+        integer or None.
+    ValueError
+        If `n_pts` is not odd or not between 1 and the number of
+        distributions, or `counts` does not have the times and the shape of
+        `vdf`.
+
+    Notes
+    -----
+    The one-count removal keeps the bins with data only: a bin without data
+    in the window stays NaN (see :ref:`api-mms-vdf-nan`). With lossy
+    compressed distributions (FPI fast survey, ``compressionloss``), the
+    counts of the low bins do not go below about 2 (see
+    :func:`pyrfu.mms.vdf_counts`), so that few bins are removed.
 
     """
 
@@ -62,6 +92,15 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
     if method not in ["mean", "sum"]:
         raise NotImplementedError("method not implemented feel free to do it!!")
 
+    if counts is not None:
+        if not isinstance(counts, Dataset):
+            raise TypeError("counts must be a xarray.Dataset")
+
+        if counts.data.shape != vdf.data.shape or not np.array_equal(
+            counts.time.data, vdf.time.data
+        ):
+            raise ValueError("counts must have the times and the shape of vdf")
+
     n_vdf = len(vdf.time.data)
     times = vdf.time.data
 
@@ -78,9 +117,24 @@ def average_vdf(vdf, n_pts, method: Literal["mean", "sum"] = "mean"):
 
     func = np.nanmean if method == "mean" else np.nansum
 
-    data_avg = np.stack(
-        [func(vdf.data.data[i_l:i_r, ...], axis=0) for i_l, i_r in bounds]
+    # Mean or sum over the samples with data of each bin, NaN without
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        data_avg = np.stack(
+            [func(vdf.data.data[i_l:i_r, ...], axis=0) for i_l, i_r in bounds]
+        )
+
+    no_data = np.stack(
+        [~np.any(np.isfinite(vdf.data.data[i_l:i_r]), axis=0) for i_l, i_r in bounds]
     )
+    data_avg[no_data] = np.nan
+
+    # One-count removal: fewer than 2 counts in the window (irfu-matlab
+    # PDist.movmean RemoveOneCounts), the bins with data only
+    if counts is not None:
+        n_counts = np.nan_to_num(np.asarray(counts.data.data, dtype=np.float64))
+        summed = np.stack([np.sum(n_counts[i_l:i_r], axis=0) for i_l, i_r in bounds])
+        data_avg[(summed < 1.5) & ~no_data] = 0.0
     energy_avg = np.stack(
         [np.nanmean(vdf.energy.data[i_l:i_r], axis=0) for i_l, i_r in bounds]
     )

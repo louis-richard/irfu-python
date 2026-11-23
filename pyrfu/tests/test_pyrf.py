@@ -55,6 +55,48 @@ from . import generate_data, generate_timeline, generate_ts, generate_vdf
 _NO_SEEDS = np.zeros(0, dtype=np.int64)
 
 
+class AngTestCase(unittest.TestCase):
+    def test_ang_vectors(self):
+        # 0, 90 and 180 degrees, and a small angle of 1e-9 rad, which the
+        # arccosine of the dot product (irfu-matlab) gives as 0
+        x_hat = [1.0, 0.0, 0.0]
+        self.assertEqual(pyrf.ang(x_hat, [2.0, 0.0, 0.0]), 0.0)
+        self.assertEqual(pyrf.ang(x_hat, [0.0, 3.0, 0.0]), 90.0)
+        self.assertEqual(pyrf.ang(x_hat, [-1.0, 0.0, 0.0]), 180.0)
+        np.testing.assert_allclose(
+            pyrf.ang(x_hat, [1.0, 1e-9, 0.0]), np.rad2deg(1e-9), rtol=1e-12
+        )
+
+        # Arrays of vectors, a zero vector without angle
+        result = pyrf.ang([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0]], [0.0, 1.0, 0.0])
+        np.testing.assert_allclose(result, [45.0, np.nan])
+
+    def test_ang_time_series(self):
+        # The second time series resampled to the times of the first; a vector
+        # and a time series in either order give a time series
+        time = generate_timeline(1.0, 5)
+        k = np.arange(1.0, 6.0)
+        inp1 = pyrf.ts_vec_xyz(time, np.column_stack([k, 0 * k, 0 * k]))
+        inp2 = pyrf.ts_vec_xyz(
+            time + np.timedelta64(300, "ms"), np.tile([1.0, 0.0, 1.0], (5, 1))
+        )
+
+        result = pyrf.ang(inp1, inp2)
+        self.assertIsInstance(result, xr.DataArray)
+        np.testing.assert_array_equal(result.time.data, time)
+        np.testing.assert_allclose(result.data, 45.0)
+        self.assertEqual(result.attrs["UNITS"], "deg")
+
+        for args in [(inp1, [0.0, 1.0, 0.0]), ([0.0, 1.0, 0.0], inp1)]:
+            result = pyrf.ang(*args)
+            np.testing.assert_array_equal(result.time.data, time)
+            np.testing.assert_allclose(result.data, 90.0)
+
+    def test_ang_shape(self):
+        with self.assertRaises(ValueError):
+            pyrf.ang([1.0, 0.0], [0.0, 1.0])
+
+
 @ddt
 class AnisotropyThresholdsTestCase(unittest.TestCase):
     # Ion coefficients for gamma = 0.01 (a, b, beta0)
@@ -242,6 +284,48 @@ class AverageVDFTestCase(unittest.TestCase):
             generate_vdf(64.0, 100, [32, 32, 16]), 3, method=method
         )
         self.assertIsInstance(result, xr.Dataset)
+
+    def test_average_vdf_no_data(self):
+        # A bin without data in a window is NaN, also for "sum" (it was 0);
+        # the NaN samples are left out of the others
+        vdf = generate_vdf(64.0, 6, [4, 4, 2])
+        vdf.data.data[:] = 1.0
+        vdf.data.data[:3, 0] = np.nan
+        vdf.data.data[3, 1] = np.nan
+
+        for method, full, part in [("mean", 1.0, 1.0), ("sum", 3.0, 2.0)]:
+            with self.subTest(method=method):
+                result = pyrf.average_vdf(vdf, 3, method=method).data.data
+                self.assertTrue(np.all(np.isnan(result[0, 0])))
+                np.testing.assert_array_equal(result[1, 0], full)
+                np.testing.assert_array_equal(result[1, 1], part)
+
+    def test_average_vdf_counts(self):
+        # Bins with fewer than 2 counts in the window set to 0 (irfu-matlab
+        # PDist.movmean RemoveOneCounts), NaN counts as 0, a bin without data
+        # left NaN; the counts must match vdf
+        vdf = generate_vdf(64.0, 6, [4, 4, 2])
+        vdf.data.data[:] = 1.0
+        vdf.data.data[:3, 3] = np.nan
+        counts = vdf.copy(deep=True)
+        counts.data.data[:] = 0.0
+        counts.data.data[0, 1] = 1.0005
+        counts.data.data[:2, 2] = 1.0005
+        counts.data.data[1, 0] = np.nan
+
+        result = pyrf.average_vdf(vdf, 3, counts=counts).data.data
+        np.testing.assert_array_equal(result[0, :3, 0, 0], [0.0, 0.0, 1.0])
+        self.assertTrue(np.all(np.isnan(result[0, 3])))
+        np.testing.assert_array_equal(result[1], 0.0)
+
+        whole = pyrf.average_vdf(vdf, None, method="sum", counts=counts).data.data
+        np.testing.assert_array_equal(whole[0, :3, 0, 0], [0.0, 0.0, 6.0])
+
+        with self.assertRaises(TypeError):
+            pyrf.average_vdf(vdf, 3, counts=counts.data)
+
+        with self.assertRaises(ValueError):
+            pyrf.average_vdf(vdf, 3, counts=counts.isel(time=slice(0, 5)))
 
     def test_average_vdf_output_meta(self):
         avg_inds = np.arange(1, 99, 3, dtype=int)
@@ -1725,6 +1809,54 @@ class C4GradTestCase(unittest.TestCase):
         for k, k_0 in zip(k_mms, k_ref):
             np.testing.assert_array_equal(k.time.data, time)
             np.testing.assert_allclose(k.data, k_0.data, rtol=1e-12)
+
+
+class C4RTestCase(unittest.TestCase):
+    def test_c_4_r(self):
+        # Regular tetrahedron of vertices (+-1, +-1, +-1): R = I, L = 2,
+        # E = P = 0; stretched by 2 along x, E = 1/2; flattened along z, P = 1
+        vertices = np.array(
+            [[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]], dtype=float
+        )
+        time = generate_timeline(1.0, 3)
+        scales = np.array([[1.0, 1.0, 1.0], [2.0, 1.0, 1.0], [2.0, 1.0, 0.0]])
+        r_mms = [
+            pyrf.ts_vec_xyz(time, 100.0 + vertex * scales, {"UNITS": "km"})
+            for vertex in vertices
+        ]
+
+        r_tensor, size, elongation, planarity = pyrf.c_4_r(r_mms)
+        np.testing.assert_allclose(r_tensor.data[0], np.eye(3), atol=1e-12)
+        np.testing.assert_allclose(r_tensor.data[1], np.diag([4.0, 1, 1]), atol=1e-12)
+        np.testing.assert_allclose(size.data, [2.0, 4.0, 4.0])
+        np.testing.assert_allclose(elongation.data, [0.0, 0.5, 0.5], atol=1e-12)
+        np.testing.assert_allclose(planarity.data, [0.0, 0.0, 1.0], atol=1e-12)
+        self.assertEqual(r_tensor.attrs["UNITS"], "km^2")
+        self.assertEqual(size.attrs["UNITS"], "km")
+        self.assertEqual(planarity.attrs["UNITS"], "")
+
+    def test_c_4_r_nan_and_times(self):
+        # A NaN position gives NaN; positions on other time lines are
+        # resampled to the first; four spacecraft needed
+        vertices = np.array([[0, 0, 0], [20, 0, 0], [10, 17, 0], [10, 6, 16.0]])
+        time = generate_timeline(1.0, 4)
+        r_mms = [pyrf.ts_vec_xyz(time, np.tile(r, (4, 1))) for r in vertices]
+        r_mms[2].data[1] = np.nan
+        r_tensor, size, _, planarity = pyrf.c_4_r(r_mms)
+        self.assertTrue(np.all(np.isnan(r_tensor.data[1])))
+        self.assertTrue(np.isnan(size.data[1]) and np.isnan(planarity.data[1]))
+        self.assertNotIn("UNITS", r_tensor.attrs)
+
+        r_shifted = [r_mms[0]] + [
+            r.assign_coords(time=r.time.data + np.timedelta64(100, "ms"))
+            for r in r_mms[1:]
+        ]
+        result = pyrf.c_4_r(r_shifted)
+        np.testing.assert_array_equal(result[0].time.data, time)
+        np.testing.assert_allclose(result[1].data[3], size.data[3])
+
+        with self.assertRaises(ValueError):
+            pyrf.c_4_r(r_mms[:3])
 
 
 class C4JTestCase(unittest.TestCase):
@@ -4899,6 +5031,23 @@ class IntSphDistTestCase(unittest.TestCase):
         {"projection_base": "pol", "projection_dim": "1d"},
         {"projection_base": "cart", "projection_dim": "2d"},
     )
+    def test_int_sph_dist_no_data(self, value):
+        # Without any finite value: NaN (no data), not 0
+        args = (
+            np.full((20, 8, 4), np.nan),
+            np.linspace(1, 2, 20),
+            np.arange(8.0) * np.pi / 4,
+            (np.arange(4.0) - 1.5) * np.pi / 8,
+            np.linspace(-2, 2, 41),
+            np.linspace(0, 2 * np.pi, 8, endpoint=False),
+        )
+        result = pyrf.int_sph_dist(*args, n_mc=2, seed=11, **value)["f"]
+        self.assertTrue(np.all(np.isnan(result)))
+
+    @data(
+        {"projection_base": "pol", "projection_dim": "1d"},
+        {"projection_base": "cart", "projection_dim": "2d"},
+    )
     def test_int_sph_dist_seed(self, value):
         # The same seed gives the same result, bit for bit (random.seed and
         # np.random.seed do not reach the numba generator); another seed or
@@ -5950,6 +6099,139 @@ class LowPassTestCase(unittest.TestCase):
                 pyrf.lowpass(inp, 1.0, f_s=64.0, fhz=64.0)
 
 
+def _sheet(n_pts=401):
+    # Spacecraft crossing at 30 km/s along x a sheet tanh(x / L) of a field
+    # component along y (L = 100 km), sampled at 16 Hz
+    time = generate_timeline(16.0, n_pts)
+    s_x = (np.arange(n_pts) - n_pts // 2) / 16.0 * 30.0
+    return time, s_x, 100.0
+
+
+class JzTestCase(unittest.TestCase):
+    def test_jz_b(self):
+        # B = 10 tanh(x / L) y: J = (1 / mu0) dBy/dx z = 10 sech^2(x / L) /
+        # (mu0 L) (nT/km), along B x v for z (B along y, v along x)
+        time, s_x, l_s = _sheet()
+        b_y = 10.0 * np.tanh(s_x / l_s)
+        b_xyz = pyrf.ts_vec_xyz(
+            time, np.column_stack([0 * s_x, b_y, 0 * s_x + 1e-3]), {"UNITS": "nT"}
+        )
+        v_xyz = pyrf.ts_vec_xyz(time, np.tile([30.0, 0.0, 0.0], (len(time), 1)))
+        expected = 1e-12 * 10.0 / np.cosh(s_x / l_s) ** 2 / l_s / constants.mu_0
+
+        j_xyz, j_par, j_perp = pyrf.jz(v_xyz, b_xyz)
+        np.testing.assert_allclose(j_xyz.data[1:-1, 2], expected[1:-1], rtol=1e-3)
+        np.testing.assert_allclose(j_xyz.data[:, :2], 0.0, atol=1e-15)
+
+        # Where B is along +-y: J along -+(B x v) = z; along B, J_z b_z
+        along_y = np.abs(b_y) > 1.0
+        np.testing.assert_allclose(
+            j_perp.data[along_y],
+            -np.sign(b_y[along_y]) * j_xyz.data[along_y, 2],
+            rtol=1e-6,
+        )
+        b_mag = np.sqrt(b_y**2 + 1e-6)
+        np.testing.assert_allclose(j_par.data, j_xyz.data[:, 2] * 1e-3 / b_mag)
+        self.assertEqual(j_xyz.attrs["UNITS"], "A/m^2")
+
+        # A constant velocity as 3 values; the disturbance field given
+        result = pyrf.jz([30.0, 0.0, 0.0], b_xyz, b_xyz)[0]
+        np.testing.assert_allclose(result.data, j_xyz.data)
+
+    def test_jz_a(self):
+        # Auroral-like sheet: B = 20000 z + 50 tanh(x / L) y, v = (30, 5, 3):
+        # J_par = (1 / mu0) dBy/dx (b . z), normal along x, and J_perp from the
+        # change of |B|, (1 / mu0) dBy/dx |By| / |B|
+        time, s_x, l_s = _sheet()
+        b_xyz = np.column_stack([0 * s_x, 50.0 * np.tanh(s_x / l_s), 0 * s_x + 2e4])
+        b_ts = pyrf.ts_vec_xyz(time, b_xyz, {"UNITS": "nT"})
+        b_mag = np.linalg.norm(b_xyz, axis=1)
+        expected = 1e-12 * 50.0 / np.cosh(s_x / l_s) ** 2 / l_s / constants.mu_0
+        expected *= 2e4 / b_mag
+
+        j_par, j_perp, n_j, angle = pyrf.jz([30.0, 5.0, 3.0], b_ts, method="A")
+        inner = slice(1, -1)
+        np.testing.assert_allclose(j_par.data[inner], expected[inner], rtol=1e-3)
+        np.testing.assert_allclose(
+            j_perp.data[inner],
+            (expected * np.abs(b_xyz[:, 1]) / 2e4)[inner],
+            rtol=1e-3,
+            atol=1e-15,
+        )
+        np.testing.assert_allclose(np.abs(n_j.data[inner, 0]), 1.0, atol=1e-5)
+
+        # Angle of the normal (x) from the velocity perpendicular to B, (30, 5)
+        np.testing.assert_allclose(angle.data[200], np.rad2deg(np.arctan(5 / 30)))
+        self.assertEqual(angle.attrs["UNITS"], "deg")
+
+        # A velocity within deg_z of B, or within deg_p of the sheet: NaN
+        for v_xyz in [[1.0, 0.0, 30.0], [1.0, 30.0, 0.0]]:
+            with self.subTest(v_xyz=v_xyz):
+                j_par = pyrf.jz(v_xyz, b_ts, method="A")[0]
+                self.assertTrue(np.all(np.isnan(j_par.data)))
+
+    def test_jz_n_av(self):
+        # The low-pass filter of n_av leaves a sheet much wider than the
+        # sampling unchanged; errors for the other inputs
+        time, s_x, l_s = _sheet()
+        b_xyz = pyrf.ts_vec_xyz(
+            time,
+            np.column_stack([0 * s_x, 10.0 * np.tanh(s_x / (20 * l_s)), 0 * s_x]),
+            {"UNITS": "nT"},
+        )
+        direct = pyrf.jz([30.0, 0.0, 0.0], b_xyz)[0].data[50:-50, 2]
+        filtered = pyrf.jz([30.0, 0.0, 0.0], b_xyz, n_av=4)[0].data[50:-50, 2]
+        self.assertEqual(len(direct), 301)
+        np.testing.assert_allclose(filtered, direct, rtol=1e-3)
+
+        for kwargs in [{"method": "C"}, {"n_av": 1}]:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    pyrf.jz([30.0, 0.0, 0.0], b_xyz, **kwargs)
+
+        with self.assertRaises(ValueError):
+            pyrf.jz([30.0, 0.0], b_xyz)
+
+
+class LmnTestCase(unittest.TestCase):
+    def test_lmn_l(self):
+        # "L": L along B, N along the part of n perpendicular to B, M = N x L
+        time = generate_timeline(1.0, 2)
+        inp = pyrf.ts_vec_xyz(time, np.tile([1.0, 2.0, 3.0], (2, 1)), {"UNITS": "mV/m"})
+        b_xyz = pyrf.ts_vec_xyz(time, np.array([[5.0, 0, 0], [0, 5.0, 0]]))
+
+        # B along x: N along z; B along y: N along n, M = (-1, 0, 0.3) / |n|
+        result = pyrf.lmn(inp, b_xyz, [0.3, 0.0, 1.0])
+        expected = [[1.0, 2.0, 3.0], [2.0, -0.1 / np.sqrt(1.09), 3.3 / np.sqrt(1.09)]]
+        np.testing.assert_allclose(result.data, expected, atol=1e-12)
+        self.assertEqual(result.attrs["COORDINATE_SYSTEM"], "lmn")
+        self.assertEqual(result.attrs["UNITS"], "mV/m")
+        self.assertNotIn("COORDINATE_SYSTEM", inp.attrs)
+
+    def test_lmn_n(self):
+        # "N": N along n, L along the mean B (perpendicular to n), M = N x L;
+        # B in its own frame has B_L > 0, B_M = 0 (irfu-matlab: B_L < 0)
+        time = generate_timeline(1.0, 3)
+        b_xyz = pyrf.ts_vec_xyz(
+            time, np.array([[1.0, 1.0, 0.5], [1.0, -1.0, 0.5], [np.nan] * 3])
+        )
+        inp = pyrf.ts_vec_xyz(time, np.tile([1.0, 2.0, 3.0], (3, 1)))
+
+        result = pyrf.lmn(inp, b_xyz, [0.0, 0.0, 2.0], "N")
+        np.testing.assert_allclose(result.data, np.tile([1.0, 2.0, 3.0], (3, 1)))
+        b_lmn = pyrf.lmn(b_xyz, b_xyz, [0.0, 0.0, 1.0], "N")
+        np.testing.assert_allclose(np.nanmean(b_lmn.data, axis=0), [1.0, 0, 0.5])
+
+    def test_lmn_errors(self):
+        inp = generate_ts(1.0, 5, tensor_order=1)
+
+        with self.assertRaises(ValueError):
+            pyrf.lmn(inp, inp, [0.0, 1.0])
+
+        with self.assertRaises(ValueError):
+            pyrf.lmn(inp, inp, [0.0, 0.0, 1.0], "M")
+
+
 @ddt
 class LShellTestCase(unittest.TestCase):
     @data("gei", "geo", "gse", "gsm", "mag", "sm")
@@ -6929,6 +7211,77 @@ class ReadCdfTestCase(unittest.TestCase):
         self.assertTupleEqual(result["density"].shape, (3,))
 
 
+class ResampleAverageTestCase(unittest.TestCase):
+    def test_resample_pchip(self):
+        # Shape preserving (no overshoot of a step, unlike "cubic"), as scipy
+        # PchipInterpolator; NaN samples skipped; NaN outside without
+        # extrapolate
+        time = generate_timeline(1.0, 8)
+        step = np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        inp = pyrf.ts_scalar(time, step)
+        ref = pyrf.ts_scalar(time[:-1] + np.timedelta64(500, "ms"), np.zeros(7))
+
+        result = pyrf.resample(inp, ref, method="pchip")
+        expected = interpolate.PchipInterpolator(np.arange(8.0), step)(
+            np.arange(7) + 0.5
+        )
+        np.testing.assert_allclose(result.data, expected)
+        self.assertTrue(np.all((result.data >= 0) & (result.data <= 1)))
+        cubic = pyrf.resample(inp, ref, method="cubic").data
+        self.assertTrue(np.any((cubic < 0) | (cubic > 1)))
+
+        with_nan = inp.copy(data=np.where(np.arange(8) == 5, np.nan, step))
+        np.testing.assert_allclose(
+            pyrf.resample(with_nan, ref, method="pchip").data[[0, 6]], [0.0, 1.0]
+        )
+
+        later = pyrf.ts_scalar(time + np.timedelta64(2, "s"), step)
+        out = pyrf.resample(later, ref, method="pchip", extrapolate=False).data
+        self.assertTrue(np.all(np.isnan(out[:2])) and np.all(np.isfinite(out[2:])))
+
+    def test_resample_median_max(self):
+        # Windows of 4 samples (8 Hz to 2 Hz): median and max of each, a NaN
+        # giving NaN; averaged also when the sampling is not twice higher
+        time = generate_timeline(8.0, 16)
+        values = np.array([1, 2, 3, 10, 4, 4, 5, 6, 0, 0, 1, 9, 7, 7, 7, 7.0])
+        values[9] = np.nan
+        inp = pyrf.ts_scalar(time, values)
+        ref = pyrf.ts_scalar(time[2::4] - np.timedelta64(62500, "us"), np.zeros(4))
+
+        median = pyrf.resample(inp, ref, average="median").data
+        np.testing.assert_array_equal(median[[0, 1, 3]], [2.5, 4.5, 7.0])
+        self.assertTrue(np.isnan(median[2]))
+        maximum = pyrf.resample(inp, ref, average="max").data
+        np.testing.assert_array_equal(maximum[[0, 1, 3]], [10.0, 6.0, 7.0])
+        self.assertTrue(np.isnan(maximum[2]))
+
+        # thresh: 10 is beyond 1 std of the first window, left out
+        median = pyrf.resample(inp, ref, thresh=1.0, average="median").data
+        np.testing.assert_array_equal(median[0], 2.0)
+
+        # The same sampling: averaged anyway (one sample per window)
+        same = pyrf.resample(inp, inp, average="max").data
+        np.testing.assert_array_equal(same, values)
+
+        for kwargs in [{"average": "min"}, {"average": "max", "method": "linear"}]:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    pyrf.resample(inp, ref, **kwargs)
+
+    def test_resample_max_dataset(self):
+        # A distribution: the max of the data, the mean of the energies
+        vdf = generate_vdf(8.0, 8, [2, 2, 2])
+        vdf.data.data[:] = np.arange(8.0)[:, None, None, None]
+        vdf.energy.data[:] = np.arange(8.0)[:, None]
+        ref = pyrf.ts_scalar(
+            vdf.time.data[1::4] + np.timedelta64(62500, "us"), np.zeros(2)
+        )
+
+        result = pyrf.resample(vdf, ref, average="max")
+        np.testing.assert_array_equal(result.data.data[:, 0, 0, 0], [3.0, 7.0])
+        np.testing.assert_array_equal(result.energy.data[:, 0], [1.5, 5.5])
+
+
 @ddt
 class ResampleTestCase(unittest.TestCase):
     @data(
@@ -7132,7 +7485,7 @@ class ResampleTestCase(unittest.TestCase):
             pyrf.resample(inp, ref, method="spline")
 
         with self.assertRaisesRegex(ValueError, "method must be one of"):
-            pyrf.resample(inp, ref, method="pchip")
+            pyrf.resample(inp, ref, method="akima")
 
         # NaN, as MATLAB interp1 (R2024a): next to it with "linear"; skipped
         # by "cubic", each component through its finite samples, also at the
@@ -7428,6 +7781,88 @@ class PsdTestCase(unittest.TestCase):
         expected = pyrf.wave_fft(inp, "hamming", 0.5, 1.0, scaled=False)
         for value, ref in zip(result, expected):
             np.testing.assert_allclose(value, ref, rtol=1e-12, atol=1e-12)
+
+
+def _pads(values, theta):
+    # The same pitch-angle distribution (time, energy, pitch angle) as a
+    # Dataset (get_pitch_angle_dist) and as a DataArray with theta (eis_pad)
+    n_t, n_e, _ = values.shape
+    time = generate_timeline(1.0, n_t)
+    dataset = xr.Dataset(
+        {
+            "data": (["time", "idx0", "idx1"], values, {"UNITS": "s^3/cm^6"}),
+            "energy": (["time", "idx0"], np.tile(np.arange(1.0, n_e + 1), (n_t, 1))),
+            "theta": (["time", "idx1"], np.tile(theta, (n_t, 1))),
+            "time": time,
+            "idx0": np.arange(n_e),
+            "idx1": np.arange(len(theta)),
+        },
+        attrs={"species": "electrons"},
+    )
+    data_array = xr.DataArray(
+        np.transpose(values, (0, 2, 1)),
+        coords=[time, theta, np.arange(1.0, n_e + 1)],
+        dims=["time", "theta", "energy"],
+        attrs={"UNITS": "cm^-2 s^-1 sr^-1 keV^-1"},
+    )
+    return dataset, data_array
+
+
+class PitchAngleAverageTestCase(unittest.TestCase):
+    def test_pitch_angle_average(self):
+        # Solid-angle weights 2 pi (cos a- - cos a+); the NaN bins left out
+        # with their weights, a time without data NaN; bounds included
+        theta = 7.5 + 15.0 * np.arange(12)
+        values = np.tile(np.arange(1.0, 13.0), (3, 2, 1))
+        values[1, 0, 1] = np.nan
+        values[2] = np.nan
+        dataset, data_array = _pads(values, theta)
+        edges = np.deg2rad(np.arange(0.0, 181.0, 15.0))
+        solid = np.cos(edges[:-1]) - np.cos(edges[1:])
+
+        expected = np.sum(np.arange(1.0, 13.0) * solid) / np.sum(solid)
+        expected_nan = np.sum(np.delete(np.arange(1.0, 13.0) * solid, 1))
+        expected_nan /= np.sum(np.delete(solid, 1))
+        expected_par = (1 * solid[0] + 2 * solid[1]) / (solid[0] + solid[1])
+
+        result = pyrf.pitch_angle_average(data_array)
+        self.assertTupleEqual(result.dims, ("time", "energy"))
+        np.testing.assert_allclose(result.data[0], expected)
+        np.testing.assert_allclose(result.data[1], [expected_nan, expected])
+        self.assertTrue(np.all(np.isnan(result.data[2])))
+        self.assertEqual(result.attrs["UNITS"], "cm^-2 s^-1 sr^-1 keV^-1")
+
+        result = pyrf.pitch_angle_average(dataset, [7.5, 22.5])
+        self.assertTupleEqual(result.data.shape, (3, 2, 1))
+        np.testing.assert_allclose(result.data.data[0, :, 0], expected_par)
+        np.testing.assert_allclose(result.theta.data[:, 0], 15.0)
+        np.testing.assert_array_equal(result.attrs["delta_pitchangle_plus"], 15.0)
+        self.assertEqual(result.data.attrs["UNITS"], "s^3/cm^6")
+
+        # Bins of the attributes: one bin of 0 to 90 degrees and one of 90 to
+        # 180 degrees, equal solid angles
+        dataset, _ = _pads(values[:, :, :2], np.array([45.0, 135.0]))
+        dataset.attrs["delta_pitchangle_minus"] = np.array([45.0, 45.0])
+        dataset.attrs["delta_pitchangle_plus"] = np.array([45.0, 45.0])
+        result = pyrf.pitch_angle_average(dataset)
+        np.testing.assert_allclose(result.data.data[0, :, 0], 1.5)
+
+    def test_pitch_angle_average_errors(self):
+        theta = 7.5 + 15.0 * np.arange(12)
+        dataset, data_array = _pads(np.ones((2, 2, 12)), theta)
+
+        with self.assertRaises(TypeError):
+            pyrf.pitch_angle_average(dataset.data.data)
+
+        for pad, angles in [
+            (data_array.rename(theta="pitch"), None),
+            (dataset, [0.0, 5.0]),
+            (dataset, [0.0, 90.0, 180.0]),
+            (dataset.isel(idx1=[0]), None),
+        ]:
+            with self.subTest(angles=angles):
+                with self.assertRaises(ValueError):
+                    pyrf.pitch_angle_average(pad, angles)
 
 
 class PresAnisTestCase(unittest.TestCase):
@@ -9713,6 +10148,103 @@ class VhtValuesTestCase(unittest.TestCase):
 
         np.testing.assert_allclose(np.mean(dv_hts, axis=0), expected, rtol=0.05)
         np.testing.assert_allclose(np.std(v_hts, axis=0), expected, rtol=0.15)
+
+
+def _walen_interval(n_pts=40):
+    # B rotating about x across the interval (a rotational discontinuity), a
+    # varying density, and the Alfven velocity B / sqrt(mu0 n m_p) in km/s
+    time = generate_timeline(1.0, n_pts)
+    phase = np.linspace(0.0, np.pi, n_pts)
+    b_xyz = np.column_stack(
+        [5.0 + 0.0 * phase, 30.0 * np.cos(phase), 30.0 * np.sin(phase)]
+    )
+    n_i = 10.0 + 5.0 * np.sin(phase)
+    rho = 1e6 * n_i * constants.proton_mass
+    v_a = 1e-12 * b_xyz / np.sqrt(constants.mu_0 * rho)[:, None]
+    return time, b_xyz, n_i, v_a, np.array([-200.0, 50.0, 10.0])
+
+
+def _walen_inputs(time, b_xyz, n_i, v_xyz):
+    return (
+        pyrf.ts_vec_xyz(time, v_xyz, {"UNITS": "km/s"}),
+        pyrf.ts_vec_xyz(time, b_xyz, {"UNITS": "nT"}),
+        pyrf.ts_scalar(time, n_i, {"UNITS": "cm^-3"}),
+    )
+
+
+class WalenTestCase(unittest.TestCase):
+    def test_walen_alfvenic(self):
+        # V - V_HT = +-V_A: slope and correlation +-1, no offset; 21.8 km/s
+        # for 1 nT and 1 cm^-3 (irfu-matlab 22)
+        time, b_xyz, n_i, v_a, v_ht = _walen_interval()
+
+        for sign in [1.0, -1.0]:
+            with self.subTest(sign=sign):
+                inputs = _walen_inputs(time, b_xyz, n_i, v_ht + sign * v_a)
+                slope, offset, cc, v_tht, v_a_ts = pyrf.walen(*inputs, v_ht)
+                self.assertAlmostEqual(slope, sign, places=12)
+                self.assertAlmostEqual(offset, 0.0, places=9)
+                self.assertAlmostEqual(cc, sign, places=12)
+                np.testing.assert_allclose(v_a_ts.data, v_a, rtol=1e-12)
+                np.testing.assert_allclose(v_tht.data, sign * v_a, atol=1e-9)
+                np.testing.assert_array_equal(v_tht.time.data, time)
+                self.assertEqual(v_a_ts.attrs["UNITS"], "km/s")
+
+        b_1, n_1, v_1 = np.eye(3)[:2], np.ones(2), np.eye(3)[:2]
+        inputs = _walen_inputs(time[:2], b_1, n_1, v_1)
+        _, _, _, _, v_a_1 = pyrf.walen(*inputs, [0.0, 0.0, 0.0])
+        np.testing.assert_allclose(v_a_1.data[0, 0], 21.812, rtol=1e-4)
+
+    def test_walen_anisotropy(self):
+        # alpha = mu0 (P_par - P_perp) / B^2 = 0.36: V - V_HT = 0.8 V_A has
+        # slope 1 with the pressure tensor, 0.8 without
+        time, b_xyz, n_i, v_a, v_ht = _walen_interval()
+        b_2 = np.sum(b_xyz**2, axis=1)
+        p_perp = 0.1 + 0.0 * b_2
+        p_para = p_perp + 1e-9 * 0.36 * b_2 / constants.mu_0
+        p_fac = np.zeros((len(time), 3, 3))
+        p_fac[:, 0, 0] = p_para
+        p_fac[:, 1, 1] = p_perp
+        p_fac[:, 2, 2] = p_perp
+        p_fac = pyrf.ts_tensor_xyz(time, p_fac, {"UNITS": "nPa"})
+        inputs = _walen_inputs(time, b_xyz, n_i, v_ht + 0.8 * v_a)
+
+        slope, _, cc, _, v_a_ts = pyrf.walen(*inputs, v_ht, p_fac)
+        self.assertAlmostEqual(slope, 1.0, places=12)
+        self.assertAlmostEqual(cc, 1.0, places=12)
+        np.testing.assert_allclose(v_a_ts.data, 0.8 * v_a, rtol=1e-12)
+        self.assertAlmostEqual(pyrf.walen(*inputs, v_ht)[0], 0.8, places=12)
+
+    def test_walen_excluded(self):
+        # The samples without velocity or with alpha >= 1 (no Alfven velocity)
+        # are left out of the fit; B and n resampled to the times of V
+        time, b_xyz, n_i, v_a, v_ht = _walen_interval()
+        v_xyz = v_ht + v_a
+        v_xyz[3] = np.nan
+        v_xyz[10] += 1e3
+        b_2 = np.sum(b_xyz**2, axis=1)
+        p_fac = np.zeros((len(time), 3, 3))
+        p_fac[10, 0, 0] = 1e-9 * 2.0 * b_2[10] / constants.mu_0
+        p_fac = pyrf.ts_tensor_xyz(time, p_fac, {"UNITS": "nPa"})
+        v_xyz, b_ts, n_ts = _walen_inputs(time, b_xyz, n_i, v_xyz)
+        b_ts = b_ts.assign_coords(time=time + np.timedelta64(1, "us"))
+
+        slope, offset, cc, _, v_a_ts = pyrf.walen(v_xyz, b_ts, n_ts, v_ht, p_fac)
+        self.assertAlmostEqual(slope, 1.0, places=6)
+        self.assertAlmostEqual(cc, 1.0, places=9)
+        self.assertAlmostEqual(offset, 0.0, places=3)
+        self.assertTrue(np.all(np.isnan(v_a_ts.data[10])))
+
+    def test_walen_errors(self):
+        time, b_xyz, n_i, v_a, v_ht = _walen_interval()
+        inputs = _walen_inputs(time, b_xyz, n_i, v_ht + v_a)
+
+        with self.assertRaisesRegex(ValueError, "v_ht"):
+            pyrf.walen(*inputs, v_ht[:2])
+
+        inputs = _walen_inputs(time, b_xyz, n_i, np.full_like(v_a, np.nan))
+        with self.assertRaisesRegex(ValueError, "no sample"):
+            pyrf.walen(*inputs, v_ht)
 
 
 class PyrfuLoggingTestCase(unittest.TestCase):

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from .ang import ang
 from .anisotropy_thresholds import anisotropy_thresholds
 from .autocorr import autocorr
 from .average_vdf import average_vdf
@@ -9,6 +10,7 @@ from .brazil import brazil
 from .c_4_grad import c_4_grad
 from .c_4_j import c_4_j
 from .c_4_k import c_4_k
+from .c_4_r import c_4_r
 from .c_4_v import c_4_v
 from .c_4_v_xcorr import c_4_v_xcorr
 from .calc_ag import calc_ag
@@ -56,7 +58,9 @@ from .iso86012datetime import iso86012datetime
 from .iso86012datetime64 import iso86012datetime64
 from .iso86012timevec import iso86012timevec
 from .iso86012unix import iso86012unix
+from .jz import jz
 from .l_shell import l_shell
+from .lmn import lmn
 from .lowpass import lowpass
 from .magnetosphere import magnetosphere
 from .match_phibe_dir import match_phibe_dir
@@ -76,6 +80,7 @@ from .normalize import normalize
 from .optimize_nbins_1d import optimize_nbins_1d
 from .optimize_nbins_2d import optimize_nbins_2d
 from .pid_4sc import pid_4sc, pid_4sc_err
+from .pitch_angle_average import pitch_angle_average
 from .plasma_beta import plasma_beta
 from .plasma_calc import plasma_calc
 from .poynting_flux import poynting_flux
@@ -109,12 +114,14 @@ from .ts_vec_xyz import ts_vec_xyz
 from .ttns2datetime64 import ttns2datetime64
 from .unix2datetime64 import unix2datetime64
 from .vht import vht
+from .walen import walen
 from .wave_fft import wave_fft
 from .wavelet import wavelet
 from .wavepolarize_means import wavepolarize_means
 from .waverage import waverage
 
 __all__ = [
+    "ang",
     "anisotropy_thresholds",
     "autocorr",
     "average_vdf",
@@ -123,6 +130,7 @@ __all__ = [
     "c_4_grad",
     "c_4_j",
     "c_4_k",
+    "c_4_r",
     "c_4_v",
     "c_4_v_xcorr",
     "calc_ag",
@@ -170,7 +178,9 @@ __all__ = [
     "iso86012datetime",
     "iso86012datetime64",
     "iso86012timevec",
+    "jz",
     "l_shell",
+    "lmn",
     "lowpass",
     "magnetosphere",
     "match_phibe_dir",
@@ -191,6 +201,7 @@ __all__ = [
     "optimize_nbins_2d",
     "pid_4sc",
     "pid_4sc_err",
+    "pitch_angle_average",
     "plasma_beta",
     "plasma_calc",
     "poynting_flux",
@@ -224,6 +235,7 @@ __all__ = [
     "ttns2datetime64",
     "unix2datetime64",
     "vht",
+    "walen",
     "wave_fft",
     "wavelet",
     "wavepolarize_means",

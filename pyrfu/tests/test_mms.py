@@ -391,6 +391,18 @@ class CalcEpsilonTestCase(unittest.TestCase):
         eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
         np.testing.assert_allclose(eps.data, 0.5, rtol=0.01)
 
+    def test_calc_epsilon_no_data(self):
+        # A time without data: NaN, not 0
+        vdf, n_s = self._maxwellian("attrs", False)
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(4))
+        model = vdf.copy(deep=True)
+        model.data.data[...] = 0.0
+        vdf.data.data[1] = np.nan
+
+        eps = mms.calculate_epsilon(vdf, model, n_s, sc_pot)
+        self.assertTrue(np.isnan(eps.data[1]))
+        np.testing.assert_allclose(eps.data[[0, 2, 3]], 0.5, rtol=0.01)
+
     def test_calc_epsilon_charge(self):
         # Ions of charge q gain q V, as in psd_moments
         vdf, n_s = self._maxwellian("attrs", False)
@@ -4629,6 +4641,70 @@ class PadPalimTestCase(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             mms.pad_palim(vdf, 90.0)
+
+
+def _edi_amb(n_records=4, energy=(500.0, 250.0), delta=True):
+    # EDI burst amb-pm2 Dataset as get_data gives it: the fluxes of the four
+    # channels at 0 and 180 degrees (10 * channel, + 1 at 180 degrees), their
+    # errors (a tenth) and the energy of the GDUs on its own time base
+    time = np.datetime64("2017-01-01T01:51:40", "ns") + np.arange(
+        n_records
+    ) * np.timedelta64(250, "ms")
+    out = {}
+    for channel in range(1, 5):
+        for angle, offset in [(0, 0.0), (180, 1.0)]:
+            values = np.full(n_records, 10.0 * channel + offset)
+            name = f"flux{channel:d}_{angle:d}"
+            out[name] = pyrf.ts_scalar(time, values, attrs={"UNITS": "cm^-2 s^-1"})
+            if delta:
+                out[f"{name}_delta"] = pyrf.ts_scalar(time, values / 10.0)
+    time_tag = time[0] + np.array([-1, 375], dtype="timedelta64[ms]")
+    for gdu in [1, 2]:
+        energy_ts = pyrf.ts_scalar(time_tag, np.asarray(energy))
+        out[f"energy_gdu{gdu:d}"] = energy_ts.rename({"time": "time_timetag"})
+    return xr.Dataset(out)
+
+
+class EdiAmbPadTestCase(unittest.TestCase):
+    def test_edi_amb_pad(self):
+        # The 8 pitch-angle bins of irfu-matlab Flux-amb-pm2: channels 1 to 4
+        # at 0 to 45 degrees, 4 to 1 at 135 to 180 degrees; the energy of the
+        # GDU at its last record before each time
+        pad = mms.edi_amb_pad(_edi_amb())
+
+        self.assertTupleEqual(pad.data.shape, (4, 1, 8))
+        np.testing.assert_array_equal(
+            pad.data.data[0, 0], [10, 20, 30, 40, 41, 31, 21, 11]
+        )
+        np.testing.assert_allclose(
+            pad.theta.data[0],
+            np.array([0.5, 1.5, 2.5, 3.5, 12.5, 13.5, 14.5, 15.5]) * 11.25,
+        )
+        np.testing.assert_array_equal(pad.energy.data[:, 0], [500, 500, 250, 250])
+        np.testing.assert_array_equal(
+            pad.attrs["delta_energy_minus"][:, 0], [25, 25, 12.5, 12.5]
+        )
+        np.testing.assert_array_equal(pad.attrs["delta_pitchangle_plus"], 5.625)
+        self.assertEqual(pad.data.attrs["UNITS"], "cm^-2 s^-1")
+        self.assertEqual(pad.attrs["species"], "electrons")
+
+        # The errors (irfu-matlab Flux-err-amb-pm2), and pad_palim on the result
+        pad_err = mms.edi_amb_pad(_edi_amb(), error=True)
+        np.testing.assert_allclose(pad_err.data.data, pad.data.data / 10.0)
+        np.testing.assert_array_equal(
+            mms.pad_palim(pad, [0.0, 50.0]).data.data[0, 0], [10, 20, 30, 40]
+        )
+
+    def test_edi_amb_pad_missing(self):
+        # Without the four channels, their errors or the energy: ValueError
+        amb = _edi_amb()
+        for name in ["flux4_180", "energy_gdu1"]:
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, name):
+                    mms.edi_amb_pad(amb.drop_vars(name))
+
+        with self.assertRaisesRegex(ValueError, "flux1_0_delta"):
+            mms.edi_amb_pad(_edi_amb(delta=False), error=True)
 
 
 @ddt
@@ -9824,11 +9900,74 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "missing_label"):
             self._get_data_local("e_gse_edi_brst_l2", [content], tint)
 
+    def test_get_data_spacecraft_list(self):
+        # A sequence of spacecraft: the list of their time series, in the same
+        # order, each from the files of its spacecraft
+        module = importlib.import_module("pyrfu.mms.get_data")
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+
+        with tempfile.TemporaryDirectory() as root:
+            paths = {}
+            time = np.datetime64("2019-09-14T07:54:10", "ns") + np.arange(4) * (
+                np.timedelta64(1, "s")
+            )
+            for mms_id in ["1", "2"]:
+                cdf = pycdfpp.CDF()
+                cdf.add_variable(
+                    "Epoch", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+                )
+                name = f"mms{mms_id}_edi_e_gse_brst_l2"
+                cdf.add_variable(name, values=float(mms_id) * np.ones((4, 3)))
+                cdf[name].add_attribute("DEPEND_0", "Epoch")
+                paths[mms_id] = os.path.join(root, f"mms{mms_id}_edi.cdf")
+                with open(paths[mms_id], "wb") as file:
+                    file.write(bytes(pycdfpp.save(cdf)))
+
+            with mock.patch.object(
+                module, "list_files", side_effect=lambda t, i, *_: [paths[i]]
+            ):
+                result = mms.get_data(
+                    "e_gse_edi_brst_l2", tint, [2, 1], False, root, source="local"
+                )
+
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 2)
+        np.testing.assert_array_equal(result[0].data, 2.0)
+        np.testing.assert_array_equal(result[1].data, 1.0)
+
+    @data([1, 2, 3, 4], (np.int64(3), "4"), range(1, 5))
+    def test_get_data_spacecraft_dispatch(self, mms_ids):
+        # Any sequence of indices (int, numpy int or str): one read per
+        # spacecraft, as str; a single index (int, numpy int or str) gives
+        # its time series; the deprecation warning of a key raised once,
+        # pointing at the caller
+        module = importlib.import_module("pyrfu.mms.get_data")
+        tint = ["2019-09-14T07:54:00", "2019-09-14T07:55:00"]
+
+        with mock.patch.object(
+            module, "_get_data", side_effect=lambda *a: a[2]
+        ) as read:
+            result = mms.get_data("e_gse_edi_brst_l2", tint, mms_ids)
+            self.assertListEqual(result, [str(i) for i in mms_ids])
+            self.assertEqual(read.call_count, len(mms_ids))
+
+            for mms_id in [np.int64(2), "2", 2]:
+                self.assertEqual(mms.get_data("b_gse_fgm_srvy_l2", tint, mms_id), "2")
+
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                mms.get_data("vhplus_gsm_hpca_srvy_l2", tint, mms_ids)
+
+        future = [w for w in caught if issubclass(w.category, FutureWarning)]
+        self.assertEqual(len(future), 1)
+        self.assertEqual(os.path.basename(future[0].filename), "test_mms.py")
+
     @staticmethod
-    def _cdf_edi_amb(t_start, names, n_records=4):
+    def _cdf_edi_amb(t_start, names, n_records=4, energy=None):
         # In-memory EDI ambient file with the given (name, time base) data
         # variables of 4 records (a time base per name), their errors (support
-        # data) and a variable without VAR_TYPE
+        # data), a variable without VAR_TYPE, and optionally the energy of the
+        # GDUs on a time base of its own (epoch_timetag, 2 records)
         cdf = pycdfpp.CDF()
         t_0 = np.datetime64(t_start, "ns")
         for base in sorted({base for _, base in names}):
@@ -9847,6 +9986,16 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
                 cdf[full].add_attribute("DEPEND_0", base)
                 cdf[full].add_attribute("VAR_TYPE", var_type)
         cdf.add_variable("mms1_edi_label", values=np.ones(n_records))
+        if energy is not None:
+            time = t_0 + np.arange(2) * np.timedelta64(500, "ms")
+            cdf.add_variable(
+                "epoch_timetag", values=time, data_type=pycdfpp.DataType.CDF_TIME_TT2000
+            )
+            for gdu in [1, 2]:
+                name = f"mms1_edi_energy_gdu{gdu:d}_srvy_l2"
+                cdf.add_variable(name, values=np.asarray(energy, dtype=np.uint16))
+                cdf[name].add_attribute("DEPEND_0", "epoch_timetag")
+                cdf[name].add_attribute("VAR_TYPE", "support_data")
         return bytes(pycdfpp.save(cdf))
 
     def test_get_data_edi_datasets(self):
@@ -9877,6 +10026,13 @@ class GetTsRecordVaryingTableTestCase(unittest.TestCase):
         content = self._cdf_edi_amb("2019-09-14T07:54:00", names)
         result = self._get_data_local("flux-amb_edi_srvy_l2", [content], tint)
         self.assertTupleEqual(result.flux1_0_delta.dims, ("time",))
+
+        # The energies of the GDUs on their own time base
+        content = self._cdf_edi_amb("2019-09-14T07:54:00", names, energy=[500, 250])
+        result = self._get_data_local("flux-amb_edi_srvy_l2", [content], tint)
+        self.assertTupleEqual(result.flux1_0.dims, ("time",))
+        self.assertTupleEqual(result.energy_gdu2.dims, ("time_timetag",))
+        np.testing.assert_array_equal(result.energy_gdu1.data, [500, 250])
 
         other = self._cdf_edi_amb("2019-09-14T07:54:20", [("flux1_180", "Epoch")])
         with self.assertRaisesRegex(ValueError, "variables change between files"):
@@ -10776,6 +10932,79 @@ class ListFilesAwsTestCase(unittest.TestCase):
                 "20190914080703",
             ],
         )
+
+
+class VdfNanTestCase(unittest.TestCase):
+    # The NaN bins have no data: integrals and sums leave them out, means
+    # weight the bins with data, and a time (channel, bin) without data is NaN,
+    # not 0 (docs, Missing data in the distributions)
+    def test_vdf_omni_nan_bins(self):
+        # Half of the polar bands NaN, the others 2: the mean is 2 (it was the
+        # solid-angle weighted sum over the bins with data divided by the mean
+        # solid angle of all the bins); a channel without data is NaN for "sum"
+        vdf = _gyro_skymap(n_t=2)
+        vdf.data.data[:, :, :, :8] = 2.0
+        vdf.data.data[:, :, :, 8:] = np.nan
+        vdf.data.data[1, 0] = np.nan
+
+        omni = mms.vdf_omni(vdf)
+        np.testing.assert_allclose(omni.data, [[2.0, 2.0], [np.nan, 2.0]])
+
+        omni = mms.vdf_omni(vdf, method="sum")
+        np.testing.assert_allclose(omni.data, [[512.0, 512.0], [np.nan, 512.0]])
+
+    def test_get_pitch_angle_dist_sum_no_data(self):
+        # A time without data: NaN in each bin with "sum", as with "mean"
+        vdf = _gyro_skymap(n_t=2)
+        vdf.data.data[1] = np.nan
+        b_xyz = pyrf.ts_vec_xyz(vdf.time.data, np.tile([0.0, 0.0, 10.0], (2, 1)))
+
+        for method in ["mean", "sum", "sum_weighted"]:
+            with self.subTest(method=method):
+                pad = mms.get_pitch_angle_dist(
+                    vdf, b_xyz, angles=12, meanorsum=method, verbose=False
+                )
+                self.assertTrue(np.all(np.isfinite(pad.data.data[0])))
+                self.assertTrue(np.all(np.isnan(pad.data.data[1])))
+
+    def test_psd_moments_no_data(self):
+        # A time without data: NaN moments and errors (they were 0)
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=True, species="ions")
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf.data.data[1] = np.nan
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(3))
+
+        n_s = mms.psd_moments(vdf, sc_pot)[0]
+        self.assertTrue(np.isnan(n_s.data[1]))
+        self.assertTrue(np.all(np.isfinite(n_s.data[[0, 2]])))
+
+        vdf_err = vdf.copy(deep=True)
+        vdf_err.data.data *= 0.1
+        n_err, *_, cov = mms.psd_moments_err(vdf, vdf_err, sc_pot)
+        self.assertTrue(np.isnan(n_err.data[1]) and np.all(np.isnan(cov.data[1])))
+        self.assertTrue(np.all(np.isfinite(n_err.data[[0, 2]])))
+
+    def test_rebin_shift_reduce_no_data(self):
+        # vdf_shift, vdf_rebin and reduce: NaN at a time without data, and
+        # no lost fraction
+        vdf = _gyro_skymap(n_t=3)
+        vdf.data.data[1] = np.nan
+
+        shifted = mms.vdf_shift(vdf, [10.0, 0.0, 0.0], n_mc=2, random_state=0)
+        grid = [np.linspace(-500.0, 500.0, 5)] * 3
+        cart = mms.vdf_rebin(vdf, grid, "cart", n_mc=2, random_state=0)
+
+        for out in [shifted, cart]:
+            self.assertTrue(np.all(np.isnan(out.data.data[1])))
+            self.assertTrue(np.isnan(out.attrs["lost"][1]))
+            self.assertTrue(np.all(np.isfinite(out.data.data[0])))
+
+        vdf = generate_vdf(64.0, 3, [32, 32, 16], energy01=True, species="ions")
+        vdf.data.attrs["UNITS"] = "s^3/cm^6"
+        vdf.data.data[1] = np.nan
+        reduced = mms.reduce(vdf, np.eye(3), "1d", "pol", n_mc=2)
+        self.assertTrue(np.all(np.isnan(reduced.data[1])))
+        self.assertTrue(np.all(np.isfinite(reduced.data[0])))
 
 
 @ddt
@@ -12337,7 +12566,7 @@ class VdfOmniTestCase(unittest.TestCase):
         np.testing.assert_allclose(mms.vdf_omni(vdf).data[0], self._expected("mean"))
 
     def test_vdf_omni_nan_channel(self):
-        # A channel without data: NaN (mean) or 0 (sum), without warnings
+        # A channel without data: NaN (mean and sum: no data), without warnings
         vdf = self._vdf()
         vdf.data.data[:, 3] = np.nan
 
@@ -12347,7 +12576,7 @@ class VdfOmniTestCase(unittest.TestCase):
             total = mms.vdf_omni(vdf, "sum").data
 
         self.assertTrue(np.all(np.isnan(mean[:, 3])))
-        np.testing.assert_array_equal(total[:, 3], 0.0)
+        self.assertTrue(np.all(np.isnan(total[:, 3])))
 
     def test_vdf_omni_invalid_method(self):
         with self.assertRaises(ValueError):

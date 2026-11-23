@@ -129,6 +129,7 @@ FPI particle distributions
    vdf_partial_density
    vdf_flux
    pad_palim
+   edi_amb_pad
    pad_diffusion
    psd_rebin
    vdf_rebin
@@ -155,6 +156,31 @@ Moments and background removal
    remove_idist_background
    remove_imoms_background
    psd_moments_err
+
+.. _api-mms-vdf-nan:
+
+Missing data in the distributions
+---------------------------------
+
+In the distributions (skymaps, pitch-angle distributions and their spectra),
+a bin of 0 was measured and has no particles (the empty bins of FPI), and a
+NaN bin has no data: it was not measured (the channels masked by
+:func:`vdf_mask`, the half-spins not complete of HPCA, outside the field of
+view or the domain of a model) or is invalid (e.g. the counts of
+:func:`vdf_counts`). The distribution routines treat them in the same way:
+
+- integrals (:func:`psd_moments`, :func:`psd_moments_err`, :func:`vdf_rebin`,
+  :func:`vdf_shift`, :func:`reduce`, :func:`calculate_epsilon`): the NaN bins
+  add nothing;
+- means (:func:`vdf_omni`, :func:`get_pitch_angle_dist`, :func:`pad_palim`,
+  :func:`pyrfu.pyrf.average_vdf`): the NaN bins are left out, and the
+  weights (solid angles) are those of the bins with data;
+- sums (``method="sum"``, for counts): the NaN bins are left out;
+- without any bin with data (a time, an energy channel, an averaging window
+  or a pitch-angle bin), the result is NaN (no data), not 0 (no particles).
+
+:func:`vdf_projection` sets the bins of 0 to NaN for its logarithmic colour
+scale.
 
 Unit conversions
 ----------------

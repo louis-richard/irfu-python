@@ -8,7 +8,8 @@ import os
 import posixpath
 import time
 from collections.abc import Callable, Mapping
-from typing import Any, cast
+from numbers import Integral
+from typing import Any, cast, overload
 
 # 3rd party imports
 import requests
@@ -98,11 +99,13 @@ def _read(reader, file_content, cdf_name, tint):
 
 def _read_variables(file_content, cdf_name, tint: list | None = None):
     r"""Dataset of the variables of a file matching the pattern `cdf_name`
-    (e.g. ``mms1_edi_*``): its data variables and their errors (``*_delta*``),
-    named without the spacecraft, instrument, rate and level, or None if the
-    file has none of them (a null file). In a file with several time bases,
-    the time dimension of each variable is named after its base (e.g.
-    ``time_90`` for ``Epoch_90``)."""
+    (e.g. ``mms1_edi_*``): its data variables, their errors (``*_delta*``)
+    and the energies of the GDUs (``*_energy_gdu*``), named without the
+    spacecraft, instrument, rate and level, or None if the file has no data
+    variable (a null file). The time dimension is ``time`` if the data
+    variables have a single time base, else it is named after the base of
+    each variable (e.g. ``time_90`` for ``Epoch_90``), as that of the
+    energies when theirs differs (``time_timetag``)."""
 
     file = load(file_content)
     names = [
@@ -115,14 +118,20 @@ def _read_variables(file_content, cdf_name, tint: list | None = None):
     if not names:
         return None
 
+    names += [
+        name
+        for name in file
+        if fnmatch.fnmatchcase(name, cdf_name) and "_energy_gdu" in name
+    ]
     bases = {name: file[name].attributes["DEPEND_0"][0] for name in names}
+    data_bases = {bases[name] for name in names if "_energy_gdu" not in name}
     prefix = cdf_name.rstrip("*")
     out = {}
 
     for name in names:
         data = get_ts(file_content, name, tint)
 
-        if len(set(bases.values())) > 1:
+        if len(data_bases) > 1 or bases[name] not in data_bases:
             base = bases[name].split("_", 1)[-1].lower()
             data = data.rename({data.dims[0]: f"time_{base}"})
 
@@ -394,14 +403,36 @@ def _download(remote, sdc_session=None, headers=None) -> bytes:
     return _get_file_content_sources("sdc", remote.url, sdc_session, headers)
 
 
+@overload
 def get_data(
     var_str: str,
     tint: list,
     mms_id: int | str,
+    verbose: bool = ...,
+    data_path: str = ...,
+    source: str = ...,
+) -> DataArray | Dataset: ...
+
+
+@overload
+def get_data(
+    var_str: str,
+    tint: list,
+    mms_id: list[int | str] | tuple[int | str, ...] | range,
+    verbose: bool = ...,
+    data_path: str = ...,
+    source: str = ...,
+) -> list[DataArray | Dataset]: ...
+
+
+def get_data(
+    var_str: str,
+    tint: list,
+    mms_id: int | str | list[int | str] | tuple[int | str, ...] | range,
     verbose: bool = True,
     data_path: str = "",
     source: str = "",
-) -> DataArray | Dataset:
+) -> DataArray | Dataset | list[DataArray | Dataset]:
     r"""Load a variable `var_str`.
 
     AFG: b_bcs_afg_srvy_l2pre, b_dmpa_afg_srvy_l2pre, b_gse_afg_srvy_l2pre,
@@ -628,8 +659,10 @@ def get_data(
         Time interval: the start and stop times as ISO 8601 str, datetime64
         or datetime.datetime, or a time series (its first and last times), as
         `pyrfu.pyrf.time_clip`.
-    mms_id : str or int
-        Index of the target spacecraft.
+    mms_id : int or str or sequence of int or str
+        Index of the target spacecraft, or of several spacecraft (e.g.
+        ``[1, 2, 3, 4]``), whose time series are returned as a list, in the
+        same order.
     verbose : bool, Optional
         Set to True to follow the loading. Default is True.
     data_path : str, Optional
@@ -642,13 +675,14 @@ def get_data(
 
     Returns
     -------
-    out : DataArray or Dataset
+    out : DataArray or Dataset or list
         Time series of the target variable of measured by the target
-        spacecraft over the selected time interval. A spectrum whose axis
-        changes with time (e.g. the FPI burst energy spectra of the early
-        mission, with two alternating energy tables) is a Dataset as
-        `pyrfu.pyrf.ts_spectr`: the data (time, idx0) and the axis (time,
-        idx0).
+        spacecraft over the selected time interval; for several spacecraft,
+        the list of their time series, each on its own times (no
+        resampling). A spectrum whose axis changes with time (e.g. the FPI
+        burst energy spectra of the early mission, with two alternating
+        energy tables) is a Dataset as `pyrfu.pyrf.ts_spectr`: the data
+        (time, idx0) and the axis (time, idx0).
 
     Raises
     ------
@@ -694,17 +728,19 @@ def get_data(
     `pyrfu.mms.db_init`): they are neither in the public SDC files nor in
     the public copy of the archive on AWS.
 
-    The keys of the EDI ambient and quality zero datasets
-    (``flux-amb*_edi_*``, ``counts-q0_edi_*``) give a Dataset of all the
-    fluxes (or counts) of the file, their errors (``*_delta*``) and the
-    trajectories of the electrons, e.g. ``flux1_0``, ``flux1_0_delta``,
-    ``traj1_gse_0``: the fluxes at 0 and 180 degrees pitch angle of channel 1
-    (and of channels 2 to 4 in burst amb-pm2), at 90 degrees of each GDU in
-    the amb-alt and amb-perp modes (CMAD pp. 344-357). In the files with
-    several time bases (amb-alt: 0 and 180 degrees, 90 degrees; q0: each GDU)
-    the time dimension of each variable is named after its base, e.g.
-    ``time_0_180`` and ``time_90``. The q0 trajectories of GDU2 are in
-    degrees, as those of GDU1, although their UNITS say rad.
+    The keys of the EDI ambient and quality zero datasets (``flux-amb*_edi_*``,
+    ``counts-q0_edi_*``) give a Dataset of all the fluxes (or counts) of the
+    file, their errors (``*_delta*``), the trajectories of the electrons and
+    the energies of the GDUs (``energy_gdu1``, ``energy_gdu2``, eV, on the time
+    base ``time_timetag`` in the ambient files: 500 eV in 2017 and 2019, 250 eV
+    in 2022), e.g. ``flux1_0``, ``flux1_0_delta``, ``traj1_gse_0``: the fluxes
+    at 0 and 180 degrees pitch angle of channel 1 (and of channels 2 to 4 in
+    burst amb-pm2), at 90 degrees of each GDU in the amb-alt and amb-perp modes
+    (CMAD pp. 344-357). In the files with several time bases (amb-alt: 0 and
+    180 degrees, 90 degrees; q0: each GDU) the time dimension of each variable
+    is named after its base, e.g. ``time_0_180`` and ``time_90``. The q0
+    trajectories of GDU2 are in degrees, as those of GDU1, although their UNITS
+    say rad.
 
     The MEC variables of a field model are in the files of each model (T89
     with Kp, T89 quiet, TS04 dynamic): their keys end with the model, e.g.
@@ -755,13 +791,37 @@ def get_data(
 
     >>> b_xyz = mms.get_data("b_gse_fgm_brst_l2", tint_brst, ic)
 
-    """
+    Load the magnetic field of the four spacecraft
 
-    # Convert mms_id to string
-    mms_id = str(mms_id)
+    >>> b_mms = mms.get_data("b_gse_fgm_brst_l2", tint_brst, [1, 2, 3, 4])
+
+    """
 
     # The HPCA velocities in GSM (deprecated since 2.6.0)
     _warn_deprecated_key(var_str)
+
+    # Several spacecraft (a sequence of indices): the list of their time
+    # series, in the same order
+    if isinstance(mms_id, (str, int, Integral)):
+        out: Any = _get_data(var_str, tint, str(mms_id), verbose, data_path, source)
+    else:
+        out = [
+            _get_data(var_str, tint, str(i), verbose, data_path, source) for i in mms_id
+        ]
+
+    return out
+
+
+def _get_data(
+    var_str: str,
+    tint: list,
+    mms_id: str,
+    verbose: bool,
+    data_path: str,
+    source: str,
+) -> DataArray | Dataset:
+    r"""Time series of the variable `var_str` of the spacecraft `mms_id`
+    (str), see `get_data`."""
 
     var, cdf_name = _var_and_cdf_name(var_str, mms_id)
 

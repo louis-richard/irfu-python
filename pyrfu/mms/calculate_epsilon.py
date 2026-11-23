@@ -107,7 +107,9 @@ def calculate_epsilon(
     Returns
     -------
     DataArray
-        Time series of the epsilon parameter.
+        Time series of the epsilon parameter. The bins where `vdf` or
+        `model_vdf` is NaN have no data and add nothing; a time without data
+        in the channels used is NaN, not 0 (see :ref:`api-mms-vdf-nan`).
 
     Raises
     ------
@@ -164,7 +166,9 @@ def calculate_epsilon(
     theta = vdf.theta.data
 
     # NaNs (e.g., fill values) don't contribute to the integral
-    vdf_diff = np.nan_to_num(np.abs(vdf_data - model_vdf_data), nan=0.0)
+    vdf_diff = np.abs(vdf_data - model_vdf_data)
+    finite = np.isfinite(vdf_diff)
+    vdf_diff = np.nan_to_num(vdf_diff, nan=0.0)
 
     # Mass of the species, from the table of the vdf routines
     m_s = _mass(vdf)
@@ -227,6 +231,9 @@ def calculate_epsilon(
     w_ang = np.sin(np.deg2rad(theta)) * delta_ang
 
     epsilon = np.einsum("tepk,te,k->t", vdf_diff[:, int_energies, ...], w_v, w_ang)
+
+    # Times without data in the channels used: NaN, not 0
+    epsilon[~np.any(finite[:, int_energies], axis=(1, 2, 3))] = np.nan
 
     epsilon /= 1e6 * (n_s.data * 2)
 

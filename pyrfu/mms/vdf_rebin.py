@@ -10,7 +10,7 @@ import xarray as xr
 
 # Local imports
 from pyrfu.mms._internal.psd_units import _attrs
-from pyrfu.mms._internal.vdf_bins import _bins_d3v, _is_skymap, _source_bins
+from pyrfu.mms._internal.vdf_bins import _bins_d3v, _is_skymap, _no_data, _source_bins
 from pyrfu.mms._internal.vdf_mc import _sample
 
 from .vdf_convert import _PSD, _relativistic_psd
@@ -25,7 +25,9 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
     volume = np.einsum("i,j,k->ijk", *(np.diff(e) for e in edges))
 
     # Relativistic phase-space density and speeds
-    f_si = np.nan_to_num(_relativistic_psd(vdf))
+    f_si = _relativistic_psd(vdf)
+    no_data = _no_data(f_si)
+    f_si = np.nan_to_num(f_si)
     bins = _source_bins(vdf, sc_pot)
     d3v = _bins_d3v(bins)
     rotations = _rotation_matrices(rotation, len(vdf.time))
@@ -53,6 +55,10 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
 
         total = np.sum(f_d3v)
         lost[i_t] = np.sum(weights[~inside]) / total if total > 0 else 0.0
+
+    # Times without data: NaN, not 0
+    out[no_data] = np.nan
+    lost[no_data] = np.nan
 
     return out, edges, lost
 
@@ -126,7 +132,8 @@ def vdf_rebin(
     particles outside the new grid. The particles are uniform in the volume of
     their bin (v^3, cos(theta) and phi) as in `vdf_shift`; irfu-matlab draws
     them uniformly in energy and polar angle, which biases them towards the
-    low speeds and the poles of each bin.
+    low speeds and the poles of each bin. NaN bins have no data and add
+    nothing; a time without data is NaN (see :ref:`api-mms-vdf-nan`).
 
     The result has Monte-Carlo noise: a new bin that receives N particles
     from an old one has a relative noise of about 1/sqrt(N). For a rebin in

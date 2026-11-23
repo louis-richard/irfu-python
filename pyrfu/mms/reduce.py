@@ -129,7 +129,8 @@ def reduce(
         lower_e_lim, and for a species attracted by the spacecraft (q V < 0,
         the electrons for V > 0) below its potential energy ``|q V|``
         (secondary and photoelectrons of the spacecraft), are set to zero; a
-        time step without any channel above it is NaN. The channels of a
+        time step without any channel above it, or without data in these
+        channels (NaN only), is NaN (see :ref:`api-mms-vdf-nan`). The channels of a
         species repelled (the ions for V > 0) are all ambient particles and
         are kept.
     vg, vg_edges : array_like, Optional
@@ -388,7 +389,8 @@ def reduce(
         thresh_e = np.max([lower_e_lim[i_t], -q_sc_pot[i_t]])
         above = np.where(energy - delta_energy_minu[i_t, :] > thresh_e)[0]
 
-        if len(above) == 0:
+        # No channel above the threshold, or no data in them: NaN, not 0
+        if len(above) == 0 or not np.any(np.isfinite(f_3d[above[0] :])):
             f_g[i_t, ...] = np.nan
             continue
 

@@ -11,6 +11,7 @@ from pyrfu.mms._internal.vdf_bins import (
     _bins_d3v,
     _is_skymap,
     _mass,
+    _no_data,
     _source_bins,
     _speed,
 )
@@ -96,7 +97,9 @@ def _shift(
     # the rotated coordinates (vdf_shift and vdf_rebin)
     # Bin particles with the relativistic phase-space density and speeds
     units = vdf.data.attrs["UNITS"]
-    f_si = np.nan_to_num(_relativistic_psd(vdf))
+    f_si = _relativistic_psd(vdf)
+    no_data = _no_data(f_si)
+    f_si = np.nan_to_num(f_si)
     v_frame = _frame_velocity(vdf, v_frame)
     rotations = _rotation_matrices(rotation, len(vdf.time))
     mass = _mass(vdf)
@@ -154,6 +157,11 @@ def _shift(
         total = np.sum(f_d3v)
         lost[i_t] = lost_t / total if total > 0 else 0.0
 
+    # Times without data: NaN, not 0
+    out_f = np.array(out_f)
+    out_f[no_data] = np.nan
+    lost[no_data] = np.nan
+
     energy_edges = np.array(energy_edges)
     # Geometric centres of the energy bins (those of FPI, so that the bins of
     # an unshifted skymap are unchanged), arithmetic from 0 eV
@@ -167,7 +175,7 @@ def _shift(
 
     out = ts_skymap(
         vdf.time.data,
-        np.array(out_f),
+        out_f,
         energy,
         phi,
         theta,
@@ -266,7 +274,8 @@ def vdf_shift(
     shifted by `v_frame` (Galilean) and rotated, and their sum in each new bin
     divided by its volume is the new phase-space density. The density is
     conserved, apart from the particles outside the new grid (``lost``). NaN
-    bins count as empty. The energies of the new bins are the geometric means
+    bins have no data and add nothing; a time without data is NaN (see
+    :ref:`api-mms-vdf-nan`). The energies of the new bins are the geometric means
     of their edges, so that an unshifted skymap is unchanged. Rebinning
     spreads each bin over its neighbours: a 1 keV Maxwellian shifted by half
     its thermal speed on the FPI grid is 1.5 % hotter. irfu-matlab draws the
