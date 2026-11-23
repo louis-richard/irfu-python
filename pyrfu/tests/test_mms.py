@@ -12822,6 +12822,87 @@ class VdfVelocityTestCase(unittest.TestCase):
         np.testing.assert_allclose(ratio, 1 - 3 * eps / 4, rtol=1e-12)
 
 
+def _einterp_skymap(values):
+    # Skymap of two times with alternating tables (the second between the
+    # channels of the first), f = values(energy) in every angular bin
+    e_0 = np.logspace(1, 4, 32)
+    e_1 = e_0 * np.sqrt(e_0[1] / e_0[0])
+    energy = np.vstack([e_0, e_1])
+    data = np.tile(values(energy)[:, :, None, None], (1, 1, 4, 2))
+    return pyrf.ts_skymap(
+        generate_timeline(1.0, 2),
+        data,
+        energy,
+        np.tile(45.0 + 90.0 * np.arange(4), (2, 1)),
+        np.array([45.0, 135.0]),
+        energy0=e_0,
+        energy1=e_1,
+        esteptable=np.array([0, 1], dtype=np.uint8),
+        attrs={"UNITS": "s^3/cm^6"},
+    )
+
+
+class VdfEinterpTestCase(unittest.TestCase):
+    def test_vdf_einterp(self):
+        # f linear in energy: the linear interpolation is exact on the union of
+        # the tables; the channels outside the table of a time are NaN
+        vdf = _einterp_skymap(lambda e: 1e3 - 0.01 * e)
+        out = mms.vdf_einterp(vdf, "linear")
+        energy = np.sort(np.hstack(vdf.energy.data))
+        np.testing.assert_allclose(out.energy.data, np.tile(energy, (2, 1)))
+        np.testing.assert_allclose(
+            out.data.data[0, :-1, 0, 0], 1e3 - 0.01 * energy[:-1]
+        )
+        self.assertTrue(np.all(np.isnan(out.data.data[0, -1])))
+        self.assertTrue(np.all(np.isnan(out.data.data[1, 0])))
+        np.testing.assert_array_equal(out.attrs["esteptable"], [0, 0])
+        np.testing.assert_allclose(out.attrs["energy1"], energy)
+
+        # Widths to the geometric means with the neighbouring energies
+        lower = energy - out.attrs["delta_energy_minus"][0]
+        upper = energy + out.attrs["delta_energy_plus"][0]
+        np.testing.assert_allclose(lower[1:], np.sqrt(energy[:-1] * energy[1:]))
+        np.testing.assert_allclose(upper[:-1], lower[1:])
+        self.assertEqual(out.data.attrs["UNITS"], "s^3/cm^6")
+
+        # pchip: shape preserving on a decreasing exponential, between the
+        # neighbouring values
+        vdf = _einterp_skymap(lambda e: np.exp(-e / 2e3))
+        out = mms.vdf_einterp(vdf).data.data[0, 1:-1:2, 0, 0]
+        f_0 = vdf.data.data[0, :, 0, 0]
+        self.assertTrue(np.all((out <= f_0[:-1]) & (out >= f_0[1:])))
+        np.testing.assert_allclose(
+            out[:20], np.exp(-vdf.energy.data[1, :20] / 2e3), rtol=1e-4
+        )
+
+    def test_vdf_einterp_nan_negative(self):
+        # A NaN bin through its energies with data; a bin with one energy with
+        # data NaN; negative values set to 0
+        vdf = _einterp_skymap(lambda e: 1e3 - 0.01 * e)
+        vdf.data.data[0, 5, 1, 0] = np.nan
+        vdf.data.data[0, 1:, 2, 0] = np.nan
+        vdf.data.data[1, :, 3, 1] = -1.0
+        out = mms.vdf_einterp(vdf, "linear").data.data
+        np.testing.assert_allclose(out[0, 10, 1, 0], out[0, 10, 0, 0])
+        self.assertTrue(np.all(np.isnan(out[0, :, 2, 0])))
+        np.testing.assert_array_equal(out[1, 1:, 3, 1], 0.0)
+
+    def test_vdf_einterp_errors(self):
+        vdf = _einterp_skymap(lambda e: 1.0 + 0 * e)
+
+        with self.assertRaises(TypeError):
+            mms.vdf_einterp(vdf.data)
+
+        pad = _spectr_pad()
+        bad = vdf.copy(deep=True)
+        bad["energy"] = bad.energy * 0.0
+
+        for inp, method in [(pad, "pchip"), (vdf, "cubic"), (bad, "pchip")]:
+            with self.subTest(method=method):
+                with self.assertRaises(ValueError):
+                    mms.vdf_einterp(inp, method)
+
+
 def _spectr_pad(n_t=3, n_pitch=12, alternating=False):
     # Pitch-angle distribution (time, energy, pitch angle) with f = energy
     # index + pitch-angle index / 100

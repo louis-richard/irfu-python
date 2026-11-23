@@ -101,6 +101,7 @@ from .vdf_convert import vdf_convert
 from .vdf_counts import vdf_counts
 from .vdf_cuts import vdf_cuts
 from .vdf_d3v import vdf_d3v
+from .vdf_einterp import vdf_einterp
 from .vdf_elim import vdf_elim
 from .vdf_error import vdf_error
 from .vdf_find_low_counts import vdf_find_low_counts
@@ -222,6 +223,7 @@ __all__ = [
     "vdf_counts",
     "vdf_cuts",
     "vdf_d3v",
+    "vdf_einterp",
     "vdf_elim",
     "vdf_error",
     "vdf_find_low_counts",

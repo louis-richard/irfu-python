@@ -116,6 +116,7 @@ FPI particle distributions
    :nosignatures:
 
    vdf_elim
+   vdf_einterp
    vdf_omni
    vdf_spectr
    vdf_to_e64
