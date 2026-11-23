@@ -1,6 +1,103 @@
 Changelog
 =========
 
+2.6.2 (2026-11-23)
+------------------
+
+This release reads the data of the four spacecraft in one ``mms.get_data``
+call, gives the distribution routines one convention for the bins without
+data (NaN, not 0), and adds small scientific routines of irfu-matlab: the
+Walén test, the volumetric tensor of the tetrahedron, the LMN frame of B and
+a normal, one-spacecraft current densities, the angle between vectors, the
+pitch-angle average, the one-count removal of time averages, the pchip
+interpolation and the median and max averages of ``pyrf.resample``, and the
+pitch-angle distribution of the EDI ambient electrons.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- One convention for the bins of the distributions: 0 was measured and has
+  no particles, NaN has no data. Integrals leave the NaN bins out, means
+  leave them out with the weights of the bins with data, sums leave them
+  out, and a time, channel, window or pitch-angle bin without data gives
+  NaN, not 0 (documented in "Missing data in the distributions" of the MMS
+  API page). Hence:
+
+  - ``mms.vdf_omni`` ``"mean"`` is the solid-angle weighted mean of the bins
+    with data; it divided by the mean solid angle of all the bins, as
+    irfu-matlab ``PDist.omni``, which biased the channels with NaN bins
+    (0.3 to 1.2 % low per channel on an EIS ExTOF skymap with 2 % NaN bins;
+    unchanged without NaN bins, as FPI);
+  - NaN instead of 0 without data: ``mms.vdf_omni`` ``"sum"`` of a channel,
+    ``mms.get_pitch_angle_dist(meanorsum="sum")`` of a bin,
+    ``pyrf.average_vdf(method="sum")`` of a bin in a window, the moments and
+    errors of ``mms.psd_moments`` and ``mms.psd_moments_err`` at a time,
+    ``mms.vdf_rebin`` and ``mms.vdf_shift`` (and their ``lost`` fraction) at
+    a time, ``mms.reduce`` and ``pyrf.int_sph_dist``, and
+    ``mms.calculate_epsilon`` at a time.
+
+- ``mms.get_data``: the EDI ambient and quality zero Datasets also have the
+  energies of the GDUs (``energy_gdu1``, ``energy_gdu2``, eV), on their own
+  time dimension (``time_timetag``) in the ambient files; the other
+  variables keep their dimensions.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.get_data`` for several spacecraft: ``mms_id`` may be a list, tuple
+  or range of indices (e.g. ``[1, 2, 3, 4]``), and the result is the list of
+  their time series, each on its own times, for ``pyrf.c_4_j``,
+  ``pyrf.avg_4sc`` and the other four-spacecraft routines.
+- ``mms.edi_amb_pad``: the pitch-angle distribution of the burst amb-pm2
+  fluxes of EDI (8 bins of 11.25 deg at 0 to 45 and 135 to 180 deg, or their
+  errors), as irfu-matlab ``Flux-amb-pm2``, at the energy of the files (500
+  eV in 2017 and 2019, 250 eV in 2022, where irfu-matlab uses 500 eV).
+- ``pyrf.walen``: the Walén test (slope, offset and correlation of
+  V - V_HT against the Alfvén velocity, with the pressure anisotropy
+  correction from the pressure tensor in field-aligned coordinates), as
+  irfu-matlab ``irf_walen``, with exact constants (its 22 km/s for 1 nT and
+  1 cm^-3 is 0.86 % above 21.81), without its density threshold and
+  smoothing, and with all the samples (``irf_walen`` drops the last one).
+- ``pyrf.ang``: the angle between two vectors or time series of vectors
+  (irfu-matlab ``irf_ang``), precise for small angles and angles close to
+  180 deg.
+- ``pyrf.c_4_r``: the volumetric tensor of the tetrahedron and its size,
+  elongation and planarity (irfu-matlab ``c_4_r``).
+- ``pyrf.lmn``: a vector in the LMN frame of B and a normal, with L along B
+  ("L") or N along the normal ("N"), as irfu-matlab ``irf_lmn``; with
+  "N", L is along the mean B, as its help says (``irf_lmn`` gives L and M
+  the opposite sign).
+- ``pyrf.jz``: current densities from the time derivative of B measured by
+  one spacecraft (irfu-matlab ``irf_jz``), with no change of B along the
+  velocity ("B") or for plane current sheets at an angle to it ("A"), in
+  A/m^2.
+- ``pyrf.pitch_angle_average``: the solid-angle weighted average of a
+  pitch-angle distribution over a range of pitch angles (irfu-matlab
+  ``irf.pitch_angle_average``), for the Datasets of
+  ``mms.get_pitch_angle_dist`` and ``mms.edi_amb_pad`` and the DataArrays of
+  ``mms.eis_pad``, ``mms.feeps_pad`` and ``mms.hpca_pad``.
+- ``pyrf.average_vdf(counts=)``: the bins with fewer than 2 counts in the
+  window are set to 0, as irfu-matlab ``PDist.movmean(...,
+  'RemoveOneCounts')``.
+- ``pyrf.resample``: ``method="pchip"`` (the shape-preserving piecewise
+  cubic Hermite interpolation, MATLAB ``interp1`` "pchip" and "cubic"), and
+  ``average="median"`` or ``"max"`` (the irf_resamp flags; a NaN in a window
+  gives NaN, where MATLAB ``max`` skips it).
+
+Documentation
+^^^^^^^^^^^^^
+
+- The MMS API page: "Missing data in the distributions", the convention of
+  the bins of 0 and NaN.
+- ``pyrf.jz``: its planar and steady structure; at the reconnection site of
+  2015-10-16 13:07 it does not reproduce the current of ``pyrf.c_4_j``.
+
+Development
+^^^^^^^^^^^
+
+- flake8 ignores E704, for the ``typing.overload`` stubs that black writes
+  on one line.
+
 2.6.1 (2026-11-19)
 ------------------
 
