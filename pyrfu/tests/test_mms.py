@@ -12896,6 +12896,60 @@ class VdfMovmeanTestCase(unittest.TestCase):
                     mms.vdf_movmean(*args)
 
 
+class VdfRemoveNoiseTestCase(unittest.TestCase):
+    def test_vdf_remove_noise(self):
+        # f = 1 everywhere; one isolated count (removed), a cluster of counts
+        # (kept), and two counts at the first and last azimuths (neighbours
+        # through the wrap, kept)
+        vdf = _movmean_skymap(n_t=6)
+        vdf.data.data[:] = 1.0
+        counts = vdf.copy(deep=True)
+        counts.data.data[:] = 0.0
+        counts.data.data[0, 0, 1, 0] = 1.0
+        counts.data.data[3, 1:3, 1, :] = 1.0
+        counts.data.data[5, 3, 0, 1] = 1.0
+        counts.data.data[5, 3, 2, 1] = 1.0
+
+        out = mms.vdf_remove_noise(vdf, counts, [3, 3, 3, 3], 2).data.data
+        self.assertEqual(out[0, 0, 1, 0], 0.0)
+        np.testing.assert_array_equal(out[3, 1:3, 1, :], 1.0)
+        self.assertEqual(out[5, 3, 0, 1], 1.0)
+        self.assertEqual(out[5, 0, 0, 0], 0.0)
+        np.testing.assert_array_equal(vdf.data.data, 1.0)
+
+        # Without the wrap (a neighbourhood of one azimuth): removed
+        out = mms.vdf_remove_noise(vdf, counts, [3, 3, 1, 3], 2).data.data
+        self.assertEqual(out[5, 3, 0, 1], 0.0)
+
+    def test_vdf_remove_noise_nan(self):
+        # NaN data stay NaN; NaN counts count as 0
+        vdf = _movmean_skymap(n_t=6)
+        vdf.data.data[:] = 1.0
+        vdf.data.data[2, 0, 0, 0] = np.nan
+        counts = vdf.copy(deep=True)
+        counts.data.data[:] = np.nan
+        out = mms.vdf_remove_noise(vdf, counts, [1, 1, 1, 1], 0.5).data.data
+        self.assertTrue(np.isnan(out[2, 0, 0, 0]))
+        self.assertEqual(np.nansum(out), 0.0)
+
+    def test_vdf_remove_noise_errors(self):
+        vdf = _movmean_skymap(n_t=6)
+
+        with self.assertRaises(TypeError):
+            mms.vdf_remove_noise(vdf.data, vdf, [1, 1, 1, 1], 1)
+
+        for inp, counts, n_pts in [
+            (_spectr_pad(), _spectr_pad(), [1, 1, 1, 1]),
+            (vdf, vdf.isel(time=slice(0, 5)), [1, 1, 1, 1]),
+            (vdf, vdf, [1, 2, 1, 1]),
+            (vdf, vdf, [1, 1, 1]),
+            (vdf, vdf, [1.0, 1.0, 1.0, 1.0]),
+        ]:
+            with self.subTest(n_pts=n_pts):
+                with self.assertRaises(ValueError):
+                    mms.vdf_remove_noise(inp, counts, n_pts, 1)
+
+
 def _einterp_skymap(values):
     # Skymap of two times with alternating tables (the second between the
     # channels of the first), f = values(energy) in every angular bin

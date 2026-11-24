@@ -126,6 +126,7 @@ FPI particle distributions
    vdf_one_count
    vdf_error
    vdf_find_low_counts
+   vdf_remove_noise
    vdf_velocity
    vdf_d3v
    vdf_solid_angle

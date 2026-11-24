@@ -115,6 +115,7 @@ from .vdf_partial_density import vdf_partial_density
 from .vdf_projection import vdf_projection
 from .vdf_rebin import vdf_rebin
 from .vdf_reduce import vdf_frame_transformation, vdf_reduce
+from .vdf_remove_noise import vdf_remove_noise
 from .vdf_shift import vdf_shift
 from .vdf_solid_angle import vdf_solid_angle
 from .vdf_spectr import vdf_spectr
@@ -239,6 +240,7 @@ __all__ = [
     "vdf_projection",
     "vdf_rebin",
     "vdf_reduce",
+    "vdf_remove_noise",
     "vdf_shift",
     "vdf_solid_angle",
     "vdf_spectr",
