@@ -12950,6 +12950,104 @@ class VdfRemoveNoiseTestCase(unittest.TestCase):
                     mms.vdf_remove_noise(inp, counts, n_pts, 1)
 
 
+def _hires_inputs(n_t=2, dt=0.15):
+    # Isotropic 1 keV proton Maxwellian on an FPI-like grid, with the half
+    # widths of the accumulations, and offsets putting the azimuth j in the
+    # quarter j mod 4 (each quarter a quarter of the solid angle)
+    energy = np.logspace(1, np.log10(3e4), 32)
+    speed = np.sqrt(2 * energy * constants.e / constants.m_p)
+    k_t = 1e3 * constants.e
+    f_s = (constants.m_p / (2 * np.pi * k_t)) ** 1.5 * 1e6 * 1e-12
+    f_s = f_s * np.exp(-constants.m_p * speed**2 / (2 * k_t))
+    data = np.tile(f_s[None, :, None, None], (n_t, 1, 32, 16))
+    mid = np.sqrt(energy[:-1] * energy[1:])
+    edges = np.hstack([energy[0] ** 2 / mid[0], mid, energy[-1] ** 2 / mid[-1]])
+    time = generate_timeline(1 / dt, n_t)
+
+    def skymap(values):
+        return pyrf.ts_skymap(
+            time,
+            values,
+            np.tile(energy, (n_t, 1)),
+            np.tile(5.625 + 11.25 * np.arange(32), (n_t, 1)),
+            5.625 + 11.25 * np.arange(16),
+            energy0=energy,
+            energy1=energy,
+            esteptable=np.zeros(n_t, dtype=np.uint8),
+            attrs={"UNITS": "s^3/cm^6"},
+            glob_attrs={"species": "ions"},
+        )
+
+    vdf = skymap(data)
+    vdf.attrs["delta_time_minus"] = np.full(n_t, dt / 2)
+    vdf.attrs["delta_time_plus"] = np.full(n_t, dt / 2)
+    vdf.attrs["delta_energy_minus"] = np.tile(energy - edges[:-1], (n_t, 1))
+    vdf.attrs["delta_energy_plus"] = np.tile(edges[1:] - energy, (n_t, 1))
+    vdf.attrs["errorflags"] = np.arange(n_t, dtype=np.uint32)
+    quarter = np.arange(32)[None, None, :, None] % 4
+    offsets = (quarter + 0.5) * dt / 4 * 1e6 + np.zeros(data.shape)
+    return vdf, skymap(offsets)
+
+
+class VdfHiresTestCase(unittest.TestCase):
+    def test_vdf_hires(self):
+        # Each bin in the part of its offset, NaN in the others; the parts at
+        # the centres of the quarters of the accumulations
+        vdf, offsets = _hires_inputs()
+        out = mms.vdf_hires(vdf, offsets)
+        self.assertTupleEqual(out.data.shape, (8, 32, 32, 16))
+        for k in range(4):
+            measured = np.isfinite(out.data.data[k, 0, :, 0])
+            np.testing.assert_array_equal(measured, np.arange(32) % 4 == k)
+        start = vdf.time.data[0] - np.timedelta64(75, "ms")
+        expected = start + np.array([18750000, 56250000, 93750000, 131250000])
+        np.testing.assert_array_equal(out.time.data[:4], expected)
+        np.testing.assert_allclose(out.attrs["delta_time_minus"], 0.01875)
+        np.testing.assert_array_equal(out.attrs["errorflags"], [0] * 4 + [1] * 4)
+        self.assertEqual(out.attrs["n_parts"], 4)
+        self.assertEqual(out.data.attrs["UNITS"], "s^3/cm^6")
+
+        # Two parts: azimuths 0, 1 (mod 4) in the first, 2, 3 in the second
+        out = mms.vdf_hires(vdf, offsets, 2)
+        measured = np.isfinite(out.data.data[1, 0, :, 0])
+        np.testing.assert_array_equal(measured, np.arange(32) % 4 >= 2)
+
+    def test_hires_moments(self):
+        # Isotropic distribution, each part a quarter of the solid angle: the
+        # density of each part is that of the whole distribution
+        vdf, offsets = _hires_inputs()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(2))
+        n_whole = mms.psd_moments(vdf, sc_pot, energy_range=[1.0, 4e4])[0].data
+        hires = mms.vdf_hires(vdf, offsets)
+        sc_pot = pyrf.ts_scalar(hires.time.data, np.zeros(8))
+        n_parts = mms.hires_moments(hires, sc_pot)[0].data
+        np.testing.assert_allclose(n_parts, n_whole[0], rtol=1e-10)
+
+        with self.assertRaises(ValueError):
+            mms.hires_moments(vdf, sc_pot)
+
+    def test_vdf_hires_errors(self):
+        vdf, offsets = _hires_inputs()
+
+        with self.assertRaises(TypeError):
+            mms.vdf_hires(vdf.data, offsets)
+
+        no_dt = vdf.copy()
+        no_dt.attrs = {k: v for k, v in vdf.attrs.items() if "time" not in k}
+        late = offsets.copy(deep=True)
+        late.data.data[0, 0, 0, 0] = 2e5
+
+        for args in [
+            (_spectr_pad(), _spectr_pad(), 4),
+            (vdf, offsets, 3),
+            (no_dt, offsets, 4),
+            (vdf, late, 4),
+        ]:
+            with self.subTest(n_parts=args[2]):
+                with self.assertRaises(ValueError):
+                    mms.vdf_hires(*args)
+
+
 def _einterp_skymap(values):
     # Skymap of two times with alternating tables (the second between the
     # channels of the first), f = values(energy) in every angular bin

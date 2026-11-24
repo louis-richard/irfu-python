@@ -127,6 +127,7 @@ FPI particle distributions
    vdf_error
    vdf_find_low_counts
    vdf_remove_noise
+   vdf_hires
    vdf_velocity
    vdf_d3v
    vdf_solid_angle
@@ -160,6 +161,7 @@ Moments and background removal
    remove_idist_background
    remove_imoms_background
    psd_moments_err
+   hires_moments
 
 .. _api-mms-vdf-nan:
 
