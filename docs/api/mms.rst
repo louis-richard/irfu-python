@@ -116,13 +116,18 @@ FPI particle distributions
    :nosignatures:
 
    vdf_elim
+   vdf_einterp
+   vdf_movmean
    vdf_omni
+   vdf_spectr
    vdf_to_e64
    vdf_mask
    vdf_counts
    vdf_one_count
    vdf_error
    vdf_find_low_counts
+   vdf_remove_noise
+   vdf_hires
    vdf_velocity
    vdf_d3v
    vdf_solid_angle
@@ -156,6 +161,7 @@ Moments and background removal
    remove_idist_background
    remove_imoms_background
    psd_moments_err
+   hires_moments
 
 .. _api-mms-vdf-nan:
 

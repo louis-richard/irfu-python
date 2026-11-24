@@ -12822,6 +12822,401 @@ class VdfVelocityTestCase(unittest.TestCase):
         np.testing.assert_allclose(ratio, 1 - 3 * eps / 4, rtol=1e-12)
 
 
+def _movmean_skymap(n_t=6):
+    # Skymap with f = the time index, accumulations of 0.15 s, the
+    # compression indicator and quality flags of each distribution
+    time = generate_timeline(1 / 0.15, n_t)
+    energy = np.tile(np.logspace(1, 3, 4), (n_t, 1))
+    data = np.tile(np.arange(float(n_t))[:, None, None, None], (1, 4, 3, 2))
+    vdf = pyrf.ts_skymap(
+        time,
+        data,
+        energy,
+        np.tile([60.0, 180.0, 300.0], (n_t, 1)),
+        np.array([45.0, 135.0]),
+        energy0=energy[0],
+        energy1=energy[0],
+        esteptable=np.zeros(n_t, dtype=np.uint8),
+        attrs={"UNITS": "s^3/cm^6"},
+    )
+    vdf.attrs["delta_time_minus"] = np.full(n_t, 0.075)
+    vdf.attrs["delta_time_plus"] = np.full(n_t, 0.075)
+    vdf.attrs["compressionloss"] = np.array([0, 0, 1, 0, 0, 0])[:n_t]
+    vdf.attrs["errorflags"] = np.array([0, 1, 0, 0, 4, 0], dtype=np.uint32)[:n_t]
+    return vdf
+
+
+class VdfMovmeanTestCase(unittest.TestCase):
+    def test_vdf_movmean(self):
+        # The mean of each distribution with its neighbours, fewer at the
+        # ends, on the times of vdf; the attributes of each window
+        vdf = _movmean_skymap()
+        out = mms.vdf_movmean(vdf, 3)
+        np.testing.assert_array_equal(out.time.data, vdf.time.data)
+        np.testing.assert_allclose(out.data.data[:, 0, 0, 0], [0.5, 1, 2, 3, 4, 4.5])
+        np.testing.assert_array_equal(out.attrs["compressionloss"], [0, 1, 1, 1, 0, 0])
+        np.testing.assert_array_equal(out.attrs["errorflags"], [1, 1, 1, 4, 4, 4])
+        np.testing.assert_allclose(out.attrs["delta_time_minus"], [0.075] + [0.225] * 5)
+        np.testing.assert_allclose(out.attrs["delta_time_plus"], [0.225] * 5 + [0.075])
+        self.assertEqual(out.data.attrs["UNITS"], "s^3/cm^6")
+
+        # One distribution: unchanged
+        np.testing.assert_allclose(mms.vdf_movmean(vdf, 1).data.data, vdf.data.data)
+
+    def test_vdf_movmean_counts_nan(self):
+        # Fewer than 2 counts in the window: 0; NaN bins left out of the mean,
+        # a window without data NaN
+        vdf = _movmean_skymap()
+        counts = vdf.copy(deep=True)
+        counts.data.data[:] = 0.0
+        counts.data.data[2, 0] = 1.0
+        counts.data.data[2:4, 1] = 1.0
+        vdf.data.data[0:2, 2] = np.nan
+        vdf.data.data[:, 3, 0, 0] = np.nan
+
+        out = mms.vdf_movmean(vdf, 3, counts=counts).data.data
+        np.testing.assert_array_equal(out[2, 0, 0, 0], 0.0)
+        np.testing.assert_allclose(out[2, 1, 0, 0], 2.0)
+        np.testing.assert_allclose(mms.vdf_movmean(vdf, 3).data.data[1, 2, 0, 0], 2.0)
+        self.assertTrue(np.all(np.isnan(out[:, 3, 0, 0])))
+
+    def test_vdf_movmean_errors(self):
+        vdf = _movmean_skymap()
+
+        for args, error in [
+            ((vdf.data, 3), TypeError),
+            ((vdf, 2.0), TypeError),
+            ((vdf, 4), ValueError),
+            ((vdf, 7), ValueError),
+            ((vdf, 3, vdf.data), TypeError),
+            ((vdf, 3, vdf.isel(time=slice(0, 5))), ValueError),
+        ]:
+            with self.subTest(args=args[1:]):
+                with self.assertRaises(error):
+                    mms.vdf_movmean(*args)
+
+
+class VdfRemoveNoiseTestCase(unittest.TestCase):
+    def test_vdf_remove_noise(self):
+        # f = 1 everywhere; one isolated count (removed), a cluster of counts
+        # (kept), and two counts at the first and last azimuths (neighbours
+        # through the wrap, kept)
+        vdf = _movmean_skymap(n_t=6)
+        vdf.data.data[:] = 1.0
+        counts = vdf.copy(deep=True)
+        counts.data.data[:] = 0.0
+        counts.data.data[0, 0, 1, 0] = 1.0
+        counts.data.data[3, 1:3, 1, :] = 1.0
+        counts.data.data[5, 3, 0, 1] = 1.0
+        counts.data.data[5, 3, 2, 1] = 1.0
+
+        out = mms.vdf_remove_noise(vdf, counts, [3, 3, 3, 3], 2).data.data
+        self.assertEqual(out[0, 0, 1, 0], 0.0)
+        np.testing.assert_array_equal(out[3, 1:3, 1, :], 1.0)
+        self.assertEqual(out[5, 3, 0, 1], 1.0)
+        self.assertEqual(out[5, 0, 0, 0], 0.0)
+        np.testing.assert_array_equal(vdf.data.data, 1.0)
+
+        # Without the wrap (a neighbourhood of one azimuth): removed
+        out = mms.vdf_remove_noise(vdf, counts, [3, 3, 1, 3], 2).data.data
+        self.assertEqual(out[5, 3, 0, 1], 0.0)
+
+    def test_vdf_remove_noise_nan(self):
+        # NaN data stay NaN; NaN counts count as 0
+        vdf = _movmean_skymap(n_t=6)
+        vdf.data.data[:] = 1.0
+        vdf.data.data[2, 0, 0, 0] = np.nan
+        counts = vdf.copy(deep=True)
+        counts.data.data[:] = np.nan
+        out = mms.vdf_remove_noise(vdf, counts, [1, 1, 1, 1], 0.5).data.data
+        self.assertTrue(np.isnan(out[2, 0, 0, 0]))
+        self.assertEqual(np.nansum(out), 0.0)
+
+    def test_vdf_remove_noise_errors(self):
+        vdf = _movmean_skymap(n_t=6)
+
+        with self.assertRaises(TypeError):
+            mms.vdf_remove_noise(vdf.data, vdf, [1, 1, 1, 1], 1)
+
+        for inp, counts, n_pts in [
+            (_spectr_pad(), _spectr_pad(), [1, 1, 1, 1]),
+            (vdf, vdf.isel(time=slice(0, 5)), [1, 1, 1, 1]),
+            (vdf, vdf, [1, 2, 1, 1]),
+            (vdf, vdf, [1, 1, 1]),
+            (vdf, vdf, [1.0, 1.0, 1.0, 1.0]),
+        ]:
+            with self.subTest(n_pts=n_pts):
+                with self.assertRaises(ValueError):
+                    mms.vdf_remove_noise(inp, counts, n_pts, 1)
+
+
+def _hires_inputs(n_t=2, dt=0.15):
+    # Isotropic 1 keV proton Maxwellian on an FPI-like grid, with the half
+    # widths of the accumulations, and offsets putting the azimuth j in the
+    # quarter j mod 4 (each quarter a quarter of the solid angle)
+    energy = np.logspace(1, np.log10(3e4), 32)
+    speed = np.sqrt(2 * energy * constants.e / constants.m_p)
+    k_t = 1e3 * constants.e
+    f_s = (constants.m_p / (2 * np.pi * k_t)) ** 1.5 * 1e6 * 1e-12
+    f_s = f_s * np.exp(-constants.m_p * speed**2 / (2 * k_t))
+    data = np.tile(f_s[None, :, None, None], (n_t, 1, 32, 16))
+    mid = np.sqrt(energy[:-1] * energy[1:])
+    edges = np.hstack([energy[0] ** 2 / mid[0], mid, energy[-1] ** 2 / mid[-1]])
+    time = generate_timeline(1 / dt, n_t)
+
+    def skymap(values):
+        return pyrf.ts_skymap(
+            time,
+            values,
+            np.tile(energy, (n_t, 1)),
+            np.tile(5.625 + 11.25 * np.arange(32), (n_t, 1)),
+            5.625 + 11.25 * np.arange(16),
+            energy0=energy,
+            energy1=energy,
+            esteptable=np.zeros(n_t, dtype=np.uint8),
+            attrs={"UNITS": "s^3/cm^6"},
+            glob_attrs={"species": "ions"},
+        )
+
+    vdf = skymap(data)
+    vdf.attrs["delta_time_minus"] = np.full(n_t, dt / 2)
+    vdf.attrs["delta_time_plus"] = np.full(n_t, dt / 2)
+    vdf.attrs["delta_energy_minus"] = np.tile(energy - edges[:-1], (n_t, 1))
+    vdf.attrs["delta_energy_plus"] = np.tile(edges[1:] - energy, (n_t, 1))
+    vdf.attrs["errorflags"] = np.arange(n_t, dtype=np.uint32)
+    quarter = np.arange(32)[None, None, :, None] % 4
+    offsets = (quarter + 0.5) * dt / 4 * 1e6 + np.zeros(data.shape)
+    return vdf, skymap(offsets)
+
+
+class VdfHiresTestCase(unittest.TestCase):
+    def test_vdf_hires(self):
+        # Each bin in the part of its offset, NaN in the others; the parts at
+        # the centres of the quarters of the accumulations
+        vdf, offsets = _hires_inputs()
+        out = mms.vdf_hires(vdf, offsets)
+        self.assertTupleEqual(out.data.shape, (8, 32, 32, 16))
+        for k in range(4):
+            measured = np.isfinite(out.data.data[k, 0, :, 0])
+            np.testing.assert_array_equal(measured, np.arange(32) % 4 == k)
+        start = vdf.time.data[0] - np.timedelta64(75, "ms")
+        expected = start + np.array([18750000, 56250000, 93750000, 131250000])
+        np.testing.assert_array_equal(out.time.data[:4], expected)
+        np.testing.assert_allclose(out.attrs["delta_time_minus"], 0.01875)
+        np.testing.assert_array_equal(out.attrs["errorflags"], [0] * 4 + [1] * 4)
+        self.assertEqual(out.attrs["n_parts"], 4)
+        self.assertEqual(out.data.attrs["UNITS"], "s^3/cm^6")
+
+        # Two parts: azimuths 0, 1 (mod 4) in the first, 2, 3 in the second
+        out = mms.vdf_hires(vdf, offsets, 2)
+        measured = np.isfinite(out.data.data[1, 0, :, 0])
+        np.testing.assert_array_equal(measured, np.arange(32) % 4 >= 2)
+
+    def test_hires_moments(self):
+        # Isotropic distribution, each part a quarter of the solid angle: the
+        # density of each part is that of the whole distribution
+        vdf, offsets = _hires_inputs()
+        sc_pot = pyrf.ts_scalar(vdf.time.data, np.zeros(2))
+        n_whole = mms.psd_moments(vdf, sc_pot, energy_range=[1.0, 4e4])[0].data
+        hires = mms.vdf_hires(vdf, offsets)
+        sc_pot = pyrf.ts_scalar(hires.time.data, np.zeros(8))
+        n_parts = mms.hires_moments(hires, sc_pot)[0].data
+        np.testing.assert_allclose(n_parts, n_whole[0], rtol=1e-10)
+
+        with self.assertRaises(ValueError):
+            mms.hires_moments(vdf, sc_pot)
+
+    def test_vdf_hires_errors(self):
+        vdf, offsets = _hires_inputs()
+
+        with self.assertRaises(TypeError):
+            mms.vdf_hires(vdf.data, offsets)
+
+        no_dt = vdf.copy()
+        no_dt.attrs = {k: v for k, v in vdf.attrs.items() if "time" not in k}
+        late = offsets.copy(deep=True)
+        late.data.data[0, 0, 0, 0] = 2e5
+
+        for args in [
+            (_spectr_pad(), _spectr_pad(), 4),
+            (vdf, offsets, 3),
+            (no_dt, offsets, 4),
+            (vdf, late, 4),
+        ]:
+            with self.subTest(n_parts=args[2]):
+                with self.assertRaises(ValueError):
+                    mms.vdf_hires(*args)
+
+
+def _einterp_skymap(values):
+    # Skymap of two times with alternating tables (the second between the
+    # channels of the first), f = values(energy) in every angular bin
+    e_0 = np.logspace(1, 4, 32)
+    e_1 = e_0 * np.sqrt(e_0[1] / e_0[0])
+    energy = np.vstack([e_0, e_1])
+    data = np.tile(values(energy)[:, :, None, None], (1, 1, 4, 2))
+    return pyrf.ts_skymap(
+        generate_timeline(1.0, 2),
+        data,
+        energy,
+        np.tile(45.0 + 90.0 * np.arange(4), (2, 1)),
+        np.array([45.0, 135.0]),
+        energy0=e_0,
+        energy1=e_1,
+        esteptable=np.array([0, 1], dtype=np.uint8),
+        attrs={"UNITS": "s^3/cm^6"},
+    )
+
+
+class VdfEinterpTestCase(unittest.TestCase):
+    def test_vdf_einterp(self):
+        # f linear in energy: the linear interpolation is exact on the union of
+        # the tables; the channels outside the table of a time are NaN
+        vdf = _einterp_skymap(lambda e: 1e3 - 0.01 * e)
+        out = mms.vdf_einterp(vdf, "linear")
+        energy = np.sort(np.hstack(vdf.energy.data))
+        np.testing.assert_allclose(out.energy.data, np.tile(energy, (2, 1)))
+        np.testing.assert_allclose(
+            out.data.data[0, :-1, 0, 0], 1e3 - 0.01 * energy[:-1]
+        )
+        self.assertTrue(np.all(np.isnan(out.data.data[0, -1])))
+        self.assertTrue(np.all(np.isnan(out.data.data[1, 0])))
+        np.testing.assert_array_equal(out.attrs["esteptable"], [0, 0])
+        np.testing.assert_allclose(out.attrs["energy1"], energy)
+
+        # Widths to the geometric means with the neighbouring energies
+        lower = energy - out.attrs["delta_energy_minus"][0]
+        upper = energy + out.attrs["delta_energy_plus"][0]
+        np.testing.assert_allclose(lower[1:], np.sqrt(energy[:-1] * energy[1:]))
+        np.testing.assert_allclose(upper[:-1], lower[1:])
+        self.assertEqual(out.data.attrs["UNITS"], "s^3/cm^6")
+
+        # pchip: shape preserving on a decreasing exponential, between the
+        # neighbouring values
+        vdf = _einterp_skymap(lambda e: np.exp(-e / 2e3))
+        out = mms.vdf_einterp(vdf).data.data[0, 1:-1:2, 0, 0]
+        f_0 = vdf.data.data[0, :, 0, 0]
+        self.assertTrue(np.all((out <= f_0[:-1]) & (out >= f_0[1:])))
+        np.testing.assert_allclose(
+            out[:20], np.exp(-vdf.energy.data[1, :20] / 2e3), rtol=1e-4
+        )
+
+    def test_vdf_einterp_nan_negative(self):
+        # A NaN bin through its energies with data; a bin with one energy with
+        # data NaN; negative values set to 0
+        vdf = _einterp_skymap(lambda e: 1e3 - 0.01 * e)
+        vdf.data.data[0, 5, 1, 0] = np.nan
+        vdf.data.data[0, 1:, 2, 0] = np.nan
+        vdf.data.data[1, :, 3, 1] = -1.0
+        out = mms.vdf_einterp(vdf, "linear").data.data
+        np.testing.assert_allclose(out[0, 10, 1, 0], out[0, 10, 0, 0])
+        self.assertTrue(np.all(np.isnan(out[0, :, 2, 0])))
+        np.testing.assert_array_equal(out[1, 1:, 3, 1], 0.0)
+
+    def test_vdf_einterp_errors(self):
+        vdf = _einterp_skymap(lambda e: 1.0 + 0 * e)
+
+        with self.assertRaises(TypeError):
+            mms.vdf_einterp(vdf.data)
+
+        pad = _spectr_pad()
+        bad = vdf.copy(deep=True)
+        bad["energy"] = bad.energy * 0.0
+
+        for inp, method in [(pad, "pchip"), (vdf, "cubic"), (bad, "pchip")]:
+            with self.subTest(method=method):
+                with self.assertRaises(ValueError):
+                    mms.vdf_einterp(inp, method)
+
+
+def _spectr_pad(n_t=3, n_pitch=12, alternating=False):
+    # Pitch-angle distribution (time, energy, pitch angle) with f = energy
+    # index + pitch-angle index / 100
+    time = generate_timeline(1.0, n_t)
+    energy = np.tile(np.logspace(1, 4, 32), (n_t, 1))
+    if alternating:
+        energy[1::2] *= 1.1
+    pitch = (0.5 + np.arange(n_pitch)) * 180.0 / n_pitch
+    data = np.arange(32.0)[None, :, None] + np.arange(n_pitch)[None, None, :] / 100
+    data = np.tile(data, (n_t, 1, 1))
+    return xr.Dataset(
+        {
+            "data": (["time", "idx0", "idx1"], data, {"UNITS": "s^3/cm^6"}),
+            "energy": (["time", "idx0"], energy),
+            "theta": (["time", "idx1"], np.tile(pitch, (n_t, 1))),
+            "time": time,
+            "idx0": np.arange(32),
+            "idx1": np.arange(n_pitch),
+        },
+        attrs={"species": "electrons"},
+    )
+
+
+class VdfSpectrTestCase(unittest.TestCase):
+    def test_vdf_spectr_pad(self):
+        # Pitch-angle spectrogram: the mean over the energies (or those of
+        # indices); energy spectrogram: the mean over the pitch angles
+        pad = _spectr_pad()
+        spec = mms.vdf_spectr(pad)
+        self.assertTupleEqual(spec.dims, ("time", "theta"))
+        np.testing.assert_allclose(spec.data[0], 15.5 + np.arange(12) / 100)
+        np.testing.assert_allclose(spec.theta.data, 7.5 + 15.0 * np.arange(12))
+        self.assertEqual(spec.theta.attrs["UNITS"], "deg")
+        self.assertEqual(spec.attrs["UNITS"], "s^3/cm^6")
+
+        spec = mms.vdf_spectr(pad, "pitchangle", indices=[2, 4])
+        np.testing.assert_allclose(spec.data[0], 3.0 + np.arange(12) / 100)
+
+        spec = mms.vdf_spectr(pad, "energy", indices=[0, 11])
+        np.testing.assert_allclose(spec.data[1], np.arange(32.0) + 0.055)
+        self.assertTupleEqual(spec.dims, ("time", "energy"))
+
+        # One pitch angle: the energy spectrogram by default; alternating
+        # tables: a Dataset with the energies of each time
+        spec = mms.vdf_spectr(_spectr_pad(n_pitch=1))
+        self.assertTupleEqual(spec.dims, ("time", "energy"))
+        spec = mms.vdf_spectr(_spectr_pad(alternating=True), "energy")
+        self.assertIsInstance(spec, xr.Dataset)
+        np.testing.assert_allclose(spec.energy.data[1], 1.1 * spec.energy.data[0])
+
+    def test_vdf_spectr_skymap(self):
+        # Energy spectrogram: vdf_omni; azimuthal: the mean over the polar
+        # angles, then the energies (a Dataset when the azimuths change)
+        vdf = _gyro_skymap(lambda p, t: p + 0 * t, n_t=2)
+        xr.testing.assert_identical(mms.vdf_spectr(vdf), mms.vdf_omni(vdf))
+        spec = mms.vdf_spectr(vdf, "azimuthal")
+        self.assertTupleEqual(spec.dims, ("time", "phi"))
+        np.testing.assert_allclose(spec.data[0], vdf.phi.data[0])
+
+        vdf["phi"] = vdf.phi + np.array([[0.0], [2.8]])
+        self.assertIsInstance(mms.vdf_spectr(vdf, "azimuthal"), xr.Dataset)
+
+    def test_vdf_spectr_nan(self):
+        # NaN bins left out; a time without data is NaN
+        pad = _spectr_pad()
+        pad.data.data[0, 0, :] = np.nan
+        pad.data.data[2] = np.nan
+        spec = mms.vdf_spectr(pad)
+        np.testing.assert_allclose(spec.data[0], 16.0 + np.arange(12) / 100)
+        self.assertTrue(np.all(np.isnan(spec.data[2])))
+
+    def test_vdf_spectr_errors(self):
+        pad = _spectr_pad()
+        vdf = _gyro_skymap(n_t=2)
+
+        with self.assertRaises(TypeError):
+            mms.vdf_spectr(pad.data)
+
+        for inp, kwargs in [
+            (pad, {"kind": "azimuthal"}),
+            (vdf, {"kind": "pitchangle"}),
+            (vdf, {"kind": "energy", "indices": [0]}),
+        ]:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    mms.vdf_spectr(inp, **kwargs)
+
+
 @ddt
 class VdfSolidAngleTestCase(unittest.TestCase):
     def test_vdf_solid_angle_skymap(self):

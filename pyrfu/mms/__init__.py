@@ -63,6 +63,7 @@ from .get_hpca_dist import get_hpca_dist
 from .get_pitch_angle_dist import get_pitch_angle_dist
 from .get_ts import get_ts
 from .get_variable import get_variable
+from .hires_moments import hires_moments
 from .hpca_calc_anodes import hpca_calc_anodes
 from .hpca_energies import hpca_energies
 from .hpca_pad import hpca_pad
@@ -101,20 +102,25 @@ from .vdf_convert import vdf_convert
 from .vdf_counts import vdf_counts
 from .vdf_cuts import vdf_cuts
 from .vdf_d3v import vdf_d3v
+from .vdf_einterp import vdf_einterp
 from .vdf_elim import vdf_elim
 from .vdf_error import vdf_error
 from .vdf_find_low_counts import vdf_find_low_counts
 from .vdf_flux import vdf_flux
+from .vdf_hires import vdf_hires
 from .vdf_macroparticles import vdf_macroparticles
 from .vdf_mask import vdf_mask
+from .vdf_movmean import vdf_movmean
 from .vdf_omni import vdf_omni
 from .vdf_one_count import vdf_one_count
 from .vdf_partial_density import vdf_partial_density
 from .vdf_projection import vdf_projection
 from .vdf_rebin import vdf_rebin
 from .vdf_reduce import vdf_frame_transformation, vdf_reduce
+from .vdf_remove_noise import vdf_remove_noise
 from .vdf_shift import vdf_shift
 from .vdf_solid_angle import vdf_solid_angle
+from .vdf_spectr import vdf_spectr
 from .vdf_to_e64 import vdf_to_e64
 from .vdf_velocity import vdf_velocity
 from .whistler_b2e import whistler_b2e
@@ -183,6 +189,7 @@ __all__ = [
     "get_pitch_angle_dist",
     "get_ts",
     "get_variable",
+    "hires_moments",
     "hpca_calc_anodes",
     "hpca_energies",
     "hpca_pad",
@@ -221,21 +228,26 @@ __all__ = [
     "vdf_counts",
     "vdf_cuts",
     "vdf_d3v",
+    "vdf_einterp",
     "vdf_elim",
     "vdf_error",
     "vdf_find_low_counts",
     "vdf_flux",
     "vdf_frame_transformation",
+    "vdf_hires",
     "vdf_macroparticles",
     "vdf_mask",
+    "vdf_movmean",
     "vdf_omni",
     "vdf_one_count",
     "vdf_partial_density",
     "vdf_projection",
     "vdf_rebin",
     "vdf_reduce",
+    "vdf_remove_noise",
     "vdf_shift",
     "vdf_solid_angle",
+    "vdf_spectr",
     "vdf_to_e64",
     "vdf_velocity",
     "whistler_b2e",
