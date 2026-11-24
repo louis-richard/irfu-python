@@ -1,6 +1,56 @@
 Changelog
 =========
 
+2.6.3 (2026-11-24)
+------------------
+
+This release adds routines for the distributions: spectrograms against the
+energy, the pitch angle or the azimuth, the interpolation of the alternating
+energy tables at every time, a moving time average, the removal of the bins
+of few counts, and the split of the burst distributions by the time at which
+each bin was measured, with their moments.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.vdf_spectr``: spectrogram of a distribution, against the pitch angle
+  or the energy (pitch-angle distribution) or the azimuth or the energy
+  (skymap, ``vdf_omni``), averaged over the other dimensions or the bins of
+  ``indices``; a Dataset when the coordinate changes with time, which
+  ``plot.plot_spectr`` takes.
+- ``mms.vdf_einterp``: a skymap with alternating energy tables interpolated
+  onto the union of its tables (64 energies for FPI) at every time, with the
+  widths of the new channels; ``vdf_to_e64`` keeps the measured values at
+  half the time resolution.
+- ``mms.vdf_movmean``: moving average of a distribution on its own times,
+  with the attributes of each window as ``pyrf.average_vdf`` and the
+  one-count removal with ``counts=``.
+- ``mms.vdf_remove_noise``: sets to 0 the bins whose neighbourhood in time,
+  energy and angles (the azimuths wrapping around) has fewer counts than a
+  threshold.
+- ``mms.vdf_hires``: each burst distribution split into 2 or 4 parts of its
+  accumulation from the time of each bin (``pdtoff{e,i}_fpi_brst_l2``), the
+  bins not measured in a part NaN; ``mms.hires_moments``: the moments of the
+  parts, each multiplied by the number of parts.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.vdf_remove_noise``: in tenuous plasma the particles are in bins of
+  few counts and are removed with the noise (FPI burst ions, 3 x 3 x 3 x 3
+  bins, 5 counts: the density 1.3 % lower in the magnetosheath, 85 % lower
+  in the plasma sheet).
+- ``mms.vdf_hires`` and ``mms.hires_moments``: each quarter of an FPI burst
+  accumulation holds a quarter of the solid angle spread over all the
+  directions, except the highest DES channel; the densities of the quarters
+  of DES burst distributions are 0.97 to 1.05 times that of the whole.
+
+Development
+^^^^^^^^^^^
+
+- ``pyrf.average_vdf`` and ``mms.vdf_movmean`` share the averaging over the
+  windows (``pyrf.average_vdf`` unchanged).
+
 2.6.2 (2026-11-23)
 ------------------
 
