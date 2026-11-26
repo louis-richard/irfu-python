@@ -50,8 +50,8 @@ pyRFU
 .. |Black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
 .. _Black: https://github.com/psf/black
 
-.. |Doi| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10678695.svg
-.. _Doi: https://doi.org/10.5281/zenodo.10678695
+.. |Doi| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10678694.svg
+.. _Doi: https://doi.org/10.5281/zenodo.10678694
 
 |License|_ |Python|_ |PyPi|_ |Format|_ |Wheel|_ |Status|_ |Downloads|_ |CI|_
 |PyLintB|_ |CodeCov|_ |Issues|_ |Commits|_ |Readthedocs|_ |Matrix|_
@@ -159,7 +159,7 @@ Reference:
     Richard, L., Khotyaintsev, Y. V., Vaivads, A., Graham, D. B., Norgren, C., &
     Johlander, A. (2024). *Python RymdFysik Utilities (PyRFU): An open-source
     Python package for advanced in-situ space plasma analysis* [Software]. Zenodo.
-    https://doi.org/10.5281/zenodo.10678695
+    https://doi.org/10.5281/zenodo.10678694
 
 BibTeX:
 
@@ -172,8 +172,8 @@ BibTeX:
                    for Advanced In-Situ Space Plasma Analysis},
       year      = {2024},
       publisher = {Zenodo},
-      doi       = {10.5281/zenodo.10678695},
-      url       = {https://doi.org/10.5281/zenodo.10678695}
+      doi       = {10.5281/zenodo.10678694},
+      url       = {https://doi.org/10.5281/zenodo.10678694}
     }
 
 The same metadata is in ``CITATION.cff`` (GitHub's "Cite this repository").

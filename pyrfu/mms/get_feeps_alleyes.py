@@ -133,7 +133,9 @@ def get_feeps_alleyes(
     less than 50 % of the survey sector contaminated), 3 (not valid for
     science: contaminated, or survey sector fully masked onboard, with zero
     counts) and 4 (calibration). The MMS CMAD (section 6.4.3) recommends not
-    to use 3 and 4 for science. IDL SPEDAS doesn't use the quality indicators.
+    to use 3 and 4 for science. IDL SPEDAS and pyspedas set these samples to
+    NaN in the omni-directional spectra only (``quality_flag=3``), pyrfu in
+    all the products.
 
     The L2 files have no counts: the L2 counts ("counts") are derived from
     the statistical error ``percent_error`` = 100 / sqrt(N) of the files,

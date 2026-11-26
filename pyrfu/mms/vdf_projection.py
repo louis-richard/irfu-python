@@ -27,11 +27,21 @@ from pyrfu.mms._internal.vdf_bins import (
 from pyrfu.mms.psd_rebin import psd_rebin
 from pyrfu.mms.vdf_convert import _PSD
 from pyrfu.pyrf.iso86012datetime64 import iso86012datetime64
+from pyrfu.pyrf.resample import resample
 from pyrfu.pyrf.time_clip import time_clip
 from pyrfu.pyrf.ts_scalar import ts_scalar
 from pyrfu.pyrf.ts_skymap import ts_skymap
 
 logger = logging.getLogger(__name__)
+
+
+def _frame_rows(coord_sys, times):
+    # x, y and z as rows: a time series of pyrf.xyz_frame (columns) resampled
+    # to the times of the distributions projected and averaged
+    if isinstance(coord_sys, xr.DataArray) and coord_sys.attrs.get("xyz") == "columns":
+        return np.nanmean(resample(coord_sys, times).data, axis=0).T
+
+    return np.asarray(coord_sys, dtype=np.float64)
 
 
 def _coord_sys(
@@ -384,11 +394,13 @@ def vdf_projection(
         Computes data for time interval if len(tint) = 2 or closest time if
         len(tint) = 1. For tint includes two or more distributions the
         energies are rebinned into 64 channels.
-    coord_sys : ndarray, Optional
+    coord_sys : ndarray or xarray.DataArray, Optional
         3x3 matrix with x, y and z as rows, e.g., ``np.vstack([x, y, z])``.
         z is normal to the projection plane, and x and y are made orthogonal to
         z and each other if they are not already. Default is np.eye(3)
-        (project onto spacecraft spin plane).
+        (project onto spacecraft spin plane). A time series of
+        `pyrfu.pyrf.xyz_frame` (its unit vectors as columns) is averaged over
+        the times of the distributions projected.
     sc_pot : xarray.DataArray, Optional
         Spacecraft potential to correct velocities (the ions gain q V and the
         electrons lose e V). For a single value of tint the closest potential
@@ -455,7 +467,7 @@ def vdf_projection(
         vdf = _output(vdf, data * _relativistic_factor(vdf, data), units)
 
     dist, polar, azimuthal, energy_edges, i_times = _init(vdf, tint)
-    x_vec, y_vec, z_vec, _ = _coord_sys(coord_sys)
+    x_vec, y_vec, z_vec, _ = _coord_sys(_frame_rows(coord_sys, vdf.time[i_times]))
 
     if azimuthal.ndim == 1:
         azimuthal = np.ones((len(dist), 1)) * azimuthal

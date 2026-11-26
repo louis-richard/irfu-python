@@ -30,7 +30,7 @@ def _cartesian(vdf, grid, rotation, n_mc, sc_pot, random_state):
     f_si = np.nan_to_num(f_si)
     bins = _source_bins(vdf, sc_pot)
     d3v = _bins_d3v(bins)
-    rotations = _rotation_matrices(rotation, len(vdf.time))
+    rotations = _rotation_matrices(rotation, vdf.time)
     rng = np.random.default_rng(random_state)
 
     out = np.zeros((len(vdf.time),) + shape)
@@ -90,7 +90,8 @@ def vdf_rebin(
     rotation : array_like, Optional
         3x3 matrix, or (time, 3, 3) matrices, whose rows are the new unit
         vectors in the coordinate system of `vdf` (irfu-matlab ``orient``).
-        Default is no rotation.
+        Default is no rotation. A time series of `pyrfu.pyrf.xyz_frame` (its
+        unit vectors as columns) is resampled to the times of `vdf`.
     n_mc : int, Optional
         Number of Monte-Carlo particles per bin with data. Default is 200, as
         irfu-matlab.

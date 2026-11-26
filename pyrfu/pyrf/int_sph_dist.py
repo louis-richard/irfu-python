@@ -3,7 +3,7 @@
 
 # Built-in imports
 import random
-from math import asin, cos, sin, sqrt
+from math import asin, atan2, cos, pi, sin, sqrt
 from typing import Literal
 
 # 3rd party imports
@@ -72,13 +72,20 @@ def int_sph_dist(
     velocity_grid : numpy.ndarray
         Velocity grid for interpolation.
     phi_grid : numpy.ndarray
-        Azimuthal angle grid for interpolation.
+        Azimuths (rad) of the centres of the bins of the 2d polar grid, from
+        x in the projection plane, equally spaced over at most a turn (e.g.
+        32 bins centred on (k + 0.5) 2 pi / 32); not used by the other
+        projections.
 
     Returns
     -------
     pst : dict
-        Dictionary with the projected distribution and
-        corresponding velocity grid information.
+        Projected distribution ``f``, on the speeds of the grid ``vx`` and
+        their edges ``vx_edges`` (1d), and ``vy``, ``vz`` (2d and 3d
+        cartesian, the same grid on each axis). For the 2d polar projection,
+        ``f`` is (azimuth, speed), on the azimuths ``phi`` (rad) and speeds
+        ``v`` of the bins and their edges ``phi_edges`` and ``v_edges``, with
+        the velocities ``vx``, ``vy`` of the centres of the bins (2d).
 
     Other Parameters
     ----------------
@@ -99,7 +106,8 @@ def int_sph_dist(
     projection_dim : {"1d", "2d", "3d"}
         Dimension of the projection (case-insensitive). Default is "1d". A polar
         projection is 1d if `phi_grid` is None; `phi_grid` is not used by the
-        cartesian projections.
+        cartesian projections. The 1d projection is the same in both bases, a
+        cartesian grid being uniform.
     weight : {None, "lin", "log"}
         Number of Monte-Carlo particles per bin: `n_mc` in every non-empty bin
         (None), or `n_mc` on average, in proportion to vdf ("lin") or to
@@ -134,13 +142,20 @@ def int_sph_dist(
         If the speed widths are negative or extend below zero speed, if only
         one of `d_v_m` and `d_v_p` is given, if `weight` is not one of the
         above, if a cartesian projection grid is not uniform, or if `phi` or
-        `theta` has a single bin without `d_phi` or `d_theta`, or if `seed`
-        is not a non-negative integer.
+        `theta` has a single bin without `d_phi` or `d_theta`, if `seed` is
+        not a non-negative integer, or if the `phi_grid` of a 2d polar
+        projection is not equally spaced or spans more than a turn.
     NotImplementedError
-        If the projection is not a 1d polar, or a 2d or 3d cartesian one.
+        If the projection is 3d polar.
 
     Notes
     -----
+    The projected distribution of a bin is the integral of the distribution
+    over the bin divided by its length (1d), its area (2d) or its volume
+    (3d): the area of a bin of the 2d polar grid is (v_2^2 - v_1^2) d_phi / 2
+    between its edges v_1 and v_2 (the speeds below 0 not counted), so that
+    the density is the sum of f times the areas.
+
     The Monte-Carlo particles are drawn uniformly within each speed bin. This
     differs from irfu-matlab's irf_int_sph_dist, which draws them in
     [v - 1.5 dV, v - 0.5 dV] (one bin too low) and uses the spacing to the lower
@@ -241,8 +256,14 @@ def int_sph_dist(
     else:
         velocity_grid = velocity_grid_edges[:-1] + np.diff(velocity_grid_edges) / 2.0
 
+    # Azimuths of the 2d polar grid (empty for the other grids)
+    phig_edges, phi_step = np.zeros(0), 0.0
+
     if projection_base == "pol":
         d_v_grid = np.diff(velocity_grid_edges)
+
+        if n_dim == 2:
+            phig_edges, phi_step = _azimuth_edges(phi_grid)
     else:
         # All bins must have the same width (to 1 %), which is used for all
         d_v_grid = np.diff(velocity_grid_edges)
@@ -260,9 +281,14 @@ def int_sph_dist(
     speed_seeds = _speed_seeds(seed, len(velocity))
 
     # Element of the projection grid: the speed width of each bin of the 1d
-    # polar grid, the volume of the bins of the cartesian grids
-    if projection_base == "pol":
-        d_a_grid = d_v_grid.astype(np.float64)
+    # grids, the area of the bins of each speed of the 2d polar grid, the
+    # volume of the bins of the cartesian grids
+    if n_dim == 1:
+        d_a_grid = np.broadcast_to(d_v_grid, (len(velocity_grid),))
+        d_a_grid = d_a_grid.astype(np.float64)
+    elif projection_base == "pol":
+        v_edges_2 = np.clip(velocity_grid_edges, 0.0, None) ** 2
+        d_a_grid = 0.5 * np.diff(v_edges_2) * phi_step
     else:
         d_a_grid = np.full(1, d_v_grid**n_dim, dtype=np.float64)
 
@@ -292,13 +318,31 @@ def int_sph_dist(
         n_dim,
         speed_seeds,
         numba.get_num_threads(),
+        phig_edges,
+        phi_step,
     )
-    f_g = f_g.reshape((len(velocity_grid),) * n_dim)
+
+    if len(phig_edges) > 0:
+        f_g = f_g.reshape((len(phig_edges) - 1, len(velocity_grid)))
+    else:
+        f_g = f_g.reshape((len(velocity_grid),) * n_dim)
 
     if no_data:
         f_g = np.full(f_g.shape, np.nan)
 
-    if projection_dim == "2d" and projection_base == "cart":
+    if projection_dim == "2d" and projection_base == "pol":
+        phig_centres = phig_edges[:-1] + phi_step / 2.0
+        v_mesh, phi_mesh = np.meshgrid(velocity_grid, phig_centres)
+        pst = {
+            "f": f_g,
+            "phi": phig_centres,
+            "v": velocity_grid,
+            "phi_edges": phig_edges,
+            "v_edges": velocity_grid_edges,
+            "vx": v_mesh * np.cos(phi_mesh),
+            "vy": v_mesh * np.sin(phi_mesh),
+        }
+    elif projection_dim == "2d" and projection_base == "cart":
         pst = {
             "f": f_g,
             "vx": velocity_grid,
@@ -323,7 +367,35 @@ def int_sph_dist(
 
 
 # Supported projections: (base, dimension)
-_PROJECTIONS = [("pol", "1d"), ("cart", "2d"), ("cart", "3d")]
+_PROJECTIONS = [
+    ("pol", "1d"),
+    ("pol", "2d"),
+    ("cart", "1d"),
+    ("cart", "2d"),
+    ("cart", "3d"),
+]
+
+
+def _azimuth_edges(phi_grid):
+    r"""Edges (rad) and width of the azimuths of a 2d polar grid from the
+    centres of its bins (a single bin is a turn)."""
+
+    phi_grid = np.atleast_1d(np.asarray(phi_grid, dtype=np.float64))
+
+    if len(phi_grid) < 2:
+        d_phi = 2 * np.pi
+    else:
+        d_phi = float(np.median(np.diff(phi_grid)))
+
+    if d_phi <= 0 or not np.allclose(np.diff(phi_grid), d_phi, rtol=1e-6, atol=0):
+        raise ValueError("phi_grid must be equally spaced and increasing")
+
+    if len(phi_grid) * d_phi > 2 * np.pi * (1 + 1e-9):
+        raise ValueError("phi_grid must span at most a turn")
+
+    edges = np.hstack([phi_grid - d_phi / 2, phi_grid[-1] + d_phi / 2])
+
+    return edges, d_phi
 
 
 def _mc_particles(vdf, n_mc, weight):
@@ -497,11 +569,14 @@ def _mc_project(
     n_dim,
     speed_seeds,
     n_chunks,
+    phig_edges,
+    phi_step,
 ):
-    r"""Monte-Carlo projection of a skymap onto a grid, flattened: 1d polar
-    (n_dim = 1: the speed along the first axis, the transverse speed limited
-    by v_lim and a_lim), 2d or 3d cartesian (the out-of-plane speed limited
-    by v_lim and a_lim).
+    r"""Monte-Carlo projection of a skymap onto a grid, flattened: 1d (n_dim
+    = 1: the speed along the first axis, the transverse speed limited by
+    v_lim and a_lim), 2d polar (n_dim = 2 with `phig_edges`: the azimuth and
+    the speed in the plane), 2d or 3d cartesian (the out-of-plane speed
+    limited by v_lim and a_lim).
 
     Parameters
     ----------
@@ -514,10 +589,12 @@ def _mc_project(
     d_phi, d_theta : numpy.ndarray
         Azimuth and elevation widths of the bins (rad).
     vg_edges : numpy.ndarray
-        Edges of the projection grid (the same on each axis).
+        Edges of the projection grid (the same on each axis; the speeds of
+        the 2d polar grid).
     d_a_grid : numpy.ndarray
-        Speed widths of the 1d polar grid, or the volume of a bin of the
-        cartesian grids (one value).
+        Speed widths of the 1d grid, areas of the bins of each speed of the
+        2d polar grid, or the volume of a bin of the cartesian grids (one
+        value).
     v_lim, a_lim : numpy.ndarray
         Limits of the transverse or out-of-plane speed, and of the angle from
         the projection axis or plane (rad).
@@ -533,16 +610,28 @@ def _mc_project(
         Seed of the particles of each speed, or empty (no seeding).
     n_chunks : int
         Number of chunks of speeds (the number of worker threads).
+    phig_edges : numpy.ndarray
+        Edges of the azimuths of the 2d polar grid (rad, spanning at most a
+        turn), or empty for the other grids.
+    phi_step : float
+        Width of the azimuths of the 2d polar grid (index arithmetic), or 0.0.
 
     Returns
     -------
     numpy.ndarray
-        Projected distribution, (n_g ** n_dim,) with n_g bins on each axis.
+        Projected distribution, (n_g ** n_dim,) with n_g bins on each axis,
+        or (n_phi * n_g,) for the 2d polar grid (azimuth, speed).
 
     """
 
     n_v, n_ph, n_th = vdf.shape
     n_vg = len(vg_edges) - 1
+    polar = len(phig_edges) > 0
+
+    if polar:
+        n_out = (len(phig_edges) - 1) * n_vg
+    else:
+        n_out = n_vg**n_dim
 
     # Invariants of the speeds and elevations
     v2 = v**2
@@ -550,7 +639,7 @@ def _mc_project(
     sin_theta_1_arr = np.sin(theta - 0.5 * d_theta)
     d_sin_theta_arr = np.sin(theta + 0.5 * d_theta) - sin_theta_1_arr
 
-    f_g_chunks = np.zeros((n_chunks, n_vg**n_dim))
+    f_g_chunks = np.zeros((n_chunks, n_out))
 
     for c in numba.prange(n_chunks):
         for i in range(c, n_v, n_chunks):
@@ -615,30 +704,54 @@ def _mc_project(
                         use_point = v_lim[0] <= v_z_p < v_lim[1]
                         use_point = use_point and (a_lim[0] <= alpha < a_lim[1])
 
-                        # Particles out of the grid
-                        if v_x_p > vg_edges[-1] or v_x_p < vg_edges[0]:
-                            continue
+                        if polar:
+                            # Azimuth in the turn from the first edge of the
+                            # grid, and speed in the plane
+                            phi_p = atan2(v_y_p, v_x_p) - phig_edges[0]
+                            phi_p = phig_edges[0] + phi_p % (2 * pi)
+                            v_p = sqrt(v_x_p**2 + v_y_p**2)
 
-                        if n_dim > 1 and (v_y_p > vg_edges[-1] or v_y_p < vg_edges[0]):
-                            continue
+                            # Particles out of the grid
+                            if v_p > vg_edges[-1] or v_p < vg_edges[0]:
+                                continue
 
-                        if n_dim > 2 and (v_z_p > vg_edges[-1] or v_z_p < vg_edges[0]):
-                            continue
+                            if phi_p > phig_edges[-1] or phi_p < phig_edges[0]:
+                                continue
 
-                        # Flat index of the bin (x, y, z), C order
-                        i_vxg = _grid_index(v_x_p, vg_edges, v_step)
-                        idx = i_vxg
-
-                        if n_dim > 1:
-                            idx = idx * n_vg + _grid_index(v_y_p, vg_edges, v_step)
-
-                        if n_dim > 2:
-                            idx = idx * n_vg + _grid_index(v_z_p, vg_edges, v_step)
-
-                        if n_dim == 1:
-                            d_a = d_a_grid[i_vxg]
+                            # Flat index of the bin (azimuth, speed), C order
+                            i_vg = _grid_index(v_p, vg_edges, v_step)
+                            i_phig = _grid_index(phi_p, phig_edges, phi_step)
+                            idx = i_phig * n_vg + i_vg
+                            d_a = d_a_grid[i_vg]
                         else:
-                            d_a = d_a_grid[0]
+                            # Particles out of the grid
+                            if v_x_p > vg_edges[-1] or v_x_p < vg_edges[0]:
+                                continue
+
+                            if n_dim > 1 and (
+                                v_y_p > vg_edges[-1] or v_y_p < vg_edges[0]
+                            ):
+                                continue
+
+                            if n_dim > 2 and (
+                                v_z_p > vg_edges[-1] or v_z_p < vg_edges[0]
+                            ):
+                                continue
+
+                            # Flat index of the bin (x, y, z), C order
+                            i_vxg = _grid_index(v_x_p, vg_edges, v_step)
+                            idx = i_vxg
+
+                            if n_dim > 1:
+                                idx = idx * n_vg + _grid_index(v_y_p, vg_edges, v_step)
+
+                            if n_dim > 2:
+                                idx = idx * n_vg + _grid_index(v_z_p, vg_edges, v_step)
+
+                            if n_dim == 1:
+                                d_a = d_a_grid[i_vxg]
+                            else:
+                                d_a = d_a_grid[0]
 
                         if use_point:
                             f_g_chunks[c, idx] += f_ijk * c_ijk / d_a

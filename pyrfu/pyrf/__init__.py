@@ -96,6 +96,7 @@ from .shock_parameters import shock_parameters
 from .sliding_derivative import sliding_derivative
 from .solid_angle import solid_angle
 from .sph2cart import sph2cart
+from .spin_epoch import spin_epoch
 from .st_diff import st_diff
 from .start import start
 from .struct_func import struct_func
@@ -119,6 +120,7 @@ from .wave_fft import wave_fft
 from .wavelet import wavelet
 from .wavepolarize_means import wavepolarize_means
 from .waverage import waverage
+from .xyz_frame import xyz_frame
 
 __all__ = [
     "ang",
@@ -217,6 +219,7 @@ __all__ = [
     "sliding_derivative",
     "solid_angle",
     "sph2cart",
+    "spin_epoch",
     "st_diff",
     "start",
     "struct_func",
@@ -240,4 +243,5 @@ __all__ = [
     "wavelet",
     "wavepolarize_means",
     "waverage",
+    "xyz_frame",
 ]

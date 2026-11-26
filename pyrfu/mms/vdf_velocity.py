@@ -12,12 +12,19 @@ from pyrfu.mms._internal.vdf_bins import (
     _sc_pot,
     _speed,
 )
+from pyrfu.pyrf.resample import resample
 
 
-def _rotation_matrices(rotation, n_t):
-    # (time, 3, 3) rows are the new unit vectors
+def _rotation_matrices(rotation, time):
+    # (time, 3, 3) rows are the new unit vectors, at the times `time`; a time
+    # series of pyrf.xyz_frame (columns) resampled and transposed
+    n_t = len(time)
+
     if rotation is None:
         return np.tile(np.eye(3), (n_t, 1, 1))
+
+    if isinstance(rotation, xr.DataArray) and rotation.attrs.get("xyz") == "columns":
+        return np.transpose(resample(rotation, time).data, (0, 2, 1))
 
     rotation = np.asarray(rotation, dtype=np.float64)
 
@@ -49,7 +56,9 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None):
     rotation : array_like, Optional
         3x3 matrix, or (time, 3, 3) matrices, whose rows are the new unit
         vectors in the coordinate system of `vdf`, e.g. [e_perp1, e_perp2, b]
-        for field-aligned coordinates. Default is no rotation.
+        for field-aligned coordinates. Default is no rotation. A time
+        series of `pyrfu.pyrf.xyz_frame` (its unit vectors as columns) is
+        resampled to the times of `vdf`.
 
     Returns
     -------
@@ -98,7 +107,7 @@ def vdf_velocity(vdf, sc_pot=None, rotation=None):
         speed * np.cos(theta) * np.ones_like(phi),
     ]
     v_xyz = np.stack(np.broadcast_arrays(*v_xyz), axis=-1)
-    v_xyz = np.einsum("tij,tepqj->tepqi", _rotation_matrices(rotation, n_t), v_xyz)
+    v_xyz = np.einsum("tij,tepqj->tepqi", _rotation_matrices(rotation, vdf.time), v_xyz)
 
     out = xr.Dataset(
         {

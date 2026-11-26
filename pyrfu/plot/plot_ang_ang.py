@@ -104,7 +104,33 @@ def _units_label(vdf):
     return y_label
 
 
-def plot_ang_ang(vdf, tint: list | None = None, en_range: list | None = None):
+def _look_angles(vec):
+    # Azimuth in [0, 360) and polar angle (degrees) of the look direction of
+    # the particles moving along vec (opposite to it)
+    look = -np.asarray(vec, dtype=np.float64) / np.linalg.norm(vec)
+    phi = np.rad2deg(np.arctan2(look[1], look[0])) % 360.0
+    theta = np.rad2deg(np.arccos(np.clip(look[2], -1.0, 1.0)))
+    return phi, theta
+
+
+def _plot_vectors(ax, vectors):
+    # The particles moving along each vector (circled dot, the tip of an
+    # arrow coming out of the map) and against it (circled cross, its tail)
+    for vec, label in vectors:
+        for sign, marker in [(1.0, "."), (-1.0, "x")]:
+            phi, theta = _look_angles(sign * np.asarray(vec, dtype=np.float64))
+            ax.plot(phi, theta, "o", color="r", markersize=12, fillstyle="none")
+            ax.plot(phi, theta, marker, color="r", markersize=6)
+            ax.text(phi, theta, f"   {label}", color="r", ha="left", va="center")
+
+
+def plot_ang_ang(
+    vdf,
+    tint: list | None = None,
+    en_range: list | None = None,
+    *,
+    vectors: list | None = None,
+):
     r"""Creates colormap of the phase space density or the differential
     particle flux, as a function of the azimuthal and elevation angles.
 
@@ -121,6 +147,12 @@ def plot_ang_ang(vdf, tint: list | None = None, en_range: list | None = None):
         Energy range (inclusive), in the units of the energies of vdf, clamped
         to the energy range of the instrument. If None uses the entire energy
         range.
+    vectors : list of tuple, Optional
+        Directions to mark, as (vector, label) pairs, e.g. ``[(b_xyz, "B")]``,
+        the vectors in the frame of `vdf` (e.g. DBCS for FPI): a circled dot
+        at the look direction of the particles moving along the vector
+        (opposite to it, the angles of `vdf` being look directions) and a
+        circled cross at that of the particles moving against it.
 
     Returns
     -------
@@ -160,5 +192,8 @@ def plot_ang_ang(vdf, tint: list | None = None, en_range: list | None = None):
     ax.set_title(
         f"{en_range[0]:.3g} {en_units} $\\leq E \\leq$ {en_range[1]:.3g} {en_units}"
     )
+
+    if vectors:
+        _plot_vectors(ax, vectors)
 
     return f, ax, cax

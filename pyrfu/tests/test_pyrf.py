@@ -54,6 +54,9 @@ from . import generate_data, generate_timeline, generate_ts, generate_vdf
 # No seed for the Monte-Carlo kernel of int_sph_dist (numba's generator as it is)
 _NO_SEEDS = np.zeros(0, dtype=np.int64)
 
+# No azimuths of a 2d polar grid (the other grids), for the kernel
+_NO_POLAR = (np.zeros(0), 0.0)
+
 
 class AngTestCase(unittest.TestCase):
     def test_ang_vectors(self):
@@ -5011,9 +5014,7 @@ class IncrementsTestCase(unittest.TestCase):
 @ddt
 class IntSphDistTestCase(unittest.TestCase):
     @data(
-        {"projection_base": "pol", "projection_dim": "2d"},
         {"projection_base": "pol", "projection_dim": "3d"},
-        {"projection_base": "cart", "projection_dim": "1d"},
         {"projection_base": "polar", "projection_dim": "1d"},
     )
     def test_int_sph_dist_input(self, value):
@@ -5145,7 +5146,7 @@ class IntSphDistTestCase(unittest.TestCase):
             v_step = 0.0
 
         result = _mc_project(
-            vdf, *args, v_step, n_dim, _NO_SEEDS, numba.get_num_threads()
+            vdf, *args, v_step, n_dim, _NO_SEEDS, numba.get_num_threads(), *_NO_POLAR
         )
         self.assertEqual(result.shape, (101**n_dim,))
         self.assertGreater(np.count_nonzero(result), 0)
@@ -5154,10 +5155,33 @@ class IntSphDistTestCase(unittest.TestCase):
         # (the pure-Python kernel, as the jitted one)
         seeds = np.arange(len(vdf), dtype=np.int64) + 7
         seeded = [
-            _mc_project.__wrapped__(vdf, *args, v_step, n_dim, seeds, n_chunks)
+            _mc_project.__wrapped__(
+                vdf, *args, v_step, n_dim, seeds, n_chunks, *_NO_POLAR
+            )
             for n_chunks in [1, 3]
         ]
         np.testing.assert_allclose(seeded[1], seeded[0], rtol=1e-12)
+
+    def test_mc_project_polar(self):
+        # The 2d polar grid (azimuth, speed) flattened, the pure-Python
+        # kernel as the jitted one (one particle per bin, at its centre: no
+        # random draws); the particles beyond the grid (above 0.8, azimuths
+        # of the second half turn) dropped
+        vdf, args, _ = self._kernel_args(1)
+        edges = np.linspace(0.0, 0.8, 41)
+        phig_edges = np.linspace(0.0, np.pi, 5)
+        d_a = 0.5 * np.diff(edges**2) * np.pi / 4
+        n_mc = np.ones(vdf.shape, dtype=np.int64)
+        args = args[:7] + (edges, d_a) + args[9:11] + (n_mc,) + args[12:]
+        polar = (phig_edges, np.pi / 4)
+
+        results = [
+            func(vdf, *args, _uniform_step(edges), 2, _NO_SEEDS, 1, *polar)
+            for func in [_mc_project.__wrapped__, _mc_project]
+        ]
+        self.assertEqual(results[0].shape, (4 * 40,))
+        np.testing.assert_allclose(results[1], results[0], rtol=1e-12)
+        self.assertGreater(np.count_nonzero(results[0]), 0)
 
     def test_grid_index(self):
         # MATLAB's discretize: an interior edge in the upper bin, the last
@@ -5194,7 +5218,9 @@ class IntSphDistTestCase(unittest.TestCase):
         for v_step in [_uniform_step(edges), 0.0]:
             random.seed(0)
             results.append(
-                _mc_project.__wrapped__(vdf, *args, v_step, n_dim, _NO_SEEDS, 1)
+                _mc_project.__wrapped__(
+                    vdf, *args, v_step, n_dim, _NO_SEEDS, 1, *_NO_POLAR
+                )
             )
 
         self.assertGreater(_uniform_step(edges), 0.0)
@@ -5223,33 +5249,128 @@ class IntSphDistTestCase(unittest.TestCase):
                 self.assertGreater(result["f"].max(), 0.0)
 
     def test_int_sph_dist_projections(self):
-        # 1d polar (also with an azimuthal grid and projection_dim "1d"), 2d
-        # and 3d cartesian; the 2d and 3d polar and the 1d cartesian raise
-        # NotImplementedError
+        # 1d polar (also with an azimuthal grid and projection_dim "1d") and
+        # cartesian, 2d polar (azimuth, speed) and cartesian, 3d cartesian;
+        # the 3d polar raises NotImplementedError
         rng = np.random.default_rng(1)
         vdf = rng.random((8, 8, 4))
         speed = np.geomspace(1e5, 3e6, 8)
         phi = np.deg2rad(22.5 + 45 * np.arange(8))
         theta = np.deg2rad(-67.5 + 45 * np.arange(4))
         grid = np.linspace(-3e6, 3e6, 13)
-        phi_grid = np.linspace(0, 2 * np.pi, 9)
+        phi_grid = np.deg2rad(22.5 + 45 * np.arange(8))
 
         for kwargs, shape in [
             ({}, (13,)),
             ({"projection_dim": "1d"}, (13,)),
+            ({"projection_base": "cart", "projection_dim": "1d"}, (13,)),
+            ({"projection_dim": "2d"}, (8, 13)),
             ({"projection_base": "cart", "projection_dim": "2d"}, (13, 13)),
             ({"projection_base": "cart", "projection_dim": "3d"}, (13, 13, 13)),
         ]:
             out = pyrf.int_sph_dist(vdf, speed, phi, theta, grid, phi_grid, **kwargs)
             self.assertEqual(out["f"].shape, shape)
 
-        for kwargs in [
-            {"projection_dim": "2d"},
-            {"projection_dim": "3d"},
-            {"projection_base": "cart", "projection_dim": "1d"},
+        with self.assertRaises(NotImplementedError):
+            pyrf.int_sph_dist(
+                vdf, speed, phi, theta, grid, phi_grid, projection_dim="3d"
+            )
+
+    def test_int_sph_dist_polar_2d(self):
+        # Density and bulk velocity of a drifting Maxwellian on the 2d polar
+        # grid, the areas (v_2^2 - v_1^2) dphi / 2 of its bins; the
+        # projection conserves sum(f dtau) exactly on a grid covering all the
+        # particles, also centred on 0 (azimuths wrapped from the first edge)
+        # and with a lower edge below 0 (the area from 0)
+        v_d = np.array([300e3, -200e3, 100e3])
+        vdf, _, speed, phi, theta = self._maxwellian(v_d)
+        d_phi_g = 2 * np.pi / 32
+        v_edges = _speed_bin_edges(speed)
+        dtau = speed[:, None, None] ** 2 * np.diff(v_edges)[:, None, None]
+        dtau = dtau * np.cos(theta) * np.deg2rad(11.25) ** 2
+
+        for phi_grid, edges in [
+            (d_phi_g * (np.arange(32) + 0.5), np.linspace(0.0, 1500e3, 151)),
+            (d_phi_g * np.arange(32), np.linspace(-5e3, 1.01 * v_edges[-1], 151)),
         ]:
-            with self.assertRaises(NotImplementedError):
-                pyrf.int_sph_dist(vdf, speed, phi, theta, grid, phi_grid, **kwargs)
+            out = pyrf.int_sph_dist(
+                vdf,
+                speed,
+                phi,
+                theta,
+                None,
+                phi_grid,
+                projection_dim="2d",
+                velocity_grid_edges=edges,
+                n_mc=20,
+                seed=1,
+            )
+            self.assertEqual(out["f"].shape, (32, 150))
+            np.testing.assert_allclose(
+                out["phi_edges"][[0, -1]] - phi_grid[0],
+                [-d_phi_g / 2, 2 * np.pi - d_phi_g / 2],
+            )
+            area = 0.5 * np.diff(np.clip(edges, 0.0, None) ** 2) * d_phi_g
+            n = np.sum(out["f"] * area)
+
+            if edges[0] < 0:
+                self.assertAlmostEqual(n / np.sum(vdf * dtau), 1.0, delta=1e-9)
+            else:
+                self.assertAlmostEqual(n / 1e6, 1.0, delta=0.01)
+                v_xy = [np.sum(out[k] * out["f"] * area) / n for k in ["vx", "vy"]]
+                np.testing.assert_allclose(
+                    np.array(v_xy) / 1e3, v_d[:2] / 1e3, atol=3.0
+                )
+
+    def test_int_sph_dist_cart_1d(self):
+        # The 1d projection on a cartesian grid is that on the same polar grid
+        vdf, _, speed, phi, theta = self._maxwellian()
+        edges = np.linspace(-1500e3, 1500e3, 151)
+        out = [
+            pyrf.int_sph_dist(
+                vdf,
+                speed,
+                phi,
+                theta,
+                None,
+                None,
+                projection_base=base,
+                velocity_grid_edges=edges,
+                n_mc=5,
+                seed=2,
+            )
+            for base in ["cart", "pol"]
+        ]
+        np.testing.assert_array_equal(out[0]["f"], out[1]["f"])
+        self.assertGreater(out[0]["f"].max(), 0.0)
+
+    @data(
+        np.deg2rad([0.0, 10.0, 30.0]),  # not equally spaced
+        np.deg2rad([30.0, 20.0, 10.0]),  # decreasing
+        np.linspace(0, 2 * np.pi, 33),  # more than a turn
+    )
+    def test_int_sph_dist_polar_2d_phi_grid(self, phi_grid):
+        vdf, _, speed, phi, theta = self._maxwellian()
+        with self.assertRaisesRegex(ValueError, "phi_grid"):
+            pyrf.int_sph_dist(
+                vdf, speed, phi, theta, speed, phi_grid, projection_dim="2d"
+            )
+
+    def test_int_sph_dist_polar_2d_one_azimuth(self):
+        # A single azimuth is a turn: the projection onto the speed in the plane
+        vdf, _, speed, phi, theta = self._maxwellian()
+        out = pyrf.int_sph_dist(
+            vdf,
+            speed,
+            phi,
+            theta,
+            speed,
+            np.array([np.pi]),
+            projection_dim="2d",
+            n_mc=2,
+        )
+        self.assertEqual(out["f"].shape, (1, len(speed)))
+        np.testing.assert_allclose(out["phi_edges"], [0.0, 2 * np.pi])
 
     @staticmethod
     def _maxwellian(v_d=(300e3, -200e3, 100e3), t_ev=1000.0):
@@ -5415,7 +5536,7 @@ class IntSphDistTestCase(unittest.TestCase):
 
         shape = (len(k_args[8]) - 1,) * n_dim
         results = [
-            func(*k_args, step, n_dim, _NO_SEEDS, n_threads).reshape(shape)
+            func(*k_args, step, n_dim, _NO_SEEDS, n_threads, *_NO_POLAR).reshape(shape)
             for func in [_mc_project.__wrapped__, _mc_project]
             for step in steps
         ]
@@ -10612,6 +10733,219 @@ class EbspPhysicsTestCase(unittest.TestCase):
         ee = res["ee_xxyyzzss"].data
         ee_ref = ref["ee_xxyyzzss"].data
         np.testing.assert_allclose(ee, ee_ref, rtol=0, atol=1e-12 * np.nanmax(ee_ref))
+
+
+@ddt
+class XyzFrameTestCase(unittest.TestCase):
+    def test_xyz_frame(self):
+        # x along x, y along the part of y perpendicular to x, z = x cross y:
+        # orthonormal and direct, the unit vectors as columns, at the times of
+        # x (y resampled), marked for vdf_shift and vdf_projection
+        b_xyz = generate_ts(64.0, 42, tensor_order=1)
+        e_xyz = generate_ts(16.0, 12, tensor_order=1)
+        out = pyrf.xyz_frame(b_xyz, e_xyz)
+
+        np.testing.assert_array_equal(out.time.data, b_xyz.time.data)
+        self.assertEqual(out.shape, (42, 3, 3))
+        self.assertEqual(out.attrs["xyz"], "columns")
+        mat = out.data
+        np.testing.assert_allclose(
+            np.einsum("tki,tkj->tij", mat, mat),
+            np.tile(np.eye(3), (42, 1, 1)),
+            atol=1e-12,
+        )
+        np.testing.assert_allclose(np.linalg.det(mat), 1.0)
+        b_res = pyrf.resample(b_xyz, b_xyz).data.astype(np.float64)
+        b_hat = b_res / np.linalg.norm(b_res, axis=1, keepdims=True)
+        np.testing.assert_allclose(mat[:, :, 0], b_hat)
+        e_res = pyrf.resample(e_xyz, b_xyz).data.astype(np.float64)
+        e_perp = e_res - np.sum(e_res * b_hat, axis=1, keepdims=True) * b_hat
+        np.testing.assert_allclose(
+            np.sum(mat[:, :, 1] * e_perp, axis=1), np.linalg.norm(e_perp, axis=1)
+        )
+
+    def test_xyz_frame_vectors(self):
+        # 3-vectors: at the times of the time series or of `time` (a
+        # distribution); y along x: NaN (no plane)
+        b_xyz = generate_ts(64.0, 5, tensor_order=1)
+        out = pyrf.xyz_frame([0.0, 0.0, 2.0], b_xyz)
+        np.testing.assert_array_equal(out.time.data, b_xyz.time.data)
+        np.testing.assert_allclose(out.data[:, :, 0], np.tile([0.0, 0.0, 1.0], (5, 1)))
+
+        vdf = generate_vdf(64.0, 3, [4, 4, 2], energy01=False, species="ions")
+        out = pyrf.xyz_frame([1.0, 0.0, 0.0], [1.0, 1.0, 0.0], time=vdf)
+        np.testing.assert_array_equal(out.time.data, vdf.time.data)
+        np.testing.assert_allclose(out.data[0], np.eye(3), atol=1e-15)
+
+        b_xyz.data[2] = [0.0, 0.0, 3.0]
+        out = pyrf.xyz_frame([0.0, 0.0, 1.0], b_xyz)
+        self.assertTrue(np.all(np.isnan(out.data[2, :, 1:])))
+        self.assertTrue(np.all(np.isfinite(out.data[[0, 1, 3, 4]])))
+
+    @data(
+        ([0.0, 0.0, 1.0], [1.0, 0.0, 0.0], {}),  # no time series nor time
+        ([0.0, 1.0], [1.0, 0.0, 0.0], {"time": generate_ts(64.0, 5)}),
+        (generate_ts(64.0, 5), [1.0, 0.0, 0.0], {}),  # scalar series
+    )
+    @unpack
+    def test_xyz_frame_input(self, x, y, options):
+        with self.assertRaises(ValueError):
+            pyrf.xyz_frame(x, y, **options)
+
+
+def _spin_epoch_reference(time, pha_deg, data, n_spins):
+    # Literal irf_spin_epoch: interp1 NaN outside, rem, movmedian of n_spins
+    # (n // 2 before, (n - 1) // 2 after, omitnan), linear extrapolation
+    pha = np.rad2deg(np.unwrap(np.deg2rad(pha_deg)))
+    for i_gap in np.flatnonzero(np.diff(pha) < 0):
+        pha[i_gap + 1 :] += 360.0
+    start = pha[0] - np.fmod(pha[0], 360.0)
+    stop = pha[-1] - np.fmod(pha[-1], 360.0) + 360.0
+    grid = np.arange(start, stop + 0.25, 0.5)[:-1]
+    t_grid = interpolate.interp1d(pha, time, bounds_error=False)(grid)
+    f_grid = interpolate.interp1d(time, data, axis=0, bounds_error=False)(t_grid)
+    n_sp = len(grid) // 720
+    out = np.zeros_like(data)
+    ok = np.isfinite(t_grid)
+    for i_c in range(data.shape[1]):
+        f_c = f_grid[:, i_c].reshape(720, n_sp, order="F")
+        model = np.empty_like(f_c)
+        for k in range(n_sp):
+            i_0 = max(0, k - n_spins // 2)
+            i_1 = min(n_sp, k + (n_spins - 1) // 2 + 1)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                model[:, k] = np.nanmedian(f_c[:, i_0:i_1], axis=1)
+        model = model.reshape(-1, order="F")
+        out[:, i_c] = interpolate.interp1d(
+            t_grid[ok], model[ok], fill_value="extrapolate"
+        )(time)
+    return out
+
+
+@ddt
+class SpinEpochTestCase(unittest.TestCase):
+    @staticmethod
+    def _signal(n_spin=40, f_s=8.0, noise=0.05):
+        # Vector signal: spikes at 90 and 270 deg of a 20 s spin (slowly
+        # drifting), a slow variation and noise; a NaN block and a gap
+        rng = np.random.default_rng(3)
+        time = np.arange(0.0, 20.0 * n_spin, 1 / f_s)
+        period = 20.0 * (1.0 + 0.002 * np.sin(2 * np.pi * time / 600.0))
+        pha = (np.cumsum(360.0 / period / f_s) + 37.0) % 360.0
+
+        def spike(p_0, width):
+            return np.exp(-0.5 * (((pha - p_0 + 180.0) % 360.0 - 180.0) / width) ** 2)
+
+        periodic = -2.0 * spike(90.0, 6.0) + 1.5 * spike(270.0, 8.0)
+        slow = 0.5 * np.sin(2 * np.pi * time / 400.0)[:, None] * [1.0, -0.5, 0.2]
+        data = periodic[:, None] * [1.0, 0.6, -0.3] + slow
+        data += noise * rng.standard_normal(data.shape)
+        data[1000:1030] = np.nan
+        keep = np.ones(len(time), dtype=bool)
+        keep[4000:4100] = False
+        times = generate_timeline(f_s, len(time))[keep]
+        inp = pyrf.ts_vec_xyz(times, data[keep])
+        phase = pyrf.ts_scalar(times, pha[keep])
+        return inp, phase, time[keep], periodic[keep]
+
+    @data(31, 30, 5)
+    def test_spin_epoch_reference(self, n_spins):
+        # As irf_spin_epoch: the ends NaN on the phase grid (not the first and
+        # last samples repeated), the window of n_spins spins, NaN left out
+        inp, phase, time, _ = self._signal()
+        result = pyrf.spin_epoch(inp, phase, n_spins=n_spins)
+        expected = _spin_epoch_reference(time, phase.data, inp.data, n_spins)
+        np.testing.assert_allclose(result.data, expected, rtol=0, atol=1e-12)
+        self.assertTrue(np.all(np.isfinite(result.data)))
+        xr.testing.assert_identical(result.time, inp.time)
+
+    def test_spin_epoch_periodic(self):
+        # A signal synchronous with the spin is its own model (to the
+        # interpolation onto the 0.5 deg grid, 0.56 deg per sample at 32 Hz);
+        # a scalar stays a scalar
+        inp, phase, _, periodic = self._signal(f_s=32.0, noise=0.0)
+        scalar = pyrf.ts_scalar(inp.time.data, periodic, attrs={"UNITS": "mV/m"})
+        result = pyrf.spin_epoch(scalar, phase)
+        self.assertEqual(result.shape, scalar.shape)
+        self.assertEqual(result.attrs, scalar.attrs)
+        np.testing.assert_allclose(result.data, periodic, atol=5e-3)
+
+    def test_spin_epoch_phase_times(self):
+        # The phase on its own times (0.4 s, covering inp), as at the times
+        # of inp; NaN beyond the times of a phase that ends before inp (the
+        # unwrapped phase with a turn over the gap, 227 deg in 12.6 s)
+        inp, phase, time, _ = self._signal()
+        unwrapped = np.rad2deg(np.unwrap(np.deg2rad(phase.data)))
+        unwrapped += 360.0 * np.concatenate([[0], np.cumsum(np.diff(unwrapped) < 0)])
+        t_pha = np.arange(0.0, time[-1] + 0.4, 0.4)
+        pha = np.interp(t_pha, time, unwrapped)
+        pha[-1] = 2 * pha[-2] - pha[-3]
+        times = inp.time.data[0] + (t_pha * 1e9).astype("timedelta64[ns]")
+        result = pyrf.spin_epoch(inp, pyrf.ts_scalar(times, pha % 360.0))
+        expected = pyrf.spin_epoch(inp, phase)
+        # (the last sample extrapolated with the phase at the times of inp)
+        np.testing.assert_allclose(result.data[:-1], expected.data[:-1], atol=1e-4)
+
+        short = pyrf.ts_scalar(times[:1000], pha[:1000] % 360.0)
+        result = pyrf.spin_epoch(inp, short)
+        inside = inp.time.data <= times[999]
+        self.assertTrue(np.all(np.isnan(result.data[~inside])))
+        self.assertTrue(np.all(np.isfinite(result.data[inside])))
+
+    def test_spin_epoch_f_cut(self):
+        # The high-pass filter of inp first
+        inp, phase, _, _ = self._signal()
+        inp = inp.fillna(0.0)
+        result = pyrf.spin_epoch(inp, phase, f_cut=0.01)
+        expected = pyrf.spin_epoch(pyrf.filt(inp, 0.01, 0.0, 5), phase)
+        np.testing.assert_allclose(result.data, expected.data)
+
+    @data(
+        ([1.0, 2.0], None, {}),  # not a time series
+        (None, [1.0, 2.0], {}),
+        (generate_ts(8.0, 50, tensor_order=2), None, {}),  # a tensor
+        (None, generate_ts(8.0, 50, tensor_order=1), {}),  # a vector phase
+        (None, None, {"n_spins": 0}),
+        (None, None, {"n_spins": 2.5}),
+        (None, None, {"nan_phase": True}),
+    )
+    @unpack
+    def test_spin_epoch_input(self, inp, phase, options):
+        default_inp, default_phase, _, _ = self._signal(n_spin=3)
+        inp = default_inp if inp is None else inp
+        phase = default_phase.copy() if phase is None else phase
+        if options.pop("nan_phase", False):
+            phase.data[3] = np.nan
+        with self.assertRaises((TypeError, ValueError)):
+            pyrf.spin_epoch(inp, phase, **options)
+
+    def test_moving_nanmedian(self):
+        # MATLAB movmedian(a, n, 'omitnan') along the first axis, with and
+        # without NaN, windows longer than the series, ties; the running
+        # median jitted and in Python (the jitted kernel is not covered)
+        rng = np.random.default_rng(1)
+        clean = rng.standard_normal((50, 4, 2))
+        with_nan = clean.copy()
+        with_nan[rng.random(with_nan.shape) < 0.2] = np.nan
+        with_nan[:, 0, 0] = np.nan
+        ties = np.round(clean, 0)
+        module = sys.modules["pyrfu.pyrf.spin_epoch"]
+
+        for arr, n_pts in itertools.product([with_nan, clean, ties], [1, 4, 7, 60]):
+            expected = np.empty_like(arr)
+            for k in range(50):
+                window = arr[max(0, k - n_pts // 2) : k + (n_pts - 1) // 2 + 1]
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", RuntimeWarning)
+                    expected[k] = np.nanmedian(window, axis=0)
+
+            np.testing.assert_allclose(module._moving_nanmedian(arr, n_pts), expected)
+            flat = arr.reshape(50, -1)
+            np.testing.assert_allclose(
+                module._running_nanmedian.py_func(flat, n_pts),
+                expected.reshape(50, -1),
+            )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,51 @@
 Changelog
 =========
 
+2.6.4 (2026-11-26)
+------------------
+
+This release completes the reduced distributions: the projection onto a line
+on a uniform grid and onto a plane on a polar grid, a frame of two
+directions for the reductions and rotations of the distributions, and
+options of the plots of the reduced and angle-angle distributions.
+
+New features
+^^^^^^^^^^^^
+
+- ``mms.reduce`` and ``pyrf.int_sph_dist``: the 1d projection on a cartesian
+  grid (100 speeds from -v_max to v_max by default) and the 2d projection on
+  a polar grid, (time, phi, v) with the velocities of the centres of the
+  bins, each bin divided by its area so that the density is the sum of f
+  times the areas; only the 3d polar projection raises
+  ``NotImplementedError``.
+- ``pyrf.xyz_frame``: the frame of two directions, x along the first and y
+  along the part of the second perpendicular to it (e.g. B and E x B), as a
+  time series of the unit vectors as columns, which ``mms.reduce`` takes;
+  ``mms.vdf_velocity``, ``mms.vdf_rebin``, ``mms.vdf_shift`` and
+  ``mms.vdf_projection``, which take the unit vectors as rows otherwise,
+  recognise it.
+- ``plot.plot_reduced_2d``: polar grids, the contour levels
+  (``contour=``), labelled arrows of directions in the plane (``vectors=``)
+  and the units of the velocities (``v_units=``).
+- ``plot.plot_ang_ang``: directions marked (``vectors=``) at the look
+  directions of the particles moving along and against them.
+- ``pyrf.spin_epoch``: the part of a signal synchronous with the spin, the
+  moving median over spins at each half degree of spin phase (e.g. the
+  disturbance of the electric field by the shadow of the axial booms), with
+  the spin phase on its own times.
+
+Changed behaviour
+^^^^^^^^^^^^^^^^^
+
+- ``plot.plot_reduced_2d`` labels the velocity axes.
+
+Documentation
+^^^^^^^^^^^^^
+
+- ``mms.get_feeps_alleyes``: IDL SPEDAS and pyspedas set the FEEPS samples
+  of quality indicator 3 and 4 to NaN in the omni-directional spectra only,
+  pyrfu in all the products.
+
 2.6.3 (2026-11-24)
 ------------------
 

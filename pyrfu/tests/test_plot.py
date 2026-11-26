@@ -24,6 +24,7 @@ from matplotlib.colors import LogNorm, to_rgba
 from matplotlib.contour import ContourSet
 from matplotlib.dates import date2num
 from matplotlib.image import AxesImage
+from matplotlib.text import Annotation
 from scipy import constants
 
 # Local imports
@@ -569,6 +570,24 @@ class PlotAngAngTestCase(unittest.TestCase):
             np.testing.assert_allclose(self._map(ax), 8.5 * self.angles)
             self.assertEqual(cax.get_ylabel(), "PSD [s$^3$ m$^{-6}$]")
             self.assertEqual(ax.get_title(), "5 keV $\\leq E \\leq$ 10 keV")
+
+    def test_plot_ang_ang_vectors(self):
+        # A circled dot at the look direction of the particles moving along
+        # the vector (opposite to it), a circled cross at the other, labelled
+        _, ax, _ = plot.plot_ang_ang(
+            self.vdf, self.tint, [5.0, 10.0], vectors=[([2.0, 0.0, 0.0], "B")]
+        )
+        markers = [(line.get_marker(), *line.get_xydata()[0]) for line in ax.lines]
+        self.assertEqual(
+            markers,
+            [
+                ("o", 180.0, 90.0),
+                (".", 180.0, 90.0),
+                ("o", 0.0, 90.0),
+                ("x", 0.0, 90.0),
+            ],
+        )
+        self.assertEqual([t.get_text() for t in ax.texts], ["   B", "   B"])
 
     def test_plot_ang_ang_closest_time(self):
         # One time: the closest sample, also after the last sample
@@ -1490,6 +1509,85 @@ class PlotReduced2dTestCase(unittest.TestCase):
         self.assertEqual((image.norm.vmin, image.norm.vmax), (1e-12, 1e-9))
         clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
         np.testing.assert_allclose(clines.levels, np.logspace(-12, -9, 4))
+
+    def test_plot_reduced_2d_polar(self):
+        # A polar grid (phi, v): the bins between their edges (the edge at
+        # 90 deg along y), the contours closed, the limits at the largest
+        # speed edge
+        phi = 45.0 * (np.arange(8) + 0.5)
+        v_edges = np.linspace(0.0, 2e3, 11)
+        v_c = v_edges[:-1] + 100.0
+        f2d = xr.DataArray(
+            1e-9 * np.exp(-np.outer(np.ones(8), v_c**2) / 1e6) + 1e-14,
+            coords={
+                "phi": phi,
+                "v": v_c,
+                "vx": (("phi", "v"), np.outer(np.cos(np.deg2rad(phi)), v_c)),
+                "vy": (("phi", "v"), np.outer(np.sin(np.deg2rad(phi)), v_c)),
+            },
+            dims=["phi", "v"],
+            attrs={"phi_edges": 45.0 * np.arange(9), "v_edges": v_edges},
+        )
+        _, ax = plt.subplots(1)
+        plot.plot_reduced_2d(ax, f2d)
+
+        image = ax.collections[0]
+        np.testing.assert_allclose(
+            np.asarray(image.get_array()).reshape(10, 8), f2d.data.T
+        )
+        coords = image.get_coordinates()
+        self.assertEqual(coords.shape, (11, 9, 2))
+        np.testing.assert_allclose(coords[-1, 2], [0.0, 2e3], atol=1e-9)
+        clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
+        np.testing.assert_allclose(clines.levels, np.logspace(-13, -8, 6))
+        np.testing.assert_allclose(ax.get_xlim(), [-2e3, 2e3])
+        np.testing.assert_allclose(ax.get_ylim(), [-2e3, 2e3])
+
+    def test_plot_reduced_2d_contour(self):
+        # A number of levels over clim, the levels given (sorted), or none
+        # (no lines on the colour bar); a number below 1 raises
+        for contour, levels in [
+            (3, np.logspace(-13, -8, 3)),
+            ([1e-9, 1e-11], [1e-11, 1e-9]),
+            (True, np.logspace(-13, -8, 6)),
+        ]:
+            _, ax = plt.subplots(1)
+            plot.plot_reduced_2d(ax, self.f2d, contour=contour)
+            clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
+            np.testing.assert_allclose(clines.levels, levels)
+
+        _, ax = plt.subplots(1)
+        plot.plot_reduced_2d(ax, self.f2d, contour=False)
+        self.assertFalse(any(isinstance(c, ContourSet) for c in ax.collections))
+        self.assertEqual(len(ax.collections[0].colorbar.lines), 0)
+
+        with self.assertRaises(ValueError):
+            plot.plot_reduced_2d(ax, self.f2d, contour=0)
+
+    def test_plot_reduced_2d_vectors(self):
+        # Arrows from the origin along the in-plane parts of the unit
+        # vectors (60 points long in the plane), labelled at their tips
+        _, ax = plt.subplots(1)
+        plot.plot_reduced_2d(ax, self.f2d, vectors=[([2, 0, 0], "B"), ([0, 1, 1], "V")])
+
+        arrows = [c for c in ax.get_children() if isinstance(c, Annotation)]
+        self.assertEqual([a.get_text() for a in arrows], ["B", "V"])
+        np.testing.assert_allclose(arrows[0].xy, [0.0, 0.0])
+        np.testing.assert_allclose(arrows[0].xyann, [60.0, 0.0])
+        np.testing.assert_allclose(arrows[1].xyann, [0.0, 60.0 / np.sqrt(2)])
+        self.assertEqual(arrows[1].anncoords, "offset points")
+
+    def test_plot_reduced_2d_v_units(self):
+        # Velocities in 10^3 km/s; other units raise
+        _, ax = plt.subplots(1)
+        plot.plot_reduced_2d(ax, self.f2d, v_units="10^3 km/s")
+        np.testing.assert_allclose(ax.get_xlim(), [-3.0, 3.0])
+        np.testing.assert_allclose(ax.get_ylim(), [-2.0, 2.0])
+        self.assertEqual(ax.get_xlabel(), "$v_x$ [10$^3$ km s$^{-1}$]")
+        self.assertEqual(ax.get_ylabel(), "$v_y$ [10$^3$ km s$^{-1}$]")
+
+        with self.assertRaisesRegex(ValueError, "v_units"):
+            plot.plot_reduced_2d(ax, self.f2d, v_units="m/s")
 
     def test_plot_reduced_2d_other_figure(self):
         # The colour bar goes in the figure of the axis, not the current figure
