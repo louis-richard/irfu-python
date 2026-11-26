@@ -10921,27 +10921,31 @@ class SpinEpochTestCase(unittest.TestCase):
             pyrf.spin_epoch(inp, phase, **options)
 
     def test_moving_nanmedian(self):
-        # MATLAB movmedian(a, n, 'omitnan') along the first axis, by blocks
-        # (those without NaN by np.median), with and without NaN
+        # MATLAB movmedian(a, n, 'omitnan') along the first axis, with and
+        # without NaN, windows longer than the series, ties; the running
+        # median jitted and in Python (the jitted kernel is not covered)
         rng = np.random.default_rng(1)
         clean = rng.standard_normal((50, 4, 2))
         with_nan = clean.copy()
         with_nan[rng.random(with_nan.shape) < 0.2] = np.nan
         with_nan[:, 0, 0] = np.nan
+        ties = np.round(clean, 0)
         module = sys.modules["pyrfu.pyrf.spin_epoch"]
 
-        for arr, n_pts, block in itertools.product(
-            [with_nan, clean], [1, 4, 7, 60], [2**24, 8]
-        ):
-            with mock.patch.object(module, "_BLOCK", block):
-                result = module._moving_nanmedian(arr, n_pts)
+        for arr, n_pts in itertools.product([with_nan, clean, ties], [1, 4, 7, 60]):
             expected = np.empty_like(arr)
             for k in range(50):
                 window = arr[max(0, k - n_pts // 2) : k + (n_pts - 1) // 2 + 1]
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", RuntimeWarning)
                     expected[k] = np.nanmedian(window, axis=0)
-            np.testing.assert_allclose(result, expected)
+
+            np.testing.assert_allclose(module._moving_nanmedian(arr, n_pts), expected)
+            flat = arr.reshape(50, -1)
+            np.testing.assert_allclose(
+                module._running_nanmedian.py_func(flat, n_pts),
+                expected.reshape(50, -1),
+            )
 
 
 if __name__ == "__main__":

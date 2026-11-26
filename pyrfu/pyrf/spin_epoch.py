@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Built-in imports
-import warnings
-
 # 3rd party imports
+import numba
 import numpy as np
 import xarray as xr
 from scipy import interpolate
@@ -15,42 +13,68 @@ from .filt import filt
 # Phase bins per degree of the spin epoch (0.5 deg)
 _STEPS_PER_DEG = 2
 
-# Largest block of windows of the moving median (elements), to bound the
-# memory
-_BLOCK = 2**24
+# Implementation notes (numba kernel _running_nanmedian): each series keeps
+# the values of its window without NaN in a sorted buffer, the value leaving
+# the window removed before the one entering is inserted (the buffer holds
+# at most n_pts values), by binary search; the series are independent (one
+# per phase bin and component), in parallel.
+
+
+@numba.njit(cache=True, parallel=True)
+def _running_nanmedian(arr, n_pts):
+    r"""Moving median of each column of `arr` (n, m) over `n_pts` rows, NaN
+    left out, n_pts // 2 rows before and (n_pts - 1) // 2 after, fewer at
+    the ends; NaN without data."""
+
+    n_rows, n_cols = arr.shape
+    before, after = n_pts // 2, (n_pts - 1) // 2
+    out = np.empty((n_rows, n_cols))
+
+    for j in numba.prange(n_cols):
+        buf = np.empty(n_pts)
+        n_buf = 0
+
+        # The rows after the first, up to its window
+        for k in range(min(after, n_rows)):
+            if not np.isnan(arr[k, j]):
+                i = np.searchsorted(buf[:n_buf], arr[k, j])
+                buf[i + 1 : n_buf + 1] = buf[i:n_buf].copy()
+                buf[i] = arr[k, j]
+                n_buf += 1
+
+        for k in range(n_rows):
+            # The row leaving the window, then the row entering it
+            k_out, k_in = k - before - 1, k + after
+
+            if k_out >= 0 and not np.isnan(arr[k_out, j]):
+                i = np.searchsorted(buf[:n_buf], arr[k_out, j])
+                buf[i : n_buf - 1] = buf[i + 1 : n_buf].copy()
+                n_buf -= 1
+
+            if k_in < n_rows and not np.isnan(arr[k_in, j]):
+                i = np.searchsorted(buf[:n_buf], arr[k_in, j])
+                buf[i + 1 : n_buf + 1] = buf[i:n_buf].copy()
+                buf[i] = arr[k_in, j]
+                n_buf += 1
+
+            if n_buf == 0:
+                out[k, j] = np.nan
+            elif n_buf % 2:
+                out[k, j] = buf[n_buf // 2]
+            else:
+                out[k, j] = 0.5 * (buf[n_buf // 2 - 1] + buf[n_buf // 2])
+
+    return out
 
 
 def _moving_nanmedian(arr, n_pts: int):
     r"""Moving median along the first axis over `n_pts` points, NaN left
     out, n_pts // 2 points before and (n_pts - 1) // 2 after, the windows
-    shrinking at the ends (NaN padding)."""
+    shrinking at the ends."""
 
-    before, after = n_pts // 2, (n_pts - 1) // 2
-    padded = np.concatenate(
-        [
-            np.full((before,) + arr.shape[1:], np.nan),
-            arr,
-            np.full((after,) + arr.shape[1:], np.nan),
-        ]
-    )
+    flat = np.ascontiguousarray(arr, dtype=np.float64).reshape(len(arr), -1)
 
-    # Windows as a view (n, ..., n_pts), the medians by blocks of rows
-    windows = np.lib.stride_tricks.sliding_window_view(padded, n_pts, axis=0)
-    step = max(1, _BLOCK // windows[0].size)
-    out = np.empty(arr.shape)
-
-    for i in range(0, len(arr), step):
-        block = windows[i : i + step]
-
-        if np.isnan(block).any():
-            # A window without data is NaN
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", RuntimeWarning)
-                out[i : i + step] = np.nanmedian(block, axis=-1)
-        else:
-            out[i : i + step] = np.median(block, axis=-1)
-
-    return out
+    return _running_nanmedian(flat, n_pts).reshape(arr.shape)
 
 
 def spin_epoch(inp, phase, f_cut: float | None = None, n_spins: int = 31):
