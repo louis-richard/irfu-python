@@ -119,6 +119,7 @@ Filtering and signal processing
    lowpass
    medfilt
    movmean
+   spin_epoch
    mean_field
    ts_convolve
    integrate

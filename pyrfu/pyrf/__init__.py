@@ -96,6 +96,7 @@ from .shock_parameters import shock_parameters
 from .sliding_derivative import sliding_derivative
 from .solid_angle import solid_angle
 from .sph2cart import sph2cart
+from .spin_epoch import spin_epoch
 from .st_diff import st_diff
 from .start import start
 from .struct_func import struct_func
@@ -218,6 +219,7 @@ __all__ = [
     "sliding_derivative",
     "solid_angle",
     "sph2cart",
+    "spin_epoch",
     "st_diff",
     "start",
     "struct_func",

@@ -29,6 +29,10 @@ New features
   and the units of the velocities (``v_units=``).
 - ``plot.plot_ang_ang``: directions marked (``vectors=``) at the look
   directions of the particles moving along and against them.
+- ``pyrf.spin_epoch``: the part of a signal synchronous with the spin, the
+  moving median over spins at each half degree of spin phase (e.g. the
+  disturbance of the electric field by the shadow of the axial booms), with
+  the spin phase on its own times.
 
 Changed behaviour
 ^^^^^^^^^^^^^^^^^

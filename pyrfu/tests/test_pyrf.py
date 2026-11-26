@@ -10793,5 +10793,156 @@ class XyzFrameTestCase(unittest.TestCase):
             pyrf.xyz_frame(x, y, **options)
 
 
+def _spin_epoch_reference(time, pha_deg, data, n_spins):
+    # Literal irf_spin_epoch: interp1 NaN outside, rem, movmedian of n_spins
+    # (n // 2 before, (n - 1) // 2 after, omitnan), linear extrapolation
+    pha = np.rad2deg(np.unwrap(np.deg2rad(pha_deg)))
+    for i_gap in np.flatnonzero(np.diff(pha) < 0):
+        pha[i_gap + 1 :] += 360.0
+    start = pha[0] - np.fmod(pha[0], 360.0)
+    stop = pha[-1] - np.fmod(pha[-1], 360.0) + 360.0
+    grid = np.arange(start, stop + 0.25, 0.5)[:-1]
+    t_grid = interpolate.interp1d(pha, time, bounds_error=False)(grid)
+    f_grid = interpolate.interp1d(time, data, axis=0, bounds_error=False)(t_grid)
+    n_sp = len(grid) // 720
+    out = np.zeros_like(data)
+    ok = np.isfinite(t_grid)
+    for i_c in range(data.shape[1]):
+        f_c = f_grid[:, i_c].reshape(720, n_sp, order="F")
+        model = np.empty_like(f_c)
+        for k in range(n_sp):
+            i_0 = max(0, k - n_spins // 2)
+            i_1 = min(n_sp, k + (n_spins - 1) // 2 + 1)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", RuntimeWarning)
+                model[:, k] = np.nanmedian(f_c[:, i_0:i_1], axis=1)
+        model = model.reshape(-1, order="F")
+        out[:, i_c] = interpolate.interp1d(
+            t_grid[ok], model[ok], fill_value="extrapolate"
+        )(time)
+    return out
+
+
+@ddt
+class SpinEpochTestCase(unittest.TestCase):
+    @staticmethod
+    def _signal(n_spin=40, f_s=8.0, noise=0.05):
+        # Vector signal: spikes at 90 and 270 deg of a 20 s spin (slowly
+        # drifting), a slow variation and noise; a NaN block and a gap
+        rng = np.random.default_rng(3)
+        time = np.arange(0.0, 20.0 * n_spin, 1 / f_s)
+        period = 20.0 * (1.0 + 0.002 * np.sin(2 * np.pi * time / 600.0))
+        pha = (np.cumsum(360.0 / period / f_s) + 37.0) % 360.0
+
+        def spike(p_0, width):
+            return np.exp(-0.5 * (((pha - p_0 + 180.0) % 360.0 - 180.0) / width) ** 2)
+
+        periodic = -2.0 * spike(90.0, 6.0) + 1.5 * spike(270.0, 8.0)
+        slow = 0.5 * np.sin(2 * np.pi * time / 400.0)[:, None] * [1.0, -0.5, 0.2]
+        data = periodic[:, None] * [1.0, 0.6, -0.3] + slow
+        data += noise * rng.standard_normal(data.shape)
+        data[1000:1030] = np.nan
+        keep = np.ones(len(time), dtype=bool)
+        keep[4000:4100] = False
+        times = generate_timeline(f_s, len(time))[keep]
+        inp = pyrf.ts_vec_xyz(times, data[keep])
+        phase = pyrf.ts_scalar(times, pha[keep])
+        return inp, phase, time[keep], periodic[keep]
+
+    @data(31, 30, 5)
+    def test_spin_epoch_reference(self, n_spins):
+        # As irf_spin_epoch: the ends NaN on the phase grid (not the first and
+        # last samples repeated), the window of n_spins spins, NaN left out
+        inp, phase, time, _ = self._signal()
+        result = pyrf.spin_epoch(inp, phase, n_spins=n_spins)
+        expected = _spin_epoch_reference(time, phase.data, inp.data, n_spins)
+        np.testing.assert_allclose(result.data, expected, rtol=0, atol=1e-12)
+        self.assertTrue(np.all(np.isfinite(result.data)))
+        xr.testing.assert_identical(result.time, inp.time)
+
+    def test_spin_epoch_periodic(self):
+        # A signal synchronous with the spin is its own model (to the
+        # interpolation onto the 0.5 deg grid, 0.56 deg per sample at 32 Hz);
+        # a scalar stays a scalar
+        inp, phase, _, periodic = self._signal(f_s=32.0, noise=0.0)
+        scalar = pyrf.ts_scalar(inp.time.data, periodic, attrs={"UNITS": "mV/m"})
+        result = pyrf.spin_epoch(scalar, phase)
+        self.assertEqual(result.shape, scalar.shape)
+        self.assertEqual(result.attrs, scalar.attrs)
+        np.testing.assert_allclose(result.data, periodic, atol=5e-3)
+
+    def test_spin_epoch_phase_times(self):
+        # The phase on its own times (0.4 s, covering inp), as at the times
+        # of inp; NaN beyond the times of a phase that ends before inp (the
+        # unwrapped phase with a turn over the gap, 227 deg in 12.6 s)
+        inp, phase, time, _ = self._signal()
+        unwrapped = np.rad2deg(np.unwrap(np.deg2rad(phase.data)))
+        unwrapped += 360.0 * np.concatenate([[0], np.cumsum(np.diff(unwrapped) < 0)])
+        t_pha = np.arange(0.0, time[-1] + 0.4, 0.4)
+        pha = np.interp(t_pha, time, unwrapped)
+        pha[-1] = 2 * pha[-2] - pha[-3]
+        times = inp.time.data[0] + (t_pha * 1e9).astype("timedelta64[ns]")
+        result = pyrf.spin_epoch(inp, pyrf.ts_scalar(times, pha % 360.0))
+        expected = pyrf.spin_epoch(inp, phase)
+        # (the last sample extrapolated with the phase at the times of inp)
+        np.testing.assert_allclose(result.data[:-1], expected.data[:-1], atol=1e-4)
+
+        short = pyrf.ts_scalar(times[:1000], pha[:1000] % 360.0)
+        result = pyrf.spin_epoch(inp, short)
+        inside = inp.time.data <= times[999]
+        self.assertTrue(np.all(np.isnan(result.data[~inside])))
+        self.assertTrue(np.all(np.isfinite(result.data[inside])))
+
+    def test_spin_epoch_f_cut(self):
+        # The high-pass filter of inp first
+        inp, phase, _, _ = self._signal()
+        inp = inp.fillna(0.0)
+        result = pyrf.spin_epoch(inp, phase, f_cut=0.01)
+        expected = pyrf.spin_epoch(pyrf.filt(inp, 0.01, 0.0, 5), phase)
+        np.testing.assert_allclose(result.data, expected.data)
+
+    @data(
+        ([1.0, 2.0], None, {}),  # not a time series
+        (None, [1.0, 2.0], {}),
+        (generate_ts(8.0, 50, tensor_order=2), None, {}),  # a tensor
+        (None, generate_ts(8.0, 50, tensor_order=1), {}),  # a vector phase
+        (None, None, {"n_spins": 0}),
+        (None, None, {"n_spins": 2.5}),
+        (None, None, {"nan_phase": True}),
+    )
+    @unpack
+    def test_spin_epoch_input(self, inp, phase, options):
+        default_inp, default_phase, _, _ = self._signal(n_spin=3)
+        inp = default_inp if inp is None else inp
+        phase = default_phase.copy() if phase is None else phase
+        if options.pop("nan_phase", False):
+            phase.data[3] = np.nan
+        with self.assertRaises((TypeError, ValueError)):
+            pyrf.spin_epoch(inp, phase, **options)
+
+    def test_moving_nanmedian(self):
+        # MATLAB movmedian(a, n, 'omitnan') along the first axis, by blocks
+        # (those without NaN by np.median), with and without NaN
+        rng = np.random.default_rng(1)
+        clean = rng.standard_normal((50, 4, 2))
+        with_nan = clean.copy()
+        with_nan[rng.random(with_nan.shape) < 0.2] = np.nan
+        with_nan[:, 0, 0] = np.nan
+        module = sys.modules["pyrfu.pyrf.spin_epoch"]
+
+        for arr, n_pts, block in itertools.product(
+            [with_nan, clean], [1, 4, 7, 60], [2**24, 8]
+        ):
+            with mock.patch.object(module, "_BLOCK", block):
+                result = module._moving_nanmedian(arr, n_pts)
+            expected = np.empty_like(arr)
+            for k in range(50):
+                window = arr[max(0, k - n_pts // 2) : k + (n_pts - 1) // 2 + 1]
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", RuntimeWarning)
+                    expected[k] = np.nanmedian(window, axis=0)
+            np.testing.assert_allclose(result, expected)
+
+
 if __name__ == "__main__":
     unittest.main()
