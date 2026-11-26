@@ -190,7 +190,7 @@ html_theme_options = {
         },
         {
             "name": "Zenodo DOI",
-            "url": "https://doi.org/10.5281/zenodo.10678695",
+            "url": "https://doi.org/10.5281/zenodo.10678694",
             "icon": "fa-solid fa-quote-right",
         },
         {

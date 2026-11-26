@@ -71,8 +71,8 @@ pyrfu
    :target: https://github.com/louis-richard/irfu-python/actions/workflows/tests.yml
    :alt: Continuous integration
 
-.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10678695.svg
-   :target: https://doi.org/10.5281/zenodo.10678695
+.. |DOI| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10678694.svg
+   :target: https://doi.org/10.5281/zenodo.10678694
    :alt: DOI
 
 .. |License| image:: https://img.shields.io/pypi/l/pyrfu
@@ -213,7 +213,7 @@ Citing pyrfu
 ------------
 
 If you use ``pyrfu`` in your research, please cite it using its Zenodo DOI
-`10.5281/zenodo.10678695 <https://doi.org/10.5281/zenodo.10678695>`_ (the
+`10.5281/zenodo.10678694 <https://doi.org/10.5281/zenodo.10678694>`_ (the
 Zenodo page also lists the DOI of each release):
 
 .. code-block:: bibtex
@@ -225,8 +225,8 @@ Zenodo page also lists the DOI of each release):
                    for Advanced In-Situ Space Plasma Analysis},
       year      = {2024},
       publisher = {Zenodo},
-      doi       = {10.5281/zenodo.10678695},
-      url       = {https://doi.org/10.5281/zenodo.10678695}
+      doi       = {10.5281/zenodo.10678694},
+      url       = {https://doi.org/10.5281/zenodo.10678694}
     }
 
 ``pyrfu`` was developed at the Swedish Institute of Space Physics (IRF) in

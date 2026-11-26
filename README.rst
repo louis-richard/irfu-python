@@ -159,7 +159,7 @@ Reference:
     Richard, L., Khotyaintsev, Y. V., Vaivads, A., Graham, D. B., Norgren, C., &
     Johlander, A. (2024). *Python RymdFysik Utilities (PyRFU): An open-source
     Python package for advanced in-situ space plasma analysis* [Software]. Zenodo.
-    https://doi.org/10.5281/zenodo.10678695
+    https://doi.org/10.5281/zenodo.10678694
 
 BibTeX:
 
@@ -172,8 +172,8 @@ BibTeX:
                    for Advanced In-Situ Space Plasma Analysis},
       year      = {2024},
       publisher = {Zenodo},
-      doi       = {10.5281/zenodo.10678695},
-      url       = {https://doi.org/10.5281/zenodo.10678695}
+      doi       = {10.5281/zenodo.10678694},
+      url       = {https://doi.org/10.5281/zenodo.10678694}
     }
 
 The same metadata is in ``CITATION.cff`` (GitHub's "Cite this repository").
