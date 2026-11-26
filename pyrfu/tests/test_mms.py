@@ -11023,7 +11023,6 @@ class ReduceTestCase(unittest.TestCase):
         (True, "electrons", np.eye(3), "1d", "pol"),
         (False, "electrons", generate_ts(64.0, 42, tensor_order=2), "1d", "pol"),
         (False, "ions", np.eye(3), "1d", "pol"),
-        # (False, "ions", np.eye(3), "2d", "pol"), mc_pol_2d NotImplementedError
     )
     @unpack
     def test_reduce_output(self, energy01, species, xyz, dim, base):
@@ -11052,7 +11051,7 @@ class ReduceTestCase(unittest.TestCase):
         ("ions", "s^3/m^6", np.eye(2), "1d", "pol", {}),
         ("I AM GROOT", "s^3/m^6", np.eye(3), "1d", "pol", {}),
         ("ions", "bazinga", np.eye(3), "1d", "pol", {}),
-        ("ions", "s^3/m^6", np.eye(3), "2d", "pol", {}),
+        ("ions", "s^3/m^6", np.eye(3), "3d", "pol", {}),
         ("ions", "s^3/m^6", np.eye(3), "1d", "pol", {"lower_e_lim": generate_data(42)}),
     )
     @unpack
@@ -11061,6 +11060,60 @@ class ReduceTestCase(unittest.TestCase):
         vdf.data.attrs["UNITS"] = units
         with self.assertRaises((TypeError, ValueError, NotImplementedError)):
             mms.reduce(vdf, xyz, dim, base, **options)
+
+    def test_reduce_polar_2d(self):
+        # (time, phi, v): the azimuths (deg) and speeds (km/s) of the bins,
+        # the velocities of their centres, the edges in the attributes; as
+        # many azimuths as the instrument over [0, 360) and the channel speeds
+        # by default; on grids
+        # covering all the particles, the same density as the 2d cartesian
+        # projection (both conserve it exactly)
+        vdf = generate_vdf(64.0, 3, [8, 8, 4], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+        options = {"n_mc": 5, "verbose": False, "seed": 4}
+
+        result = mms.reduce(vdf, np.eye(3), "2d", "pol", **options)
+        self.assertEqual(result.dims, ("time", "phi", "v"))
+        self.assertEqual(result.shape, (3, 8, 8))
+        np.testing.assert_allclose(result.phi.data, 22.5 + 45.0 * np.arange(8))
+        np.testing.assert_allclose(result.attrs["phi_edges"], 45.0 * np.arange(9))
+        speed = np.sqrt(
+            2 * constants.electron_volt * vdf.energy.data[0] / constants.proton_mass
+        )
+        np.testing.assert_allclose(result.v.data, speed / 1e3, rtol=1e-5)
+        np.testing.assert_allclose(
+            result.vx.data, np.outer(np.cos(np.deg2rad(result.phi.data)), result.v.data)
+        )
+        self.assertEqual(result.attrs["UNITS"], "s^2/m^5")
+        self.assertEqual(result.phi.attrs["UNITS"], "deg")
+        self.assertEqual(result.vy.attrs["UNITS"], "km/s")
+
+        v_max = 1.5 * speed[-1]
+        v_edges = np.linspace(0.0, v_max, 41)
+        polar = mms.reduce(vdf, np.eye(3), "2d", "pol", vg_edges=v_edges, **options)
+        cart = mms.reduce(
+            vdf,
+            np.eye(3),
+            "2d",
+            "cart",
+            vg_edges=np.linspace(-v_max, v_max, 81),
+            **options,
+        )
+        area = 0.5 * np.diff(v_edges**2) * 2 * np.pi / 8
+        n_polar = np.sum(polar.data * area, axis=(1, 2))
+        n_cart = np.sum(cart.data, axis=(1, 2)) * (2 * v_max / 80) ** 2
+        np.testing.assert_allclose(n_polar, n_cart, rtol=1e-9)
+        self.assertTrue(np.all(n_polar > 0))
+
+    def test_reduce_cart_1d(self):
+        # The 1d projection on 100 speeds from -v_max to v_max by default
+        vdf = generate_vdf(64.0, 3, [8, 8, 4], energy01=False, species="ions")
+        vdf = vdf.assign(energy=(vdf.energy + 1.0) * 100.0)
+        result = mms.reduce(vdf, np.eye(3), "1d", "cart", n_mc=5, verbose=False)
+        self.assertEqual(result.dims, ("time", "vx"))
+        self.assertEqual(result.shape, (3, 100))
+        np.testing.assert_allclose(result.vx.data, -result.vx.data[::-1])
+        self.assertEqual(result.attrs["UNITS"], "s/m^4")
 
     def test_reduce_tint(self):
         # The distribution clipped to tint (the times of tint in the forms of

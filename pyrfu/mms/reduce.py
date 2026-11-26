@@ -98,7 +98,8 @@ def reduce(
     verbose=True,
     seed: int | None = None,
 ):
-    r"""Reduces (integrates) 3D distribution to 1D (line) or 2D (plane).
+    r"""Reduces (integrates) 3D distribution to 1D (line), 2D (plane) or 3D
+    (box).
 
     Parameters
     ----------
@@ -116,8 +117,9 @@ def reduce(
         Dimension of the reduced distribution: a line ("1d", default), a plane
         ("2d") or a box ("3d").
     base : {"pol", "cart"}, Optional
-        Base of the projection: polar "pol" (default, for "1d") or cartesian
-        "cart" (for "2d" and "3d"). dim and base are case-insensitive.
+        Base of the projection grid: polar "pol" (default; "1d" or "2d") or
+        cartesian "cart" ("1d", "2d" or "3d"). In 1d, the grids differ only
+        by default (see Notes). dim and base are case-insensitive.
     sc_pot : xarray.DataArray, Optional
         Spacecraft potential V (V), 0 V by default. The energies are those at
         infinity, E + q V for a charge q (energy conservation): the electrons
@@ -137,8 +139,10 @@ def reduce(
         Speeds (m/s) of the grid, or the edges of its bins, instead of the
         default one (see Notes).
     phig : array_like, Optional
-        Azimuthal grid of the projection plane (rad). Default is the
-        azimuths of the instrument bins.
+        Azimuths (rad) of the centres of the bins of the 2d polar grid, from
+        x in the plane, equally spaced over at most a turn. Default is as
+        many bins as the instrument has azimuths, over [0, 2 pi) (32 for
+        FPI).
     tint : array_like, Optional
         Time interval of the distributions to reduce. Default is all.
     n_mc, weight, v_int, a_int : Optional
@@ -156,7 +160,12 @@ def reduce(
     -------
     out : xarray.DataArray
         Time series of reduced velocity distribution function, in SI units
-        (``UNITS`` s/m^4 for 1d, s^2/m^5 for 2d), on velocities in km/s: of
+        (``UNITS`` s/m^4 for 1d, s^2/m^5 for 2d, s^3/m^6 for 3d), on
+        velocities in km/s, (time, vx), (time, vx, vy) or (time, vx, vy, vz);
+        the 2d polar one is (time, phi, v), on the azimuths ``phi`` from x
+        (deg) and the speeds ``v`` (km/s) of the bins, with the coordinates
+        ``vx`` and ``vy`` (phi, v) of their centres (km/s) and the edges
+        ``phi_edges`` (deg) and ``v_edges`` (km/s) in the attributes: of
         the relativistic phase-space density (``relativistic`` attribute), at
         the relativistic speeds. For the FPI, HPCA and EIS skymaps, whose
         phase-space density is the non-relativistic one, it is that of the
@@ -183,7 +192,9 @@ def reduce(
 
     The default polar grid (``"pol"``, without ``vg`` or ``vg_edges``) is
     made of the speeds of the channels at the first time computed, corrected
-    for the spacecraft potential, as in irfu-matlab. For an attracted
+    for the spacecraft potential, as in irfu-matlab: -v and v in 1d, v in 2d
+    (edged halfway between them). The default cartesian grid is 100 speeds
+    from -v_max to v_max, the upper edge of the top channel. For an attracted
     species (the electrons with a positive `sc_pot`), the channels below
     its potential energy are then at 0 eV, so that the 1d grid has several
     speeds of 0 (+0 and -0, not unique) where the distribution is zero;
@@ -365,9 +376,16 @@ def reduce(
             else:
                 n_vg = n_en
 
-    # Initialize output arrays
-    f_g = np.zeros([n_t, *[n_vg] * ndim])
+    # Initialize output arrays: (time, phi, v) for the 2d polar grid
+    polar_2d = base == "pol" and ndim == 2
+
+    if polar_2d:
+        f_g = np.zeros([n_t, len(np.atleast_1d(phi_grid)), n_vg])
+    else:
+        f_g = np.zeros([n_t, *[n_vg] * ndim])
+
     all_v = {f"v{chr(120 + i)}": np.zeros((n_t, n_vg)) for i in range(ndim)}
+    pst_grid: dict = {}
 
     # Time steps computed (those without any channel above the threshold
     # energy are NaN)
@@ -472,8 +490,11 @@ def reduce(
 
         f_g[i_t, ...] = tmpst["f"]
 
-        for i in range(ndim):
-            all_v[f"v{chr(120 + i)}"][i_t, :] = tmpst[f"v{chr(120 + i)}"] / 1e3  # km/s
+        if polar_2d:
+            pst_grid = pst_grid or tmpst
+        else:
+            for i in range(ndim):
+                all_v[f"v{chr(120 + i)}"][i_t, :] = tmpst[f"v{chr(120 + i)}"] / 1e3
 
         computed[i_t] = True
 
@@ -482,6 +503,9 @@ def reduce(
             "no energy channel above the spacecraft potential and lower_e_lim at "
             "any time"
         )
+
+    if polar_2d:
+        return _polar_2d(vdf_time.data, f_g, pst_grid)
 
     # Build output as a time series with dimensions:
     #   - (time x vx) for 1D reduced distribution
@@ -506,5 +530,35 @@ def reduce(
 
     for v_dim in dims[1:]:
         out[v_dim].attrs["UNITS"] = "km/s"
+
+    return out
+
+
+def _polar_2d(time, f_g, pst):
+    r"""Time series (time, phi, v) of a 2d polar reduced distribution, on the
+    grid of the first time computed (`pst`): azimuths in degrees, speeds and
+    the velocities of the centres of the bins in km/s."""
+
+    out = xr.DataArray(
+        f_g,
+        coords={
+            "time": time,
+            "phi": np.rad2deg(pst["phi"]),
+            "v": pst["v"] / 1e3,
+            "vx": (("phi", "v"), pst["vx"] / 1e3),
+            "vy": (("phi", "v"), pst["vy"] / 1e3),
+        },
+        dims=["time", "phi", "v"],
+        attrs={
+            "UNITS": "s^2/m^5",
+            "relativistic": True,
+            "phi_edges": np.rad2deg(pst["phi_edges"]),
+            "v_edges": pst["v_edges"] / 1e3,
+        },
+    )
+    out.phi.attrs["UNITS"] = "deg"
+
+    for key in ["v", "vx", "vy"]:
+        out[key].attrs["UNITS"] = "km/s"
 
     return out

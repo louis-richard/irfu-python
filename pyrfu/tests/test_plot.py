@@ -1491,6 +1491,39 @@ class PlotReduced2dTestCase(unittest.TestCase):
         clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
         np.testing.assert_allclose(clines.levels, np.logspace(-12, -9, 4))
 
+    def test_plot_reduced_2d_polar(self):
+        # A polar grid (phi, v): the bins between their edges (the edge at
+        # 90 deg along y), the contours closed, the limits at the largest
+        # speed edge
+        phi = 45.0 * (np.arange(8) + 0.5)
+        v_edges = np.linspace(0.0, 2e3, 11)
+        v_c = v_edges[:-1] + 100.0
+        f2d = xr.DataArray(
+            1e-9 * np.exp(-np.outer(np.ones(8), v_c**2) / 1e6) + 1e-14,
+            coords={
+                "phi": phi,
+                "v": v_c,
+                "vx": (("phi", "v"), np.outer(np.cos(np.deg2rad(phi)), v_c)),
+                "vy": (("phi", "v"), np.outer(np.sin(np.deg2rad(phi)), v_c)),
+            },
+            dims=["phi", "v"],
+            attrs={"phi_edges": 45.0 * np.arange(9), "v_edges": v_edges},
+        )
+        _, ax = plt.subplots(1)
+        plot.plot_reduced_2d(ax, f2d)
+
+        image = ax.collections[0]
+        np.testing.assert_allclose(
+            np.asarray(image.get_array()).reshape(10, 8), f2d.data.T
+        )
+        coords = image.get_coordinates()
+        self.assertEqual(coords.shape, (11, 9, 2))
+        np.testing.assert_allclose(coords[-1, 2], [0.0, 2e3], atol=1e-9)
+        clines = [c for c in ax.collections if isinstance(c, ContourSet)][0]
+        np.testing.assert_allclose(clines.levels, np.logspace(-13, -8, 6))
+        np.testing.assert_allclose(ax.get_xlim(), [-2e3, 2e3])
+        np.testing.assert_allclose(ax.get_ylim(), [-2e3, 2e3])
+
     def test_plot_reduced_2d_other_figure(self):
         # The colour bar goes in the figure of the axis, not the current figure
         f, ax = plt.subplots(1)

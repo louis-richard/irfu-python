@@ -54,6 +54,9 @@ from . import generate_data, generate_timeline, generate_ts, generate_vdf
 # No seed for the Monte-Carlo kernel of int_sph_dist (numba's generator as it is)
 _NO_SEEDS = np.zeros(0, dtype=np.int64)
 
+# No azimuths of a 2d polar grid (the other grids), for the kernel
+_NO_POLAR = (np.zeros(0), 0.0)
+
 
 class AngTestCase(unittest.TestCase):
     def test_ang_vectors(self):
@@ -5011,9 +5014,7 @@ class IncrementsTestCase(unittest.TestCase):
 @ddt
 class IntSphDistTestCase(unittest.TestCase):
     @data(
-        {"projection_base": "pol", "projection_dim": "2d"},
         {"projection_base": "pol", "projection_dim": "3d"},
-        {"projection_base": "cart", "projection_dim": "1d"},
         {"projection_base": "polar", "projection_dim": "1d"},
     )
     def test_int_sph_dist_input(self, value):
@@ -5145,7 +5146,7 @@ class IntSphDistTestCase(unittest.TestCase):
             v_step = 0.0
 
         result = _mc_project(
-            vdf, *args, v_step, n_dim, _NO_SEEDS, numba.get_num_threads()
+            vdf, *args, v_step, n_dim, _NO_SEEDS, numba.get_num_threads(), *_NO_POLAR
         )
         self.assertEqual(result.shape, (101**n_dim,))
         self.assertGreater(np.count_nonzero(result), 0)
@@ -5154,10 +5155,33 @@ class IntSphDistTestCase(unittest.TestCase):
         # (the pure-Python kernel, as the jitted one)
         seeds = np.arange(len(vdf), dtype=np.int64) + 7
         seeded = [
-            _mc_project.__wrapped__(vdf, *args, v_step, n_dim, seeds, n_chunks)
+            _mc_project.__wrapped__(
+                vdf, *args, v_step, n_dim, seeds, n_chunks, *_NO_POLAR
+            )
             for n_chunks in [1, 3]
         ]
         np.testing.assert_allclose(seeded[1], seeded[0], rtol=1e-12)
+
+    def test_mc_project_polar(self):
+        # The 2d polar grid (azimuth, speed) flattened, the pure-Python
+        # kernel as the jitted one (one particle per bin, at its centre: no
+        # random draws); the particles beyond the grid (above 0.8, azimuths
+        # of the second half turn) dropped
+        vdf, args, _ = self._kernel_args(1)
+        edges = np.linspace(0.0, 0.8, 41)
+        phig_edges = np.linspace(0.0, np.pi, 5)
+        d_a = 0.5 * np.diff(edges**2) * np.pi / 4
+        n_mc = np.ones(vdf.shape, dtype=np.int64)
+        args = args[:7] + (edges, d_a) + args[9:11] + (n_mc,) + args[12:]
+        polar = (phig_edges, np.pi / 4)
+
+        results = [
+            func(vdf, *args, _uniform_step(edges), 2, _NO_SEEDS, 1, *polar)
+            for func in [_mc_project.__wrapped__, _mc_project]
+        ]
+        self.assertEqual(results[0].shape, (4 * 40,))
+        np.testing.assert_allclose(results[1], results[0], rtol=1e-12)
+        self.assertGreater(np.count_nonzero(results[0]), 0)
 
     def test_grid_index(self):
         # MATLAB's discretize: an interior edge in the upper bin, the last
@@ -5194,7 +5218,9 @@ class IntSphDistTestCase(unittest.TestCase):
         for v_step in [_uniform_step(edges), 0.0]:
             random.seed(0)
             results.append(
-                _mc_project.__wrapped__(vdf, *args, v_step, n_dim, _NO_SEEDS, 1)
+                _mc_project.__wrapped__(
+                    vdf, *args, v_step, n_dim, _NO_SEEDS, 1, *_NO_POLAR
+                )
             )
 
         self.assertGreater(_uniform_step(edges), 0.0)
@@ -5223,33 +5249,128 @@ class IntSphDistTestCase(unittest.TestCase):
                 self.assertGreater(result["f"].max(), 0.0)
 
     def test_int_sph_dist_projections(self):
-        # 1d polar (also with an azimuthal grid and projection_dim "1d"), 2d
-        # and 3d cartesian; the 2d and 3d polar and the 1d cartesian raise
-        # NotImplementedError
+        # 1d polar (also with an azimuthal grid and projection_dim "1d") and
+        # cartesian, 2d polar (azimuth, speed) and cartesian, 3d cartesian;
+        # the 3d polar raises NotImplementedError
         rng = np.random.default_rng(1)
         vdf = rng.random((8, 8, 4))
         speed = np.geomspace(1e5, 3e6, 8)
         phi = np.deg2rad(22.5 + 45 * np.arange(8))
         theta = np.deg2rad(-67.5 + 45 * np.arange(4))
         grid = np.linspace(-3e6, 3e6, 13)
-        phi_grid = np.linspace(0, 2 * np.pi, 9)
+        phi_grid = np.deg2rad(22.5 + 45 * np.arange(8))
 
         for kwargs, shape in [
             ({}, (13,)),
             ({"projection_dim": "1d"}, (13,)),
+            ({"projection_base": "cart", "projection_dim": "1d"}, (13,)),
+            ({"projection_dim": "2d"}, (8, 13)),
             ({"projection_base": "cart", "projection_dim": "2d"}, (13, 13)),
             ({"projection_base": "cart", "projection_dim": "3d"}, (13, 13, 13)),
         ]:
             out = pyrf.int_sph_dist(vdf, speed, phi, theta, grid, phi_grid, **kwargs)
             self.assertEqual(out["f"].shape, shape)
 
-        for kwargs in [
-            {"projection_dim": "2d"},
-            {"projection_dim": "3d"},
-            {"projection_base": "cart", "projection_dim": "1d"},
+        with self.assertRaises(NotImplementedError):
+            pyrf.int_sph_dist(
+                vdf, speed, phi, theta, grid, phi_grid, projection_dim="3d"
+            )
+
+    def test_int_sph_dist_polar_2d(self):
+        # Density and bulk velocity of a drifting Maxwellian on the 2d polar
+        # grid, the areas (v_2^2 - v_1^2) dphi / 2 of its bins; the
+        # projection conserves sum(f dtau) exactly on a grid covering all the
+        # particles, also centred on 0 (azimuths wrapped from the first edge)
+        # and with a lower edge below 0 (the area from 0)
+        v_d = np.array([300e3, -200e3, 100e3])
+        vdf, _, speed, phi, theta = self._maxwellian(v_d)
+        d_phi_g = 2 * np.pi / 32
+        v_edges = _speed_bin_edges(speed)
+        dtau = speed[:, None, None] ** 2 * np.diff(v_edges)[:, None, None]
+        dtau = dtau * np.cos(theta) * np.deg2rad(11.25) ** 2
+
+        for phi_grid, edges in [
+            (d_phi_g * (np.arange(32) + 0.5), np.linspace(0.0, 1500e3, 151)),
+            (d_phi_g * np.arange(32), np.linspace(-5e3, 1.01 * v_edges[-1], 151)),
         ]:
-            with self.assertRaises(NotImplementedError):
-                pyrf.int_sph_dist(vdf, speed, phi, theta, grid, phi_grid, **kwargs)
+            out = pyrf.int_sph_dist(
+                vdf,
+                speed,
+                phi,
+                theta,
+                None,
+                phi_grid,
+                projection_dim="2d",
+                velocity_grid_edges=edges,
+                n_mc=20,
+                seed=1,
+            )
+            self.assertEqual(out["f"].shape, (32, 150))
+            np.testing.assert_allclose(
+                out["phi_edges"][[0, -1]] - phi_grid[0],
+                [-d_phi_g / 2, 2 * np.pi - d_phi_g / 2],
+            )
+            area = 0.5 * np.diff(np.clip(edges, 0.0, None) ** 2) * d_phi_g
+            n = np.sum(out["f"] * area)
+
+            if edges[0] < 0:
+                self.assertAlmostEqual(n / np.sum(vdf * dtau), 1.0, delta=1e-9)
+            else:
+                self.assertAlmostEqual(n / 1e6, 1.0, delta=0.01)
+                v_xy = [np.sum(out[k] * out["f"] * area) / n for k in ["vx", "vy"]]
+                np.testing.assert_allclose(
+                    np.array(v_xy) / 1e3, v_d[:2] / 1e3, atol=3.0
+                )
+
+    def test_int_sph_dist_cart_1d(self):
+        # The 1d projection on a cartesian grid is that on the same polar grid
+        vdf, _, speed, phi, theta = self._maxwellian()
+        edges = np.linspace(-1500e3, 1500e3, 151)
+        out = [
+            pyrf.int_sph_dist(
+                vdf,
+                speed,
+                phi,
+                theta,
+                None,
+                None,
+                projection_base=base,
+                velocity_grid_edges=edges,
+                n_mc=5,
+                seed=2,
+            )
+            for base in ["cart", "pol"]
+        ]
+        np.testing.assert_array_equal(out[0]["f"], out[1]["f"])
+        self.assertGreater(out[0]["f"].max(), 0.0)
+
+    @data(
+        np.deg2rad([0.0, 10.0, 30.0]),  # not equally spaced
+        np.deg2rad([30.0, 20.0, 10.0]),  # decreasing
+        np.linspace(0, 2 * np.pi, 33),  # more than a turn
+    )
+    def test_int_sph_dist_polar_2d_phi_grid(self, phi_grid):
+        vdf, _, speed, phi, theta = self._maxwellian()
+        with self.assertRaisesRegex(ValueError, "phi_grid"):
+            pyrf.int_sph_dist(
+                vdf, speed, phi, theta, speed, phi_grid, projection_dim="2d"
+            )
+
+    def test_int_sph_dist_polar_2d_one_azimuth(self):
+        # A single azimuth is a turn: the projection onto the speed in the plane
+        vdf, _, speed, phi, theta = self._maxwellian()
+        out = pyrf.int_sph_dist(
+            vdf,
+            speed,
+            phi,
+            theta,
+            speed,
+            np.array([np.pi]),
+            projection_dim="2d",
+            n_mc=2,
+        )
+        self.assertEqual(out["f"].shape, (1, len(speed)))
+        np.testing.assert_allclose(out["phi_edges"], [0.0, 2 * np.pi])
 
     @staticmethod
     def _maxwellian(v_d=(300e3, -200e3, 100e3), t_ev=1000.0):
@@ -5415,7 +5536,7 @@ class IntSphDistTestCase(unittest.TestCase):
 
         shape = (len(k_args[8]) - 1,) * n_dim
         results = [
-            func(*k_args, step, n_dim, _NO_SEEDS, n_threads).reshape(shape)
+            func(*k_args, step, n_dim, _NO_SEEDS, n_threads, *_NO_POLAR).reshape(shape)
             for func in [_mc_project.__wrapped__, _mc_project]
             for step in steps
         ]
