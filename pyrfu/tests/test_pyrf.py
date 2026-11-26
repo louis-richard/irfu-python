@@ -10735,5 +10735,63 @@ class EbspPhysicsTestCase(unittest.TestCase):
         np.testing.assert_allclose(ee, ee_ref, rtol=0, atol=1e-12 * np.nanmax(ee_ref))
 
 
+@ddt
+class XyzFrameTestCase(unittest.TestCase):
+    def test_xyz_frame(self):
+        # x along x, y along the part of y perpendicular to x, z = x cross y:
+        # orthonormal and direct, the unit vectors as columns, at the times of
+        # x (y resampled), marked for vdf_shift and vdf_projection
+        b_xyz = generate_ts(64.0, 42, tensor_order=1)
+        e_xyz = generate_ts(16.0, 12, tensor_order=1)
+        out = pyrf.xyz_frame(b_xyz, e_xyz)
+
+        np.testing.assert_array_equal(out.time.data, b_xyz.time.data)
+        self.assertEqual(out.shape, (42, 3, 3))
+        self.assertEqual(out.attrs["xyz"], "columns")
+        mat = out.data
+        np.testing.assert_allclose(
+            np.einsum("tki,tkj->tij", mat, mat),
+            np.tile(np.eye(3), (42, 1, 1)),
+            atol=1e-12,
+        )
+        np.testing.assert_allclose(np.linalg.det(mat), 1.0)
+        b_res = pyrf.resample(b_xyz, b_xyz).data.astype(np.float64)
+        b_hat = b_res / np.linalg.norm(b_res, axis=1, keepdims=True)
+        np.testing.assert_allclose(mat[:, :, 0], b_hat)
+        e_res = pyrf.resample(e_xyz, b_xyz).data.astype(np.float64)
+        e_perp = e_res - np.sum(e_res * b_hat, axis=1, keepdims=True) * b_hat
+        np.testing.assert_allclose(
+            np.sum(mat[:, :, 1] * e_perp, axis=1), np.linalg.norm(e_perp, axis=1)
+        )
+
+    def test_xyz_frame_vectors(self):
+        # 3-vectors: at the times of the time series or of `time` (a
+        # distribution); y along x: NaN (no plane)
+        b_xyz = generate_ts(64.0, 5, tensor_order=1)
+        out = pyrf.xyz_frame([0.0, 0.0, 2.0], b_xyz)
+        np.testing.assert_array_equal(out.time.data, b_xyz.time.data)
+        np.testing.assert_allclose(out.data[:, :, 0], np.tile([0.0, 0.0, 1.0], (5, 1)))
+
+        vdf = generate_vdf(64.0, 3, [4, 4, 2], energy01=False, species="ions")
+        out = pyrf.xyz_frame([1.0, 0.0, 0.0], [1.0, 1.0, 0.0], time=vdf)
+        np.testing.assert_array_equal(out.time.data, vdf.time.data)
+        np.testing.assert_allclose(out.data[0], np.eye(3), atol=1e-15)
+
+        b_xyz.data[2] = [0.0, 0.0, 3.0]
+        out = pyrf.xyz_frame([0.0, 0.0, 1.0], b_xyz)
+        self.assertTrue(np.all(np.isnan(out.data[2, :, 1:])))
+        self.assertTrue(np.all(np.isfinite(out.data[[0, 1, 3, 4]])))
+
+    @data(
+        ([0.0, 0.0, 1.0], [1.0, 0.0, 0.0], {}),  # no time series nor time
+        ([0.0, 1.0], [1.0, 0.0, 0.0], {"time": generate_ts(64.0, 5)}),
+        (generate_ts(64.0, 5), [1.0, 0.0, 0.0], {}),  # scalar series
+    )
+    @unpack
+    def test_xyz_frame_input(self, x, y, options):
+        with self.assertRaises(ValueError):
+            pyrf.xyz_frame(x, y, **options)
+
+
 if __name__ == "__main__":
     unittest.main()

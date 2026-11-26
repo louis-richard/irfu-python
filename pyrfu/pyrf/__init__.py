@@ -119,6 +119,7 @@ from .wave_fft import wave_fft
 from .wavelet import wavelet
 from .wavepolarize_means import wavepolarize_means
 from .waverage import waverage
+from .xyz_frame import xyz_frame
 
 __all__ = [
     "ang",
@@ -240,4 +241,5 @@ __all__ = [
     "wavelet",
     "wavepolarize_means",
     "waverage",
+    "xyz_frame",
 ]

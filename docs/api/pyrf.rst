@@ -100,6 +100,7 @@ Coordinate systems
    gse2gsm
    convert_fac
    new_xyz
+   xyz_frame
    mva
    mva_gui
    mean

@@ -101,7 +101,7 @@ def _shift(
     no_data = _no_data(f_si)
     f_si = np.nan_to_num(f_si)
     v_frame = _frame_velocity(vdf, v_frame)
-    rotations = _rotation_matrices(rotation, len(vdf.time))
+    rotations = _rotation_matrices(rotation, vdf.time)
     mass = _mass(vdf)
     rng = np.random.default_rng(random_state)
 
@@ -234,7 +234,9 @@ def vdf_shift(
         3x3 matrix, or (time, 3, 3) matrices, whose rows are the new unit
         vectors in the coordinate system of `vdf`, e.g. [e_perp1, e_perp2, b]
         so that theta is the pitch angle of the look direction (180 degrees
-        minus that of the particles). Default is no rotation.
+        minus that of the particles). Default is no rotation. A time
+        series of `pyrfu.pyrf.xyz_frame` (its unit vectors as columns) is
+        resampled to the times of `vdf`.
     n_mc : int, Optional
         Number of Monte-Carlo particles per bin with data. Default is 100.
     grid : dict, Optional

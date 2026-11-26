@@ -12816,6 +12816,21 @@ class VdfVelocityTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             mms.vdf_velocity(vdf, rotation=np.eye(2))
 
+    def test_vdf_velocity_xyz_frame(self):
+        # A time series of pyrf.xyz_frame (columns), resampled to the times
+        # of vdf, as the matrices of its rows
+        vdf = self._vdf("ions")
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        xyz = pyrf.xyz_frame(
+            pyrf.ts_vec_xyz(vdf.time.data[[0, -1]], np.tile([0.0, 0.0, 1.0], (2, 1))),
+            [1.0, 0.0, 0.0],
+        )
+        expected = mms.vdf_velocity(vdf, rotation=rotation)
+        result = mms.vdf_velocity(vdf, rotation=xyz)
+
+        for name in ["vx", "vy", "vz"]:
+            np.testing.assert_allclose(result[name].data, expected[name].data)
+
     def test_vdf_velocity_sc_pot(self):
         # Ions gain and electrons lose e V, as irfu-matlab PDist.v
         for species, sign in [("ions", 1.0), ("electrons", -1.0)]:
@@ -13952,6 +13967,16 @@ class VdfShiftTestCase(unittest.TestCase):
             rtol=1e-12,
         )
 
+    def test_vdf_shift_xyz_frame(self):
+        # A time series of pyrf.xyz_frame (columns), as the matrix of its rows
+        vdf, _ = self._vdf([200.0, 150.0, -250.0])
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        xyz = pyrf.xyz_frame([0.0, 0.0, 1.0], [1.0, 0.0, 0.0], time=vdf)
+        options = {"n_mc": 5, "random_state": 2}
+        expected = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], rotation=rotation, **options)
+        result = mms.vdf_shift(vdf, [0.0, 0.0, 0.0], rotation=xyz, **options)
+        np.testing.assert_allclose(result.data.data, expected.data.data)
+
     def test_vdf_shift_rotation_grid(self):
         v_kms = [200.0, 150.0, -250.0]
         vdf, sc_pot = self._vdf(v_kms)
@@ -14102,6 +14127,20 @@ class VdfRebinTestCase(unittest.TestCase):
             for v in [v_x, v_y, v_z]
         ]
         np.testing.assert_allclose(v_mean, rotation @ v_kms, atol=2.0)
+
+    def test_vdf_rebin_xyz_frame(self):
+        # A time series of pyrf.xyz_frame (columns), as the matrix of its rows
+        vdf, _ = self._vdf()
+        v_edges = np.linspace(-1500.0, 1500.0, 16)
+        rotation = np.array([[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        xyz = pyrf.xyz_frame([0.0, 0.0, 1.0], [1.0, 0.0, 0.0], time=vdf)
+        result, expected = [
+            mms.vdf_rebin(
+                vdf, [v_edges] * 3, base="cart", rotation=rot, n_mc=5, random_state=0
+            )
+            for rot in [xyz, rotation]
+        ]
+        np.testing.assert_allclose(result.data.data, expected.data.data)
 
     def test_vdf_rebin_cartesian_units(self):
         vdf, _ = self._vdf()
@@ -15653,6 +15692,23 @@ class VdfProjectionTestCase(unittest.TestCase):
             del vdf.attrs[key]
 
         return vdf
+
+    def test_vdf_projection_xyz_frame(self):
+        # A time series of pyrf.xyz_frame (columns): its mean over the times
+        # projected, as the matrix of its rows
+        vdf = self._vdf()
+        tint = list(pyrf.datetime642iso8601(vdf.time.data[[10, 21]]))
+        x_vec = pyrf.ts_vec_xyz(vdf.time.data, np.tile([1.0, 1.0, 0.0], (42, 1)))
+        x_vec.data[:10] = [0.0, 0.0, 1.0]  # outside tint: not used
+        xyz = pyrf.xyz_frame(x_vec, [0.0, 0.0, 1.0])
+        rows = np.array([[1.0, 1.0, 0.0], [0.0, 0.0, 1.0], [1.0, -1.0, 0.0]])
+        rows /= np.linalg.norm(rows, axis=1, keepdims=True)
+
+        expected = mms.vdf_projection(vdf, tint, rows)
+        result = mms.vdf_projection(vdf, tint, xyz)
+
+        for res, exp in zip(result, expected):
+            np.testing.assert_allclose(res, exp)
 
     def test_vdf_projection_phi_clipped(self):
         # With a tint that doesn't start at the first sample, psd_rebin gets
